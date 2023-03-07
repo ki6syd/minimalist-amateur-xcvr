@@ -1,0 +1,79 @@
+/* CSS styles */
+form {
+  font-family: monospace, sans-serif;
+  color: gray;
+}
+
+a {
+  font-family: monospace, sans-serif;
+  color: gray;
+}
+
+progress {
+  width: 100px;
+}
+
+input {
+  width: 150px;
+}
+
+.label {
+  font-size: 20px;
+}
+
+.vfo_display {
+  color: #3389FF;
+  font-family: monospace;
+  width: 180px;
+  font-size: 30px;
+  letter-spacing: 0.15em;
+}
+
+.cw_input {
+  color: gray;
+  font-family: monospace;
+  font-size: 30px;
+  width:250px;
+}
+
+.v_bat {
+  color: #3389FF;
+  font-family: monospace;
+  font-size: 20px;
+}
+
+.debug {
+  color: #3389FF;
+  font-family: monospace;
+  font-size: 15px;
+}
+
+.button {
+  background-color: #4d4c46;
+  border: none;
+  color: white;
+  padding: 5px 5px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 20px;
+  margin: 5px 2px;
+  cursor: pointer;
+  border-radius: 4px;
+  touch-action: manipulation;
+}
+
+.table { 
+  display: table;
+} 
+.table>* { 
+  display: table-row; 
+}
+
+.table>*>* { 
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  padding-right: 30px;
+  display: table-cell; 
+}

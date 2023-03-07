@@ -1,0 +1,5 @@
+
+fw/data/credentials.json
+*.log
+*.net
+*.raw

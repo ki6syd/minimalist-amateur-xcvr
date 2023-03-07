@@ -1,0 +1,19 @@
+{
+	"mdns_hostname": "radio",
+	"wifi_power_dbm": "0",
+	"wifi_channel": "11",
+	"sidetone_level": "1",
+	"sidetone_pitch_hz": "700",
+	"xtal_freq_hz": "250000710",
+	"if_freq_hz": "10000700",
+	"f_rf_min_hz_band1": "7000000",
+	"f_rf_max_hz_band1": "7300000",
+	"f_rf_min_hz_band2": "14000000",
+	"f_rf_max_hz_band2": "14350000",
+	"qsk_delay_ms": "800",
+	"f_rf_default_mhz": "7.060",
+	"keyer_speed_default_wpm": "15",
+	"af_gain_default": "1",
+	"v_bat_min_cutoff": "7.0",
+	"v_bat_max_cutoff": "16.0"
+}
