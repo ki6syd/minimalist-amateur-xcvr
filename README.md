@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `MAX-3B` (**M**inamilist **A**mateur **X**cvr, **3** **B**and) is a bare bones QRP HF radio designed with the Summits On The Air (SOTA) operator in mind. There are a few goals for the project:
+The `MAX-3B` (**M**inimalist **A**mateur **X**cvr, **3** **B**and) is a bare bones QRP HF radio designed with the Summits On The Air (SOTA) operator in mind. There are a few goals for the project:
 
 * Your phone's web browser is the screen! This gives a large, bright, highly-customizable screen. Send CW by typing on your screen.
 * Power from USB-PD or a 6-15V DC source. RX capability with 5V from USB.
