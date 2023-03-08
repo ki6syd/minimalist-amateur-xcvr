@@ -123,7 +123,7 @@ void key_on() {
   // TODO - figure out minimum bound here.
   my_delay(2);
   
-  gpio_write(OUTPUT_USER_LED, OUTPUT_ON);
+  gpio_write(OUTPUT_GREEN_LED, OUTPUT_ON);
   gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_ON);
 }
 
@@ -132,7 +132,7 @@ void key_off() {
 
   sidetone_off();
   
-  gpio_write(OUTPUT_USER_LED, OUTPUT_OFF);
+  gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
   gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_OFF); 
 
   // TODO - parametrize this

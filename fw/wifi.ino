@@ -11,9 +11,9 @@ void init_wifi_mdns() {
   for (int i = 0; i < 50; i++) {
     if (WiFi.status() == WL_CONNECTED)
       break;
-    gpio_write(OUTPUT_DEBUG_LED, OUTPUT_ON);
+    gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
     my_delay(100);
-    gpio_write(OUTPUT_DEBUG_LED, OUTPUT_OFF);
+    gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
     my_delay(100);
   }
 

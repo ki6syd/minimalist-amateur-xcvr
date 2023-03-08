@@ -12,8 +12,8 @@ enum output_pin {
   OUTPUT_RX_MUTE,
   OUTPUT_TX_VDD_EN,
   OUTPUT_ADC_SEL,
-  OUTPUT_USER_LED,
-  OUTPUT_DEBUG_LED,
+  OUTPUT_GREEN_LED,
+  OUTPUT_RED_LED,
   OUTPUT_LPF_1,
   OUTPUT_LPF_2,
   OUTPUT_BPF_1,
@@ -114,7 +114,7 @@ void setup(void) {
   // Serial.setDebugOutput(true);
 
   init_gpio();
-  gpio_write(OUTPUT_USER_LED, OUTPUT_ON);
+  gpio_write(OUTPUT_GREEN_LED, OUTPUT_ON);
 
   // start up wifi and MDNS
   // looks for home network, start AP if it's not found
@@ -133,7 +133,7 @@ void setup(void) {
   gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_OFF);
 
   // turn off LED after config finishes
-  gpio_write(OUTPUT_USER_LED, OUTPUT_OFF);
+  gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
 
   update_volume(vol);
 
@@ -155,13 +155,13 @@ void loop(void) {
     if (tx_rx_mode == MODE_RX) {
       flag_freq = false;
 
-      gpio_write(OUTPUT_DEBUG_LED, OUTPUT_ON);
+      gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
       update_relays(f_rf);
-      gpio_write(OUTPUT_DEBUG_LED, OUTPUT_OFF);
+      gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
 
-      gpio_write(OUTPUT_DEBUG_LED, OUTPUT_ON);
+      gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
       set_clocks(f_bfo, f_vfo, f_rf);
-      gpio_write(OUTPUT_DEBUG_LED, OUTPUT_OFF);
+      gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
     }
     else
       Serial.println("[SAFETY] Did not update frequency because radio was transmitting.");
@@ -204,9 +204,9 @@ void loop(void) {
     Serial.println(last_vbat);
     set_mode(MODE_RX);
     for (int i = 0; i < 10; i++) {
-      gpio_write(OUTPUT_USER_LED, OUTPUT_ON);
+      gpio_write(OUTPUT_GREEN_LED, OUTPUT_ON);
       my_delay(50);
-      gpio_write(OUTPUT_USER_LED, OUTPUT_OFF);
+      gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
       my_delay(50);
     }
   }
@@ -220,8 +220,8 @@ void loop(void) {
   // light up LED if loop took longer than expected.
   dbg_1 = micros() - last_loop_time;
   if (dbg_1 > 250)
-    gpio_write(OUTPUT_DEBUG_LED, OUTPUT_ON);
+    gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
   else
-    gpio_write(OUTPUT_DEBUG_LED, OUTPUT_OFF);
+    gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
   dbg_2 = WiFi.RSSI();
 }

@@ -1,19 +1,14 @@
 #define ADC_SCALING_VBAT      0.0349
 #define ADC_SCALING_AUDIO     0.00976
 
-// TODO: get rid of hard-coded pin numbering
+// TODO: get rid of hard-coded pin numbering below
 
 void init_gpio() {
   pinMode(LED_BUILTIN, OUTPUT);
-  /*
-  pinMode(D8, OUTPUT);
-  pinMode(D3, OUTPUT);
-  pinMode(D5, OUTPUT);
-  pinMode(D0, OUTPUT);
-  */
-  
-  pinMode(15, OUTPUT);
+
   pinMode(0, OUTPUT);
+  pinMode(2, OUTPUT);
+  pinMode(15, OUTPUT);
   pinMode(14, OUTPUT);
   pinMode(16, OUTPUT);
 
@@ -30,12 +25,10 @@ void init_gpio() {
   }
 
   // paddle GPIOs
-  /*
-   * commented out for testing
-  pinMode(D6, INPUT_PULLUP);
-  pinMode(D7, INPUT_PULLUP);
+  
+  pinMode(12, INPUT_PULLUP);
+  pinMode(13, INPUT_PULLUP);
   attach_paddle_isr(true, true);
-  */
 
 
   analogWriteFreq(load_json_config(hw_config_file, "sidetone_pitch_hz").toInt());
@@ -60,17 +53,17 @@ void sidetone_off() {
 
 // attaches/deattaches interrupt on dit/dah pins
 void attach_paddle_isr(bool dit_en, bool dah_en) {
-  /*
+  
   if(dit_en)
-    attachInterrupt(digitalPinToInterrupt(D7), paddle_isr, ONLOW);
+    attachInterrupt(digitalPinToInterrupt(13), paddle_isr, ONLOW);
   if(!dit_en)
-    detachInterrupt(digitalPinToInterrupt(D7));
+    detachInterrupt(digitalPinToInterrupt(13));
 
   if(dah_en)
-    attachInterrupt(digitalPinToInterrupt(D6), paddle_isr, ONLOW);
+    attachInterrupt(digitalPinToInterrupt(12), paddle_isr, ONLOW);
   if(!dah_en)
-    detachInterrupt(digitalPinToInterrupt(D6));
-    */
+    detachInterrupt(digitalPinToInterrupt(12));
+    
 }
 
 // when we detect dit/dah paddle:
@@ -96,41 +89,40 @@ ICACHE_RAM_ATTR void paddle_isr() {
 
 // TODO: accept a gpio number that doesn't necessarily map to ESP12. This would allow an IO expander to work with this function
 void gpio_write(output_pin pin, output_state state) {
-  /*
   switch(pin) {
     case OUTPUT_RX_MUTE:
       if(state == OUTPUT_AUDIO_RX)
-        digitalWrite(D3, LOW);
+        digitalWrite(15, LOW);
       if(state == OUTPUT_AUDIO_SIDETONE)
-        digitalWrite(D3, HIGH);
+        digitalWrite(15, HIGH);
       break;
       
     case OUTPUT_TX_VDD_EN:
       if(state == OUTPUT_ON)
-        digitalWrite(D5, HIGH);
+        digitalWrite(14, HIGH);
       if(state == OUTPUT_OFF)
-        digitalWrite(D5, LOW);
+        digitalWrite(14, LOW);
       break;
       
     case OUTPUT_ADC_SEL:
       if(state == OUTPUT_SEL_VBAT)
-        digitalWrite(D0, LOW);
+        digitalWrite(16, LOW);
       if(state == OUTPUT_SEL_AUDIO)
-        digitalWrite(D0, HIGH);
+        digitalWrite(16, HIGH);
       break;
       
-    case OUTPUT_USER_LED:
+    case OUTPUT_GREEN_LED:
       if(state == OUTPUT_ON)
-        digitalWrite(D8, HIGH);
+        digitalWrite(0, HIGH);
       if(state == OUTPUT_OFF)
-        digitalWrite(D8, LOW);
+        digitalWrite(0, LOW);
       break;
 
-    case OUTPUT_DEBUG_LED:
+    case OUTPUT_RED_LED:
       if(state == OUTPUT_ON)
-        digitalWrite(LED_BUILTIN, LOW);
+        digitalWrite(2, LOW);
       if(state == OUTPUT_OFF)
-        digitalWrite(LED_BUILTIN, HIGH);
+        digitalWrite(2, HIGH);
       break;
       
     case OUTPUT_LPF_1:
@@ -170,7 +162,6 @@ void gpio_write(output_pin pin, output_state state) {
       }
       break;
   }
-  */
 }
 
 // returns analog readings in the correct units (as a float)
@@ -314,7 +305,7 @@ void special_mode(uint16_t special_mode) {
 
         gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_CW);
         
-        gpio_write(OUTPUT_DEBUG_LED, OUTPUT_ON);
+        gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
 
         si5351.output_enable(SI5351_CLK2, 1);
 
@@ -347,7 +338,7 @@ void special_mode(uint16_t special_mode) {
         f_vfo = update_vfo(f_rf, f_bfo, f_audio);
         set_clocks(f_bfo, f_vfo, f_rf);
         si5351.output_enable(SI5351_CLK2, 0);
-        gpio_write(OUTPUT_DEBUG_LED, OUTPUT_OFF);
+        gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
         Serial.println("Done sweeping crystal");
         break;
       }
@@ -357,7 +348,7 @@ void special_mode(uint16_t special_mode) {
         // assume we're already looking at the correct frequency and BPF
         gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_CW);
 
-        gpio_write(OUTPUT_DEBUG_LED, OUTPUT_ON);
+        gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
 
         // turn on CLK2
         si5351.output_enable(SI5351_CLK2, 1);
@@ -385,7 +376,7 @@ void special_mode(uint16_t special_mode) {
         f_vfo = update_vfo(f_rf, f_bfo, f_audio);
         set_clocks(f_bfo, f_vfo, f_rf);
         si5351.output_enable(SI5351_CLK2, 0);
-        gpio_write(OUTPUT_DEBUG_LED, OUTPUT_OFF);
+        gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
         Serial.println("Done sweeping BPF");
         break;
       }
@@ -395,7 +386,7 @@ void special_mode(uint16_t special_mode) {
         // assume we're already looking at the correct frequency and BPF
         gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_CW);
 
-        gpio_write(OUTPUT_DEBUG_LED, OUTPUT_ON);
+        gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
 
         si5351.output_enable(SI5351_CLK2, 1);
 
@@ -420,7 +411,7 @@ void special_mode(uint16_t special_mode) {
         set_clocks(f_bfo, f_vfo, f_rf);
         si5351.output_enable(SI5351_CLK2, 0);
         Serial.println("Done sweeping AF");
-        gpio_write(OUTPUT_DEBUG_LED, OUTPUT_OFF);
+        gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
         break;
       }
       case 19: {
