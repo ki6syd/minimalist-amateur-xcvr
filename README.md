@@ -110,6 +110,11 @@ The IF crystal filter is wider than most CW only radios in order to support SSB 
 
 Performance is fine with Type 2, and it was simpler to buy a large bag of a single type of toroid.
 
+### How accurate is the freqency?
+
+TBD. 
+
+The same 26MHz crystal part number is used for both the ESP8266 and Si5351 clock generator. The Si5351 configuration code uses the crystal frequency defined in the JSON file, and the IF filter frequency is also defined here.
 
 ### Can I modify this project? Can we collaborate?
 
