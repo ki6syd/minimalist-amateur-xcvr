@@ -27,9 +27,13 @@ void update_relays(uint64_t f_rf) {
     lpf_relay = OUTPUT_LPF_2;
     bpf_relay = OUTPUT_BPF_2;
   }
+  else if(f_rf >= f_rf_min_band3 && f_rf <= f_rf_max_band3) {
+    lpf_relay = OUTPUT_LPF_3;
+    bpf_relay = OUTPUT_BPF_3;
+  }
   else {
     Serial.print("[FILTER] Unable to select relays based on freq: ");
-    // Serial.println(f_rf);
+    Serial.println(f_rf);
   }
   
   // set relays to RX configuration
@@ -41,6 +45,15 @@ void update_relays(uint64_t f_rf) {
 
 // update SI5351 clocks
 void set_clocks(uint64_t clk_0, uint64_t clk_1, uint64_t clk_2) {    
+  Serial.println("[SI5351] Clocks updating:");
+  Serial.print("\t");
+  print_uint64_t(clk_0);
+  Serial.print("\t");
+  print_uint64_t(clk_1);
+  Serial.print("\t");
+  print_uint64_t(clk_2);
+  Serial.println("\t");
+  
   si5351.set_freq(clk_0 * 100, SI5351_CLK0);
   si5351.set_freq(clk_1 * 100, SI5351_CLK1);
   si5351.set_freq(clk_2 * 100, SI5351_CLK2);
@@ -62,12 +75,10 @@ void set_mode(mode_type new_mode) {
     tx_rx_mode = new_mode;
 
   if(new_mode == MODE_TX) {
-    // audio source as sidetone
-    gpio_write(OUTPUT_RX_MUTE, OUTPUT_AUDIO_SIDETONE);
-    // commented out: use leakage through RX path as sidetone.
-    // gpio_write(OUTPUT_RX_MUTE, OUTPUT_AUDIO_RX);
+    
 
-    // set volume to lowest setting before using sidetone
+    // mute and set volume to lowest setting before using sidetone
+    gpio_write(OUTPUT_RX_MUTE, OUTPUT_MUTED);
     // TODO: create a sidetone level option in json file
     update_volume(1);
     
@@ -76,14 +87,14 @@ void set_mode(mode_type new_mode) {
     // change relays over to TX
     gpio_write(lpf_relay, OUTPUT_ON);
     gpio_write(bpf_relay, OUTPUT_OFF);
+
+    // turn off LNA for TX
+    gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
+
+    // delay for settling
     my_delay(50);
 
-    // change over clocks to TX
-    // commented out: keep CLK0 and CLK1 running so leakage turns into a sidetone.
-    // si5351.output_enable(SI5351_CLK0, 0);
-    // si5351.output_enable(SI5351_CLK1, 0);
-
-    my_delay(5);
+    // start the power amp
     si5351.output_enable(SI5351_CLK2, 1);
 
     Serial.println("[MODE] TX");
@@ -99,10 +110,18 @@ void set_mode(mode_type new_mode) {
     // change over relays before letting RX chain drive the audio
     gpio_write(lpf_relay, OUTPUT_OFF);
     gpio_write(bpf_relay, OUTPUT_ON);
+
+    // restore LNA to its previous state
+    if(lna_state)
+      gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
+    else
+      gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
+
+    // delay for everything to settle
     my_delay(10);
 
-    // audio source as RX
-    gpio_write(OUTPUT_RX_MUTE, OUTPUT_AUDIO_RX);
+    // unmute to allow audio through
+    gpio_write(OUTPUT_RX_MUTE, OUTPUT_UNMUTED);
 
     // restore audio volume, was at minimum setting for sidetone 
     update_volume(vol);
@@ -116,8 +135,6 @@ void key_on() {
   // change over relays and sidetone
   set_mode(MODE_TX);
 
-  sidetone_on();
-  
   si5351.output_enable(SI5351_CLK2, 1);
 
   // TODO - figure out minimum bound here.
@@ -130,8 +147,6 @@ void key_on() {
 void key_off() {
   set_mode(MODE_QSK_COUNTDOWN);
 
-  sidetone_off();
-  
   gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
   gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_OFF); 
 
@@ -164,6 +179,8 @@ void init_radio() {
   f_rf_max_band1 = load_json_config(hw_config_file, "f_rf_max_hz_band1").toFloat();
   f_rf_min_band2 = load_json_config(hw_config_file, "f_rf_min_hz_band2").toFloat();
   f_rf_max_band2 = load_json_config(hw_config_file, "f_rf_max_hz_band2").toFloat();
+  f_rf_min_band3 = load_json_config(hw_config_file, "f_rf_min_hz_band3").toFloat();
+  f_rf_max_band3 = load_json_config(hw_config_file, "f_rf_max_hz_band3").toFloat();
   
   // load frequencies from flash
   uint64_t xtal = load_json_config(hw_config_file, "xtal_freq_hz").toFloat();

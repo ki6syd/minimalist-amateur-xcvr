@@ -58,6 +58,19 @@ function set_freq() {
   console.log('set')
 }
 
+function set_clocks() {
+  clk0 = parseFloat(document.getElementById('clk0').value);
+  clk1 = parseFloat(document.getElementById('clk1').value);
+  clk2 = parseFloat(document.getElementById('clk2').value);
+
+  clock_string = clk0 + "_" + clk1 + "_" + clk2
+
+  send_command("clk", clock_string)
+
+  console.log('setting clocks')
+  console.log(clock_string)
+}
+
 
 function swap_vfo() {
   if(active_vfo == "a") { 

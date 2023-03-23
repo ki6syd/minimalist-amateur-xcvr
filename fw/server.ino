@@ -42,7 +42,7 @@ void handle_freq(String freq) {
   uint64_t tmp = freq.toFloat() * 1000000;
 
   // check frequency bounds before doing anything else
-  if((tmp < f_rf_min_band1 && tmp > f_rf_max_band1) && (tmp < f_rf_min_band2 && tmp > f_rf_max_band2))
+  if((tmp < f_rf_min_band1 && tmp > f_rf_max_band1) && (tmp < f_rf_min_band2 && tmp > f_rf_max_band2) && (tmp < f_rf_min_band3 && tmp > f_rf_max_band3))
     return;
 
   flag_freq = true;
@@ -57,6 +57,23 @@ void handle_freq(String freq) {
   Serial.print("\tBFO: ");
   print_uint64_t(f_bfo);
   Serial.println();
+}
+
+void handle_clocks(String clk0_string, String clk1_string, String clk2_string) {
+  Serial.print("[CLOCK UPDATE] ");
+  Serial.print(clk0_string);
+  Serial.print("\t");
+  Serial.print(clk1_string);
+  Serial.print("\t");
+  Serial.println(clk2_string);
+  
+  uint64_t clk0 = clk0_string.toFloat() * 1000000;
+  uint64_t clk1 = clk1_string.toFloat() * 1000000;
+  uint64_t clk2 = clk2_string.toFloat() * 1000000;
+
+  flag_freq = false;
+
+  set_clocks(clk0, clk1, clk2);
 }
 
 String handle_s_meter() {
@@ -158,6 +175,28 @@ void init_web_server() {
     handle_freq(input_message);
     request->send(200, "text/plain", "OK");
   });
+
+  // handler for setting individual clocks
+  server.on("/clk", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    String input_message, string1, string2, string3;
+    if (request->hasParam("value"))
+      input_message = request->getParam("value")->value();
+    else
+      input_message = "No message sent";
+    
+    int index1 = input_message.indexOf("_");
+    int index2 = input_message.indexOf("_", index1 + 1);
+
+    string1 = input_message.substring(0, index1);
+    string2 = input_message.substring(index1 + 1, index2);
+    string3 = input_message.substring(index2 + 1);
+
+    handle_clocks(string1, string2, string3);
+
+    request->send(200, "text/plain", "OK");
+  });
+
+  
 
   // handler for adding text to queue
   server.on("/enqueue", HTTP_GET, [] (AsyncWebServerRequest *request) {

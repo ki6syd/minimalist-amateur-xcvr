@@ -3,9 +3,7 @@
 
 // TODO: get rid of hard-coded pin numbering below
 
-void init_gpio() {
-  pinMode(LED_BUILTIN, OUTPUT);
-
+void init_gpio() {  
   pinMode(0, OUTPUT);
   pinMode(2, OUTPUT);
   pinMode(15, OUTPUT);
@@ -13,19 +11,25 @@ void init_gpio() {
   pinMode(16, OUTPUT);
 
   // set up the relay driver IO expander
-  if(!pcf8574.begin())
+  if(!pcf8574_relays.begin() && !pcf8574_audio.begin())
     Serial.println("[PCF8574] Couldn't initialize");
   else {
     for(int i=0; i < 8; i++) {
-      pcf8574.write(i, LOW);
+      pcf8574_audio.write(i, LOW);
+      pcf8574_relays.write(i, LOW);
     }
     Serial.print("[PCF8574] Connected?: ");
-    Serial.println(pcf8574.isConnected());
+    Serial.print(pcf8574_audio.isConnected());
+    Serial.print(",");
+    Serial.println(pcf8574_relays.isConnected());
     Serial.println("[PCF8574] Initialized and set OUTPUT_OFF");
   }
 
+  // turn off LEDs
+  gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
+  gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
+
   // paddle GPIOs
-  
   pinMode(12, INPUT_PULLUP);
   pinMode(13, INPUT_PULLUP);
   attach_paddle_isr(true, true);
@@ -42,27 +46,19 @@ void init_gpio() {
   vol = (uint16_t) load_json_config(hw_config_file, "af_gain_default").toFloat();
 }
 
-void sidetone_on() {
-  //analogWrite(D4, 127);
-}
-
-void sidetone_off() {
-  //analogWrite(D4, 0);
-}
-
 
 // attaches/deattaches interrupt on dit/dah pins
 void attach_paddle_isr(bool dit_en, bool dah_en) {
   
   if(dit_en)
-    attachInterrupt(digitalPinToInterrupt(13), paddle_isr, ONLOW);
+    attachInterrupt(digitalPinToInterrupt(12), paddle_isr, ONLOW);
   if(!dit_en)
-    detachInterrupt(digitalPinToInterrupt(13));
+    detachInterrupt(digitalPinToInterrupt(12));
 
   if(dah_en)
-    attachInterrupt(digitalPinToInterrupt(12), paddle_isr, ONLOW);
+    attachInterrupt(digitalPinToInterrupt(13), paddle_isr, ONLOW);
   if(!dah_en)
-    detachInterrupt(digitalPinToInterrupt(12));
+    detachInterrupt(digitalPinToInterrupt(13));
     
 }
 
@@ -70,17 +66,15 @@ void attach_paddle_isr(bool dit_en, bool dah_en) {
 //  - turn off the interrupt to prevent future events
 //  - set a flag
 ICACHE_RAM_ATTR void paddle_isr() {
-  /*
-  if(!digitalRead(D7)) {
+  
+  if(!digitalRead(12)) {
     attach_paddle_isr(false, true);
     dit_flag = true;
   }
-  //if(!digitalRead(D6)) {
-  if(!digitalRead(12)) {
+  if(!digitalRead(13)) {
     attach_paddle_isr(true, false);
     dah_flag = true;
   }
-  */
 
   // empty the keyer queue so touching the paddle stops any ongoing messages
   tx_queue = "";
@@ -91,9 +85,9 @@ ICACHE_RAM_ATTR void paddle_isr() {
 void gpio_write(output_pin pin, output_state state) {
   switch(pin) {
     case OUTPUT_RX_MUTE:
-      if(state == OUTPUT_AUDIO_RX)
+      if(state == OUTPUT_UNMUTED)
         digitalWrite(15, LOW);
-      if(state == OUTPUT_AUDIO_SIDETONE)
+      if(state == OUTPUT_MUTED)
         digitalWrite(15, HIGH);
       break;
       
@@ -127,46 +121,82 @@ void gpio_write(output_pin pin, output_state state) {
       
     case OUTPUT_LPF_1:
       if(state == OUTPUT_ON)
-        pcf8574.write(1, HIGH);
+        pcf8574_relays.write(0, HIGH);
       if(state == OUTPUT_OFF)
-        pcf8574.write(1, LOW);
+        pcf8574_relays.write(0, LOW);
       break;
 
     case OUTPUT_BPF_1:
       if(state == OUTPUT_ON)
-        pcf8574.write(3, HIGH);
+        pcf8574_relays.write(5, HIGH);
       if(state == OUTPUT_OFF)
-        pcf8574.write(3, LOW);
+        pcf8574_relays.write(5, LOW);
       break;
 
     case OUTPUT_LPF_2:
       if(state == OUTPUT_ON)
-        pcf8574.write(0, HIGH);
+        pcf8574_relays.write(1, HIGH);
       if(state == OUTPUT_OFF)
-        pcf8574.write(0, LOW);
+        pcf8574_relays.write(1, LOW);
       break;
 
     case OUTPUT_BPF_2:
       if(state == OUTPUT_ON)
-        pcf8574.write(2, HIGH);
+        pcf8574_relays.write(4, HIGH);
       if(state == OUTPUT_OFF)
-        pcf8574.write(2, LOW);
+        pcf8574_relays.write(4, LOW);
+      break;
+
+    case OUTPUT_LPF_3:
+      if(state == OUTPUT_ON)
+        pcf8574_relays.write(0, HIGH);
+      if(state == OUTPUT_OFF)
+        pcf8574_relays.write(0, LOW);
+      break;
+
+    case OUTPUT_BPF_3:
+      if(state == OUTPUT_ON)
+        pcf8574_relays.write(3, HIGH);
+      if(state == OUTPUT_OFF)
+        pcf8574_relays.write(3, LOW);
       break;
 
     case OUTPUT_BW_SEL:
-      if(state == OUTPUT_SEL_SSB) {
-        pcf8574.write(7, HIGH);
+      if(state == OUTPUT_SEL_CW)
+        pcf8574_audio.write(4, HIGH);
+      if(state == OUTPUT_SEL_SSB)
+        pcf8574_audio.write(4, LOW);
+      break;
+
+    case OUTPUT_LNA_SEL:
+      if(state == OUTPUT_ON) {
+        pcf8574_relays.write(6, HIGH);
       }
-      if(state == OUTPUT_SEL_CW) {
-        pcf8574.write(7, LOW);
+      if(state == OUTPUT_OFF) {
+        pcf8574_relays.write(6, LOW);
       }
       break;
+
+    case OUTPUT_ANT_SEL:
+      if(state == OUTPUT_ANT_DIRECT) {
+        pcf8574_relays.write(7, LOW);
+      }
+      if(state == OUTPUT_ANT_XFMR) {
+        pcf8574_relays.write(7, HIGH);
+      }
+      break;
+
   }
 }
 
 // returns analog readings in the correct units (as a float)
 // handles any required muxing
 float analog_read(input_pin pin) {
+
+  return analogRead(A0);
+
+  // TODO: delete above lines after debugging
+  
   int16_t adc_counts;
   float reading;
   
@@ -193,35 +223,46 @@ float analog_read(input_pin pin) {
 }
 
 // TODO: implement a maximum volume control based on JSON file
+// TODO: add min/max valid inputs
 void update_volume(uint16_t volume) {
-  uint8_t vol_1 = 4;
-  uint8_t vol_2 = 5;
-  uint8_t vol_3 = 6;
+  uint8_t vol_1 = 0;
+  uint8_t vol_2 = 1;
+  uint8_t vol_3 = 2;
+  uint8_t vol_4 = 3;
 
   Serial.print("[VOLUME] ");
   Serial.println(volume);
 
   switch(volume) {
     case 1:
-      pcf8574.write(vol_1, LOW);
-      pcf8574.write(vol_2, LOW);
-      pcf8574.write(vol_3, LOW);
+      pcf8574_audio.write(vol_1, LOW);
+      pcf8574_audio.write(vol_2, LOW);
+      pcf8574_audio.write(vol_3, LOW);
+      pcf8574_audio.write(vol_4, LOW);
       break;
     case 2:
-      pcf8574.write(vol_1, LOW);
-      pcf8574.write(vol_2, LOW);
-      pcf8574.write(vol_3, HIGH);
+      pcf8574_audio.write(vol_1, LOW);
+      pcf8574_audio.write(vol_2, LOW);
+      pcf8574_audio.write(vol_3, LOW);
+      pcf8574_audio.write(vol_4, HIGH);
       break;
     case 3:
-      pcf8574.write(vol_1, LOW);
-      pcf8574.write(vol_2, HIGH);
-      pcf8574.write(vol_3, LOW);
+      pcf8574_audio.write(vol_1, LOW);
+      pcf8574_audio.write(vol_2, LOW);
+      pcf8574_audio.write(vol_3, HIGH);
+      pcf8574_audio.write(vol_4, LOW);
       break;
     case 4:
-      pcf8574.write(vol_1, HIGH);
-      pcf8574.write(vol_2, LOW);
-      pcf8574.write(vol_3, LOW);
+      pcf8574_audio.write(vol_1, LOW);
+      pcf8574_audio.write(vol_2, HIGH);
+      pcf8574_audio.write(vol_3, LOW);
+      pcf8574_audio.write(vol_4, LOW);
       break;
+    case 5:
+      pcf8574_audio.write(vol_1, HIGH);
+      pcf8574_audio.write(vol_2, LOW);
+      pcf8574_audio.write(vol_3, LOW);
+      pcf8574_audio.write(vol_4, LOW);
   }
 }
 
@@ -236,57 +277,83 @@ void special_mode(uint16_t special_mode) {
       case 3:
         gpio_write(OUTPUT_LPF_1, OUTPUT_ON);
         gpio_write(OUTPUT_LPF_2, OUTPUT_OFF);
+        gpio_write(OUTPUT_LPF_3, OUTPUT_OFF);
         gpio_write(OUTPUT_BPF_1, OUTPUT_OFF);
         gpio_write(OUTPUT_BPF_2, OUTPUT_OFF);
+        gpio_write(OUTPUT_BPF_3, OUTPUT_OFF);
         break;
       case 4:
         gpio_write(OUTPUT_LPF_1, OUTPUT_OFF);
         gpio_write(OUTPUT_LPF_2, OUTPUT_OFF);
+        gpio_write(OUTPUT_LPF_3, OUTPUT_OFF);
         gpio_write(OUTPUT_BPF_1, OUTPUT_ON);
         gpio_write(OUTPUT_BPF_2, OUTPUT_OFF);
+        gpio_write(OUTPUT_BPF_3, OUTPUT_OFF);
         break;
       case 5:
         gpio_write(OUTPUT_LPF_1, OUTPUT_OFF);
         gpio_write(OUTPUT_LPF_2, OUTPUT_ON);
-        gpio_write(OUTPUT_BPF_1, OUTPUT_OFF);
+        gpio_write(OUTPUT_LPF_3, OUTPUT_OFF);
+        gpio_write(OUTPUT_BPF_1, OUTPUT_ON);
         gpio_write(OUTPUT_BPF_2, OUTPUT_OFF);
+        gpio_write(OUTPUT_BPF_3, OUTPUT_OFF);
         break;
       case 6:
         gpio_write(OUTPUT_LPF_1, OUTPUT_OFF);
         gpio_write(OUTPUT_LPF_2, OUTPUT_OFF);
+        gpio_write(OUTPUT_LPF_3, OUTPUT_OFF);
         gpio_write(OUTPUT_BPF_1, OUTPUT_OFF);
         gpio_write(OUTPUT_BPF_2, OUTPUT_ON);
+        gpio_write(OUTPUT_BPF_3, OUTPUT_OFF);
         break;
       case 7:
         gpio_write(OUTPUT_LPF_1, OUTPUT_OFF);
         gpio_write(OUTPUT_LPF_2, OUTPUT_OFF);
+        gpio_write(OUTPUT_LPF_3, OUTPUT_ON);
         gpio_write(OUTPUT_BPF_1, OUTPUT_OFF);
         gpio_write(OUTPUT_BPF_2, OUTPUT_OFF);
+        gpio_write(OUTPUT_BPF_3, OUTPUT_OFF);
         break;
       case 8:
-        gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_ON);
+        gpio_write(OUTPUT_LPF_1, OUTPUT_OFF);
+        gpio_write(OUTPUT_LPF_2, OUTPUT_OFF);
+        gpio_write(OUTPUT_LPF_3, OUTPUT_OFF);
+        gpio_write(OUTPUT_BPF_1, OUTPUT_OFF);
+        gpio_write(OUTPUT_BPF_2, OUTPUT_OFF);
+        gpio_write(OUTPUT_BPF_3, OUTPUT_ON);
         break;
-      case 9:
-        gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_OFF);
+       case 9:
+        gpio_write(OUTPUT_LPF_1, OUTPUT_OFF);
+        gpio_write(OUTPUT_LPF_2, OUTPUT_OFF);
+        gpio_write(OUTPUT_LPF_3, OUTPUT_OFF);
+        gpio_write(OUTPUT_BPF_1, OUTPUT_OFF);
+        gpio_write(OUTPUT_BPF_2, OUTPUT_OFF);
+        gpio_write(OUTPUT_BPF_3, OUTPUT_OFF);
         break;
       case 10:
-        sidetone_on();
+        gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_ON);
         break;
       case 11:
-        sidetone_off();
+        gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_OFF);
         break;
       case 12:
+        gpio_write(OUTPUT_RX_MUTE, OUTPUT_UNMUTED);
+        break;
+      case 13:
+        gpio_write(OUTPUT_RX_MUTE, OUTPUT_MUTED);
+        break;
+      case 14:
         gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_ON);
         my_delay(100);
         gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_OFF);
         break;
-      case 13:
+      case 15:
         key_on();
         break;
-      case 14:
+      case 16:
         key_off();
         break;
-      case 15:
+      case 17:
         gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_OFF);
         my_delay(1000);
         gpio_write(OUTPUT_BPF_1, OUTPUT_OFF);
@@ -298,7 +365,7 @@ void special_mode(uint16_t special_mode) {
         my_delay(5000);
         si5351.output_enable(SI5351_CLK2, 0);
         break;
-      case 16: {
+      case 18: {
         // xtal sweep: hold rf and audio frequencies constant, but adjust the two LO frequencies
 
         // assume we're already looking at the correct frequency and BPF
@@ -316,10 +383,10 @@ void special_mode(uint16_t special_mode) {
         Serial.println();
 
         uint64_t f_if_orig = f_if;
-        uint64_t f_if_min = f_if-7500;
-        uint64_t f_if_max = f_if+7500;
+        uint64_t f_if_min = f_if-10000;
+        uint64_t f_if_max = f_if+10000;
 
-        for(f_if=f_if_min; f_if < f_if_max; f_if += 50) {
+        for(f_if=f_if_min; f_if < f_if_max; f_if += 500) {
           f_bfo = f_if + f_audio;
           f_vfo = update_vfo(f_rf, f_bfo, f_audio);
           set_clocks(f_bfo, f_vfo, f_rf);
@@ -330,7 +397,7 @@ void special_mode(uint16_t special_mode) {
           print_uint64_t(f_bfo);
           Serial.println();
           
-          my_delay(50);
+          my_delay(100);
         }
         // return if to original value
         f_if = f_if_orig;
@@ -342,7 +409,7 @@ void special_mode(uint16_t special_mode) {
         Serial.println("Done sweeping crystal");
         break;
       }
-      case 17: {
+      case 19: {
         // BPF sweep: hold if and audio frequencies constant, but adjust the first LO and RF frequency
         
         // assume we're already looking at the correct frequency and BPF
@@ -358,7 +425,7 @@ void special_mode(uint16_t special_mode) {
         uint64_t f_rf_max = f_rf+2000000;
 
 
-        for(f_rf=f_rf_min; f_rf < f_rf_max; f_rf += 25000) {
+        for(f_rf=f_rf_min; f_rf < f_rf_max; f_rf += 100000) {
           f_vfo = update_vfo(f_rf, f_bfo, f_audio);
           set_clocks(f_bfo, f_vfo, f_rf);          
 
@@ -368,7 +435,7 @@ void special_mode(uint16_t special_mode) {
           print_uint64_t(f_bfo);
           Serial.println();
 
-          my_delay(50);
+          my_delay(100);
         }
         
         // return if to original value
@@ -380,7 +447,7 @@ void special_mode(uint16_t special_mode) {
         Serial.println("Done sweeping BPF");
         break;
       }
-      case 18: {
+      case 20: {
         // af sweep: hold rf and if frequencies constant, but adjust BFO to sweep AF
 
         // assume we're already looking at the correct frequency and BPF
@@ -391,10 +458,10 @@ void special_mode(uint16_t special_mode) {
         si5351.output_enable(SI5351_CLK2, 1);
 
         uint64_t f_bfo_orig = f_bfo;
-        uint64_t f_bfo_min = f_bfo-f_audio;
-        uint64_t f_bfo_max = f_bfo+5000;
+        uint64_t f_bfo_min = f_bfo-f_audio-2000;
+        uint64_t f_bfo_max = f_bfo+2000;
 
-        for(f_bfo=f_bfo_min; f_bfo < f_bfo_max; f_bfo += 50) {
+        for(f_bfo=f_bfo_min; f_bfo < f_bfo_max; f_bfo += 100) {
           set_clocks(f_bfo, f_vfo, f_rf);
 
           Serial.print("VFO: ");
@@ -403,7 +470,7 @@ void special_mode(uint16_t special_mode) {
           print_uint64_t(f_bfo);
           Serial.println();
           
-          my_delay(50);
+          my_delay(100);
         }
         // return if to original value
         f_bfo = f_bfo_orig;
@@ -414,8 +481,25 @@ void special_mode(uint16_t special_mode) {
         gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
         break;
       }
-      case 19: {
+      case 21: {
         reboot();
+        break;
+      }
+      case 22: {
+        gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
+        break;
+      }
+      case 23: {
+        gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
+        break;
+      }
+      case 24: {
+        gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_DIRECT);
+        break;
+      }
+      case 25: {
+        gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_XFMR);
+        break;
       }
     }
 }

@@ -16,12 +16,17 @@ enum output_pin {
   OUTPUT_RED_LED,
   OUTPUT_LPF_1,
   OUTPUT_LPF_2,
+  OUTPUT_LPF_3,
   OUTPUT_BPF_1,
   OUTPUT_BPF_2,
+  OUTPUT_BPF_3,
   OUTPUT_AF_SEL_1,
   OUTPUT_AF_SEL_2,
   OUTPUT_AF_SEL_3,
-  OUTPUT_BW_SEL
+  OUTPUT_AF_SEL_4,
+  OUTPUT_BW_SEL,
+  OUTPUT_LNA_SEL,
+  OUTPUT_ANT_SEL
 };
 
 enum input_pin {
@@ -29,7 +34,7 @@ enum input_pin {
   INPUT_AUDIO
 };
 
-// enums for output pin states - to help with clarity in situations like driving a relay
+// enums for output pin states - to help with clarity in situations like open drain outputs or high/low signal driving a relay
 enum output_state {
   OUTPUT_HIGH,
   OUTPUT_LOW,
@@ -39,8 +44,10 @@ enum output_state {
   OUTPUT_SEL_AUDIO,
   OUTPUT_SEL_CW,
   OUTPUT_SEL_SSB,
-  OUTPUT_AUDIO_RX,
-  OUTPUT_AUDIO_SIDETONE
+  OUTPUT_MUTED,
+  OUTPUT_UNMUTED,
+  OUTPUT_ANT_DIRECT,
+  OUTPUT_ANT_XFMR
 };
 
 enum mode_type {
@@ -48,6 +55,7 @@ enum mode_type {
   MODE_TX,
   MODE_QSK_COUNTDOWN
 };
+
 
 enum key_types {
   KEY_STRAIGHT,
@@ -60,11 +68,15 @@ const int led = LED_BUILTIN;
 
 AsyncWebServer server(80);
 Si5351 si5351;
-PCF8574 pcf8574(0x20);
+PCF8574 pcf8574_relays(0x20);
+PCF8574 pcf8574_audio(0x21);
 
 // flag_freq indicates whether frequency OR rx bandwidth need to change
 bool flag_freq = false, flag_vol = true, flag_special = false;
 bool dit_flag = false, dah_flag = false;
+
+// TODO: turn this into an enum
+bool lna_state = false;
 
 mode_type tx_rx_mode = MODE_QSK_COUNTDOWN;
 int64_t qsk_counter = 0;
@@ -83,13 +95,15 @@ uint64_t f_audio = 0;
 uint64_t f_vfo = 0;
 uint64_t f_if = 0;
 
-// TOOD: replace this with something that would more easily scale to an arbitrary number of bands
+// TODO: replace this with something that would more easily scale to an arbitrary number of bands
 uint64_t f_rf_min_band1 = 0;
 uint64_t f_rf_max_band1 = 0;
 uint64_t f_rf_min_band2 = 0;
 uint64_t f_rf_max_band2 = 0;
+uint64_t f_rf_min_band3 = 0;
+uint64_t f_rf_max_band3 = 0;
 
-
+// TODO: a few of these shouldn't be uint16_t's, figure out more enums
 uint16_t rx_bw = OUTPUT_SEL_CW;
 uint16_t keyer_speed = 0;
 uint16_t vol = 0;
@@ -132,10 +146,17 @@ void setup(void) {
   // turn off TX power
   gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_OFF);
 
-  // turn off LED after config finishes
-  gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
-
+  // set volume to default value
   update_volume(vol);
+
+  // set LNA to default value
+  if(lna_state)
+    gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
+  else
+    gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
+
+  // select direct connection to output
+  gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_DIRECT);
 
   // TODO - bulk read from JSON, move everything out of init files
   min_vbat = load_json_config(hw_config_file, "v_bat_min_cutoff").toFloat();
@@ -196,7 +217,7 @@ void loop(void) {
   handle_qsk_timer();
 
   // analog reads so server has fresh info
-  last_vbat = analog_read(INPUT_VBAT);
+  // last_vbat = analog_read(INPUT_VBAT);
 
   // TODO - have some better logic for this, and extract the 1.0v rationality threshold
   if (last_vbat > max_vbat || (last_vbat < min_vbat && last_vbat > 1.0)) {

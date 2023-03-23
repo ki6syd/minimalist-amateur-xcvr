@@ -34,6 +34,7 @@
     </div>
     <div>
       <button type="button" class="button" onclick="band(7)">40m</button>
+      <button type="button" class="button" onclick="band(10)">30m</button>
       <button type="button" class="button" onclick="band(14)">20m</button>
     </div>
     <div>
@@ -52,7 +53,7 @@
     </div>
     <div>
       <output name="af_gain" id="af_gain" for="af_slider">1</output>
-      <input type="range" min="1" max="4" value="1" id="af_slider" oninput="update_af(this.value);">
+      <input type="range" min="1" max="5" value="1" id="af_slider" oninput="update_af(this.value);">
     </div> 
     <div>
       <label for="dbg_1" class="label">DBG 1 </label>
@@ -80,6 +81,7 @@
   <input type="text" class="cw_input" id="freeform" name="freeform" placeholder="TEXT TO CW" value="">
   <a href="/edit">SETTINGS</a>
   <a href="debug.html">DEBUG</a>
+  <a href="clocks.html">CLOCKS</a>
 </form>
 
 <script src="./script.js"></script>
