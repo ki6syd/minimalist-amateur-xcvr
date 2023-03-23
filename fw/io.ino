@@ -114,9 +114,9 @@ void gpio_write(output_pin pin, output_state state) {
 
     case OUTPUT_RED_LED:
       if(state == OUTPUT_ON)
-        digitalWrite(2, LOW);
-      if(state == OUTPUT_OFF)
         digitalWrite(2, HIGH);
+      if(state == OUTPUT_OFF)
+        digitalWrite(2, LOW);
       break;
       
     case OUTPUT_LPF_1:
@@ -125,7 +125,7 @@ void gpio_write(output_pin pin, output_state state) {
       if(state == OUTPUT_OFF)
         pcf8574_relays.write(0, LOW);
       break;
-
+      
     case OUTPUT_BPF_1:
       if(state == OUTPUT_ON)
         pcf8574_relays.write(5, HIGH);
@@ -368,9 +368,7 @@ void special_mode(uint16_t special_mode) {
       case 18: {
         // xtal sweep: hold rf and audio frequencies constant, but adjust the two LO frequencies
 
-        // assume we're already looking at the correct frequency and BPF
-
-        gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_CW);
+        gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB);
         
         gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
 
@@ -383,10 +381,10 @@ void special_mode(uint16_t special_mode) {
         Serial.println();
 
         uint64_t f_if_orig = f_if;
-        uint64_t f_if_min = f_if-10000;
-        uint64_t f_if_max = f_if+10000;
+        uint64_t f_if_min = f_if-5000;
+        uint64_t f_if_max = f_if+5000;
 
-        for(f_if=f_if_min; f_if < f_if_max; f_if += 500) {
+        for(f_if=f_if_min; f_if < f_if_max; f_if += 50) {
           f_bfo = f_if + f_audio;
           f_vfo = update_vfo(f_rf, f_bfo, f_audio);
           set_clocks(f_bfo, f_vfo, f_rf);
@@ -397,7 +395,7 @@ void special_mode(uint16_t special_mode) {
           print_uint64_t(f_bfo);
           Serial.println();
           
-          my_delay(100);
+          my_delay(50);
         }
         // return if to original value
         f_if = f_if_orig;
@@ -412,8 +410,7 @@ void special_mode(uint16_t special_mode) {
       case 19: {
         // BPF sweep: hold if and audio frequencies constant, but adjust the first LO and RF frequency
         
-        // assume we're already looking at the correct frequency and BPF
-        gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_CW);
+        gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB);
 
         gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
 
@@ -425,7 +422,7 @@ void special_mode(uint16_t special_mode) {
         uint64_t f_rf_max = f_rf+2000000;
 
 
-        for(f_rf=f_rf_min; f_rf < f_rf_max; f_rf += 100000) {
+        for(f_rf=f_rf_min; f_rf < f_rf_max; f_rf += 20000) {
           f_vfo = update_vfo(f_rf, f_bfo, f_audio);
           set_clocks(f_bfo, f_vfo, f_rf);          
 
@@ -435,7 +432,7 @@ void special_mode(uint16_t special_mode) {
           print_uint64_t(f_bfo);
           Serial.println();
 
-          my_delay(100);
+          my_delay(50);
         }
         
         // return if to original value
@@ -449,9 +446,9 @@ void special_mode(uint16_t special_mode) {
       }
       case 20: {
         // af sweep: hold rf and if frequencies constant, but adjust BFO to sweep AF
+        // NOTE: this isn't working with CW filter selected, due to distortion.
 
-        // assume we're already looking at the correct frequency and BPF
-        gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_CW);
+        gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB);
 
         gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
 
@@ -482,22 +479,59 @@ void special_mode(uint16_t special_mode) {
         break;
       }
       case 21: {
-        reboot();
+        // sideband suppression test
+        // inject +audio and -audio freqs, just so this can ignore upper vs lower sideband modes
+
+        
+        gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB);
+        gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
+        si5351.output_enable(SI5351_CLK2, 1);
+        
+        uint64_t f_rf_nom = f_rf;
+        uint64_t f_rf_sideband_1 = f_rf - 2*f_audio;
+        uint64_t f_rf_sideband_2 = f_rf + 2*f_audio;
+
+        uint64_t f_rf_list[] = {f_rf_nom, f_rf_sideband_1, f_rf_sideband_2};
+
+        for(uint8_t i=0; i<5; i++) {
+          for(uint8_t j=0; j<3; j++) {
+            f_rf = f_rf_list[j];
+            set_clocks(f_bfo, f_vfo, f_rf);
+          
+            Serial.print("RF: ");
+            print_uint64_t(f_rf);
+            Serial.println();
+            
+            delay(1000);
+          }
+        }
+
+        // return to original value
+        f_rf = f_rf_nom;
+        set_clocks(f_bfo, f_vfo, f_rf);
+        si5351.output_enable(SI5351_CLK2, 0);
+        Serial.println("Done sweeping AF");
+        gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
+        
         break;
       }
       case 22: {
-        gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
+        reboot();
         break;
       }
       case 23: {
-        gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
+        gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
         break;
       }
       case 24: {
-        gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_DIRECT);
+        gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
         break;
       }
       case 25: {
+        gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_DIRECT);
+        break;
+      }
+      case 26: {
         gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_XFMR);
         break;
       }

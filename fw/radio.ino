@@ -74,6 +74,8 @@ void set_mode(mode_type new_mode) {
   else
     tx_rx_mode = new_mode;
 
+  gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
+
   if(new_mode == MODE_TX) {
     
 
@@ -128,6 +130,7 @@ void set_mode(mode_type new_mode) {
 
     Serial.println("[MODE] RX");
   }
+  gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
 }
 
 // TODO: pull out the magic 10ms delay
