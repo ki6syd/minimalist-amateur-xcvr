@@ -78,6 +78,7 @@ The radio front panel and (most) hardware details are loaded into a file structu
 ## New Features
 
 The following features are not implemented, but should be possible with existing hardware:
+* Direct frequency entry
 * WSPR beacon
 * Digital modes
 * CAT interface
