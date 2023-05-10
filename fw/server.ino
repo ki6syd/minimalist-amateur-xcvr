@@ -79,7 +79,8 @@ void handle_clocks(String clk0_string, String clk1_string, String clk2_string) {
 String handle_s_meter() {
   // commented out because this one is a little noisy
   // Serial.println("[S-METER UPDATE]");
-  return String(last_smeter);
+  // TODO - remove this magic number
+  return String(last_smeter * 30);
 }
 
 String handle_batt() {

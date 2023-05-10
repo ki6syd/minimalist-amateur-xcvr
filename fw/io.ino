@@ -149,9 +149,9 @@ void gpio_write(output_pin pin, output_state state) {
 
     case OUTPUT_LPF_3:
       if(state == OUTPUT_ON)
-        pcf8574_relays.write(0, HIGH);
+        pcf8574_relays.write(2, HIGH);
       if(state == OUTPUT_OFF)
-        pcf8574_relays.write(0, LOW);
+        pcf8574_relays.write(2, LOW);
       break;
 
     case OUTPUT_BPF_3:
@@ -192,11 +192,6 @@ void gpio_write(output_pin pin, output_state state) {
 // returns analog readings in the correct units (as a float)
 // handles any required muxing
 float analog_read(input_pin pin) {
-
-  return analogRead(A0);
-
-  // TODO: delete above lines after debugging
-  
   int16_t adc_counts;
   float reading;
   
@@ -205,7 +200,7 @@ float analog_read(input_pin pin) {
       // change to the correct mux setting
       gpio_write(OUTPUT_ADC_SEL, OUTPUT_SEL_VBAT);
       // settling time
-      my_delay(5);
+      my_delay(1);
       adc_counts = analogRead(A0);
       reading = adc_counts * ADC_SCALING_VBAT;
       break;
@@ -213,13 +208,56 @@ float analog_read(input_pin pin) {
     case INPUT_AUDIO:
       gpio_write(OUTPUT_ADC_SEL, OUTPUT_SEL_AUDIO);
       // settling time
-      my_delay(5);
+      my_delay(1);
       adc_counts = analogRead(A0);
       reading = adc_counts * ADC_SCALING_AUDIO;
       break;
   }
 
   return reading;
+}
+
+
+// take "n" samples and compute amplitude/sum/average
+void update_smeter () {
+  uint8_t num_samples = 50;
+  float sum = 0, avg = 0, rms = 0;
+  float readings[num_samples];
+
+  // pick audio input for ADC
+  gpio_write(OUTPUT_ADC_SEL, OUTPUT_SEL_AUDIO);
+
+  // sampling loop
+  for(uint8_t i=0; i<num_samples; i++) {
+    readings[i] = ADC_SCALING_AUDIO * analogRead(A0);
+  }
+
+  // averaging loop
+  for(uint8_t i=0; i<num_samples; i++) {
+    sum += readings[i];
+  }
+  avg = sum / num_samples;
+  
+  for(uint8_t i=0; i<num_samples; i++) {
+    readings[i] -= avg;
+    rms += readings[i] * readings[i];
+  }
+  rms = sqrt(rms/num_samples);
+
+
+  // TODO - make a flag for printing this out
+  /*
+  Serial.print("[S-METER]\tAvg: ");
+  Serial.print(avg);
+  Serial.print("\tSum: ");
+  Serial.print(sum);
+  Serial.print("\tRMS: ");
+  Serial.println(rms);
+  */
+
+  last_smeter = rms;
+
+  my_delay(10);
 }
 
 // TODO: implement a maximum volume control based on JSON file
@@ -294,7 +332,7 @@ void special_mode(uint16_t special_mode) {
         gpio_write(OUTPUT_LPF_1, OUTPUT_OFF);
         gpio_write(OUTPUT_LPF_2, OUTPUT_ON);
         gpio_write(OUTPUT_LPF_3, OUTPUT_OFF);
-        gpio_write(OUTPUT_BPF_1, OUTPUT_ON);
+        gpio_write(OUTPUT_BPF_1, OUTPUT_OFF);
         gpio_write(OUTPUT_BPF_2, OUTPUT_OFF);
         gpio_write(OUTPUT_BPF_3, OUTPUT_OFF);
         break;
@@ -358,10 +396,12 @@ void special_mode(uint16_t special_mode) {
         my_delay(1000);
         gpio_write(OUTPUT_BPF_1, OUTPUT_OFF);
         gpio_write(OUTPUT_BPF_2, OUTPUT_OFF);
+        gpio_write(OUTPUT_BPF_3, OUTPUT_OFF);
         my_delay(1000);
         si5351.output_enable(SI5351_CLK2, 1);
         gpio_write(OUTPUT_LPF_1, OUTPUT_ON);
         gpio_write(OUTPUT_LPF_2, OUTPUT_ON);
+        gpio_write(OUTPUT_LPF_3, OUTPUT_ON);
         my_delay(5000);
         si5351.output_enable(SI5351_CLK2, 0);
         break;
@@ -382,9 +422,14 @@ void special_mode(uint16_t special_mode) {
 
         uint64_t f_if_orig = f_if;
         uint64_t f_if_min = f_if-5000;
-        uint64_t f_if_max = f_if+5000;
+        uint64_t f_if_max = f_if+3000;
+        uint16_t step_size = 200;
+        uint16_t num_points = (f_if_max-f_if_min)/step_size;
 
-        for(f_if=f_if_min; f_if < f_if_max; f_if += 50) {
+        float meter_readings[num_points];
+        uint16_t i = 0;
+
+        for(f_if=f_if_min; f_if < f_if_max; f_if += step_size) {
           f_bfo = f_if + f_audio;
           f_vfo = update_vfo(f_rf, f_bfo, f_audio);
           set_clocks(f_bfo, f_vfo, f_rf);
@@ -394,6 +439,10 @@ void special_mode(uint16_t special_mode) {
           Serial.print("BFO: ");
           print_uint64_t(f_bfo);
           Serial.println();
+
+          update_smeter();
+          meter_readings[i] = last_smeter;
+          i++;
           
           my_delay(50);
         }
@@ -405,24 +454,43 @@ void special_mode(uint16_t special_mode) {
         si5351.output_enable(SI5351_CLK2, 0);
         gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
         Serial.println("Done sweeping crystal");
+
+
+        // TODO - clean this up
+        for(i=0; i < num_points; i++) {
+          Serial.print("F_if (rel)=");
+          Serial.print(((int64_t) (f_if_min+i*step_size)) - (int64_t) f_if_orig);
+          Serial.print("\t");
+          Serial.print(meter_readings[i]);
+          Serial.print("\t");
+          for(uint16_t j=0; j < meter_readings[i]/0.02; j++)
+            Serial.print("-");
+          Serial.println();
+        }
+        
         break;
       }
       case 19: {
         // BPF sweep: hold if and audio frequencies constant, but adjust the first LO and RF frequency
         
         gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB);
-
         gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
 
         // turn on CLK2
         si5351.output_enable(SI5351_CLK2, 1);
 
         uint64_t f_rf_orig = f_rf;
-        uint64_t f_rf_min = f_rf-2000000;
-        uint64_t f_rf_max = f_rf+2000000;
+        uint64_t f_rf_min = f_rf-1500000;
+        uint64_t f_rf_max = f_rf+1500000;
+
+        uint16_t step_size = 100000;
+        uint16_t num_points = (f_rf_max-f_rf_min)/step_size;
+
+        float meter_readings[num_points];
+        uint16_t i = 0;
 
 
-        for(f_rf=f_rf_min; f_rf < f_rf_max; f_rf += 20000) {
+        for(f_rf=f_rf_min; f_rf < f_rf_max; f_rf += step_size) {
           f_vfo = update_vfo(f_rf, f_bfo, f_audio);
           set_clocks(f_bfo, f_vfo, f_rf);          
 
@@ -431,6 +499,10 @@ void special_mode(uint16_t special_mode) {
           Serial.print("BFO: ");
           print_uint64_t(f_bfo);
           Serial.println();
+
+          update_smeter();
+          meter_readings[i] = last_smeter;
+          i++;
 
           my_delay(50);
         }
@@ -442,14 +514,27 @@ void special_mode(uint16_t special_mode) {
         si5351.output_enable(SI5351_CLK2, 0);
         gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
         Serial.println("Done sweeping BPF");
+
+        // TODO - clean this up
+        for(i=0; i < num_points; i++) {
+          Serial.print("F_rf (kHz)=");
+          Serial.print((f_rf_min+i*step_size)/1000);
+          Serial.print("\t");
+          Serial.print(meter_readings[i]);
+          Serial.print("\t");
+          for(uint16_t j=0; j < meter_readings[i]/0.02; j++)
+            Serial.print("-");
+          Serial.println();
+        }
+
+        
         break;
       }
       case 20: {
         // af sweep: hold rf and if frequencies constant, but adjust BFO to sweep AF
         // NOTE: this isn't working with CW filter selected, due to distortion.
 
-        gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB);
-
+        gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
         gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
 
         si5351.output_enable(SI5351_CLK2, 1);
@@ -458,7 +543,14 @@ void special_mode(uint16_t special_mode) {
         uint64_t f_bfo_min = f_bfo-f_audio-2000;
         uint64_t f_bfo_max = f_bfo+2000;
 
-        for(f_bfo=f_bfo_min; f_bfo < f_bfo_max; f_bfo += 100) {
+        uint16_t step_size = 100;
+        uint16_t num_points = (f_bfo_max-f_bfo_min)/step_size;
+
+        float meter_readings[num_points];
+        uint16_t i = 0;
+
+
+        for(f_bfo=f_bfo_min; f_bfo < f_bfo_max; f_bfo += step_size) {
           set_clocks(f_bfo, f_vfo, f_rf);
 
           Serial.print("VFO: ");
@@ -466,6 +558,10 @@ void special_mode(uint16_t special_mode) {
           Serial.print("BFO: ");
           print_uint64_t(f_bfo);
           Serial.println();
+
+          update_smeter();
+          meter_readings[i] = last_smeter;
+          i++;
           
           my_delay(100);
         }
@@ -476,13 +572,26 @@ void special_mode(uint16_t special_mode) {
         si5351.output_enable(SI5351_CLK2, 0);
         Serial.println("Done sweeping AF");
         gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
+
+        // TODO - clean this up
+        for(i=0; i < num_points; i++) {
+          Serial.print("F (rel) =");
+          Serial.print(((int64_t) f_bfo_min+i*step_size) - (int64_t) f_bfo_orig);
+          Serial.print("\t");
+          Serial.print(meter_readings[i]);
+          Serial.print("\t");
+          for(uint16_t j=0; j < meter_readings[i]/0.02; j++)
+            Serial.print("-");
+          Serial.println();
+        }
+
         break;
       }
       case 21: {
         // sideband suppression test
         // inject +audio and -audio freqs, just so this can ignore upper vs lower sideband modes
 
-        
+        gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
         gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB);
         gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
         si5351.output_enable(SI5351_CLK2, 1);
@@ -493,7 +602,9 @@ void special_mode(uint16_t special_mode) {
 
         uint64_t f_rf_list[] = {f_rf_nom, f_rf_sideband_1, f_rf_sideband_2};
 
-        for(uint8_t i=0; i<5; i++) {
+        float meter_readings[3];
+
+        for(uint8_t i=0; i<1; i++) {
           for(uint8_t j=0; j<3; j++) {
             f_rf = f_rf_list[j];
             set_clocks(f_bfo, f_vfo, f_rf);
@@ -501,6 +612,9 @@ void special_mode(uint16_t special_mode) {
             Serial.print("RF: ");
             print_uint64_t(f_rf);
             Serial.println();
+
+            update_smeter();
+            meter_readings[j] = last_smeter;
             
             delay(1000);
           }
@@ -512,6 +626,19 @@ void special_mode(uint16_t special_mode) {
         si5351.output_enable(SI5351_CLK2, 0);
         Serial.println("Done sweeping AF");
         gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
+
+
+        // TODO - clean this up
+        for(uint8_t i=0; i < 3; i++) {
+          Serial.print("F=");
+          Serial.print(f_rf_list[i]);
+          Serial.print("\t");
+          Serial.print(meter_readings[i]);
+          Serial.print("\t");
+          for(uint16_t j=0; j < meter_readings[i]/0.02; j++)
+            Serial.print("-");
+          Serial.println();
+        }
         
         break;
       }

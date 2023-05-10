@@ -77,13 +77,14 @@ void set_mode(mode_type new_mode) {
   gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
 
   if(new_mode == MODE_TX) {
-    
-
     // mute and set volume to lowest setting before using sidetone
     gpio_write(OUTPUT_RX_MUTE, OUTPUT_MUTED);
     // TODO: create a sidetone level option in json file
     update_volume(1);
-    
+
+    // HACK: CW audio shows distortion with sidetone. use SSB.
+    gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB);
+
     my_delay(10);
     
     // change relays over to TX
@@ -101,10 +102,10 @@ void set_mode(mode_type new_mode) {
 
     Serial.println("[MODE] TX");
   }
-  if(new_mode == MODE_RX) {
+  if(new_mode == MODE_RX) {    
     si5351.output_enable(SI5351_CLK2, 0);
 
-    my_delay(5);
+    my_delay(10);
     // change over clocks to RX
     si5351.output_enable(SI5351_CLK0, 1);
     si5351.output_enable(SI5351_CLK1, 1);
@@ -118,6 +119,9 @@ void set_mode(mode_type new_mode) {
       gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
     else
       gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
+
+    // restore audio bandwidth to its previous value
+    gpio_write(OUTPUT_BW_SEL, (output_state) rx_bw);
 
     // delay for everything to settle
     my_delay(10);
@@ -148,15 +152,16 @@ void key_on() {
 }
 
 void key_off() {
+  gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_OFF); 
+  
   set_mode(MODE_QSK_COUNTDOWN);
 
   gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
-  gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_OFF); 
-
+  
   // TODO - parametrize this
   // this delay must be long enough for switching to fully discharge VBATT-SW
   // otherwise, some voltage remains when key_on() gets called and there is a click.
-  my_delay(10);
+  my_delay(25);
   
   si5351.output_enable(SI5351_CLK2, 0);
 }

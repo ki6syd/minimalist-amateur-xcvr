@@ -216,13 +216,25 @@ void loop(void) {
   // decrement QSK timer if needed
   handle_qsk_timer();
 
-  // analog reads so server has fresh info
-  // last_vbat = analog_read(INPUT_VBAT);
+
+  // do analog read once per loop. vbat during tx, smeter during rx. 
+  // noise comes from toggling adc mux, so reading both types doesn't work well
+  if(tx_rx_mode == MODE_TX)
+    last_vbat = analog_read(INPUT_VBAT);
+  else {
+    update_smeter();
+  }
 
   // TODO - have some better logic for this, and extract the 1.0v rationality threshold
   if (last_vbat > max_vbat || (last_vbat < min_vbat && last_vbat > 1.0)) {
     Serial.print("[SAFETY] VBat out of range ");
     Serial.println(last_vbat);
+    
+    // turn off TX clock and set VDD off
+    gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_OFF);
+    my_delay(50);
+    si5351.output_enable(SI5351_CLK2, 0);
+    
     set_mode(MODE_RX);
     for (int i = 0; i < 10; i++) {
       gpio_write(OUTPUT_GREEN_LED, OUTPUT_ON);
@@ -230,12 +242,10 @@ void loop(void) {
       gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
       my_delay(50);
     }
+
+    // force another ADC read so we don't get stuck in an undervoltage state. Only samples during TX normally.
+    last_vbat = analog_read(INPUT_VBAT);
   }
-
-
-
-  // commented out because it's causing a hum, suspect due to mux switching affecting audio signal
-  // last_smeter = analog_read(INPUT_AUDIO);
 
   // update debug values
   // light up LED if loop took longer than expected.
