@@ -13,75 +13,82 @@
 <div class="table">
   <form>
     <div>
-      <output name="vfo" id="vfo" for="vfo_swap" class="label">VFO A</output>
-      <input type="number" step="0.0005" pattern="[0-9]*" inputmode="decimal" id="freq_mhz" name="freq_mhz" value="7.06000" class="vfo_display">
+      <input type="number" step="0.0005" pattern="[0-9]*" inputmode="decimal" id="freq_mhz" name="freq_mhz" value="7.0600" class="vfo_display">
     </div>
     <div>
       <button type="button" id="set_freq_btn" class="button" onclick="set_freq()">SET</button>
-      <button type="button" class="button" onclick="swap_vfo()">A&harr;B</button>
+      <button type="button" class="button" onclick="next_band()">BAND</button>
     </div>
     <div>
       <label for="v_bat" class="label">VDD </label>
-      <output name="v_bat" class="v_bat" id="v_bat">0.0 V</label>
-    </div>
-  </form>
-  <form>
-    <div>
-      <button type="button" class="button" onclick="incr_decr(-.002)">-2k</button>
-      <button type="button" class="button" onclick="incr_decr(-.0005)">-500k</button>
-      <button type="button" class="button" onclick="incr_decr(.0005)">+500</button>
-      <button type="button" class="button" onclick="incr_decr(.002)">+2k</button>
-    </div>
-    <div>
-      <button type="button" class="button" onclick="band(7)">40m</button>
-      <button type="button" class="button" onclick="band(10.1)">30m</button>
-      <button type="button" class="button" onclick="band(14)">20m</button>
-    </div>
-    <div>
+      <output name="v_bat" class="readout" id="v_bat">0.0 V</output>
+      <br>
       <label for="af_slider" class="label">S</label>
       <progress id="s_meter" value="1" max="9"></progress>
     </div>
   </form>
+
+
   <form>
-    <label for="af_slider" class="label">KEYER [wpm]</label>
-    <label for="af_slider" class="label">AF GAIN</label>
+    <div>
+      <button type="button" class="button" onclick="incr_decr_freq(-.002)">&darr;&darr;</button>
+      <button type="button" class="button" onclick="incr_decr_freq(-.0005)">&darr;</button>
+      <button type="button" class="button" onclick="incr_decr_freq(.0005)">&uarr;</button>
+      <button type="button" class="button" onclick="incr_decr_freq(.002)">&uarr;&uarr;</button>
+    </div>
+    <div>
+      <button type="button" class="button" onclick="press_bw()">BW</button>
+      <button type="button" class="button" onclick="press_ant()">ANT</button>
+      <button type="button" class="button" onclick="press_lna()">LNA</button>
+    </div>
+    <div>
+      <label for="af_gain" class="label">VOL</label>
+      <output name="af_gain" class="readout" id="af_gain">1</output>
+      <br>
+      <label for="keyer_speed" class="label">WPM</label>
+      <output name="keyer_speed" class="readout" id="keyer_speed">15</output>
+    </div>
   </form>
   <form>
     <div>
-      <output name="keyer_speed_wpm" id="keyer_speed_wpm" for="speed_slider">15</output>
-      <input type="range" min="5" max="35" value="15" id="speed_slider" oninput="update_keyer(this.value);">
+      <button type="button" class="button" onclick="decr_vol()">&#128264;</button>
+      <button type="button" class="button" onclick="incr_vol()">&#128266;</button>
+      <button type="button" class="button" onclick="decr_speed()">&#128034;</button>
+      <button type="button" class="button" onclick="incr_speed()">&#128007;</button>
     </div>
-    <div>
-      <output name="af_gain" id="af_gain" for="af_slider">1</output>
-      <input type="range" min="1" max="5" value="1" id="af_slider" oninput="update_af(this.value);">
-    </div> 
-    <div>
-      <label for="dbg_1" class="label">DBG 1 </label>
-      <output name="dbg_1" class="debug" id="dbg_1">0.0</label>
-    </div>
-  </form>
-  <form>
     <div>
       <button type="button" class="button" onclick="memory(1)">CQ</button>
-      <button type="button" class="button" onclick="memory(2)">CALL</button>
-      <button type="button" class="button" onclick="memory(3)">S2S</button>
-      <button type="button" class="button" id="rpt_button" onclick="repeat()">REPEAT</button>
+      <button type="button" class="button" onclick="memory(2)">MEM 1</button>
+    </div> 
+    <div>
+      <label for="bw" class="label">BW</label>
+      <output name="bw" class="readout" id="bw">CW</output>
+      <br>
+      <label for="lna" class="label">LNA</label>
+      <output name="lna" class="readout" id="lna">OFF</output>
+    </div>
+  </form>
+  <form>
+    <div>
+      <input type="text" class="cw_input" id="freeform" name="freeform" placeholder="TEXT TO CW" value="">
     </div>
     <div>
-      <button type="button" class="button" onclick="bw(1)">CW</button>
-      <button type="button" class="button" onclick="bw(2)">SSB</button>
+      <a href="/edit">SETTING</a>
+      <a href="debug.html">DBG</a>
+      <a href="clocks.html">CLK</a>
     </div>
     <div>
-      <label for="dbg_2" class="label">DBG 2 </label>
-      <output name="dbg_2" class="debug" id="dbg_2">0.0</label>
+      <label for="ant" class="label">ANT</label>
+      <output name="ant" class="readout" id="ant">50 &#937;</output>
+      <br>
+      <label for="dbg" class="label">DBG</label>
+      <output name="dbg" class="readout" id="dbg">0.0</output>
     </div>
   </form>
 </div>
 <form>
-  <input type="text" class="cw_input" id="freeform" name="freeform" placeholder="TEXT TO CW" value="">
-  <a href="/edit">SETTINGS</a>
-  <a href="debug.html">DEBUG</a>
-  <a href="clocks.html">CLOCKS</a>
+  
+  
 </form>
 
 <script src="./script.js"></script>

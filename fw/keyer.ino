@@ -6,7 +6,7 @@
 #define MORSE_INTERWORD_LEN       7
 
 void init_keyer() {
-  handle_speed(load_json_config(hw_config_file, "keyer_speed_default_wpm"));
+  keyer_speed = load_json_config(hw_config_file, "keyer_speed_default_wpm").toInt();
 
   // detect key type
 //  if(digitalRead(D6) == LOW) {

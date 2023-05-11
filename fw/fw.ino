@@ -103,8 +103,15 @@ uint64_t f_rf_max_band2 = 0;
 uint64_t f_rf_min_band3 = 0;
 uint64_t f_rf_max_band3 = 0;
 
-// TODO: a few of these shouldn't be uint16_t's, figure out more enums
+// TODO: load these from JSON
+uint16_t keyer_min = 5;
+uint16_t keyer_max = 30;
+uint16_t vol_min = 1;
+uint16_t vol_max = 5;
+
+// TODO: a few of these shouldn't be uint16_t's, figure out better enum strategy
 uint16_t rx_bw = OUTPUT_SEL_CW;
+uint16_t ant = OUTPUT_ANT_DIRECT;
 uint16_t keyer_speed = 0;
 uint16_t vol = 0;
 uint16_t special = 0;

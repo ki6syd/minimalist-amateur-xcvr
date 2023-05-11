@@ -198,7 +198,7 @@ void init_radio() {
   // f_bfo = f_if + 2500;
 
   // calculate clocks based on the default
-  handle_freq(load_json_config(hw_config_file, "f_rf_default_mhz"));
+  handle_set_freq(load_json_config(hw_config_file, "f_rf_default_mhz"));
 
 
   // initialize radio hardare

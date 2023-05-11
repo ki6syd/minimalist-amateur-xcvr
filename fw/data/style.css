@@ -10,42 +10,32 @@ a {
 }
 
 progress {
-  width: 100px;
-}
-
-input {
-  width: 150px;
+  width: 70px;
 }
 
 .label {
-  font-size: 20px;
+  font-size: 18px;
 }
 
 .vfo_display {
   color: #3389FF;
   font-family: monospace;
   width: 180px;
-  font-size: 30px;
+  font-size: 35px;
   letter-spacing: 0.15em;
 }
 
 .cw_input {
   color: gray;
   font-family: monospace;
-  font-size: 30px;
-  width:250px;
+  font-size: 25px;
+  width:180px;
 }
 
-.v_bat {
+.readout {
   color: #3389FF;
   font-family: monospace;
   font-size: 20px;
-}
-
-.debug {
-  color: #3389FF;
-  font-family: monospace;
-  font-size: 15px;
 }
 
 .button {
@@ -61,6 +51,7 @@ input {
   cursor: pointer;
   border-radius: 4px;
   touch-action: manipulation;
+  line-height: 30px;
 }
 
 .table { 
