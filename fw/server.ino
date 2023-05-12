@@ -34,7 +34,7 @@ void init_file_system() {
 */
 
 
-void handle_freq(String freq) {
+void handle_set_freq(String freq) {
   Serial.print("[FREQ UPDATE] ");
   Serial.print(freq);
   Serial.print("\t");
@@ -59,48 +59,50 @@ void handle_freq(String freq) {
   Serial.println();
 }
 
-void handle_clocks(String clk0_string, String clk1_string, String clk2_string) {
-  Serial.print("[CLOCK UPDATE] ");
-  Serial.print(clk0_string);
-  Serial.print("\t");
-  Serial.print(clk1_string);
-  Serial.print("\t");
-  Serial.println(clk2_string);
-  
-  uint64_t clk0 = clk0_string.toFloat() * 1000000;
-  uint64_t clk1 = clk1_string.toFloat() * 1000000;
-  uint64_t clk2 = clk2_string.toFloat() * 1000000;
-
-  flag_freq = false;
-
-  set_clocks(clk0, clk1, clk2);
+String handle_get_freq() {
+  return String(f_rf);
 }
 
-String handle_s_meter() {
+String handle_get_smeter() {
   // commented out because this one is a little noisy
   // Serial.println("[S-METER UPDATE]");
   // TODO - remove this magic number
   return String(last_smeter * 30);
 }
 
-String handle_batt() {
+String handle_get_vbat() {
   // commented out because this one is a little noisy
   // Serial.println("[BATTERY VOLTAGE UPDATE]");
   return String(last_vbat);
 }
 
-String handle_debug_1() {
+String handle_debug() {
   return String(dbg_1);
 }
 
-String handle_debug_2() {
-  return String(dbg_2);
+
+void handle_incr_volume() {
+  if(vol < vol_max) {
+    flag_vol = true;
+    vol++;
+
+    Serial.print("[VOLUME UPDATE] ");
+    Serial.println(vol);
+  }
 }
 
-void handle_volume(String volume) {
-  flag_vol = true;
-  // TODO: add bounds on the input
-  vol = volume.toInt();
+void handle_decr_volume() {
+  if(vol > vol_min) {
+    flag_vol = true;
+    vol--;
+
+    Serial.print("[VOLUME UPDATE] ");
+    Serial.println(vol);
+  }
+}
+
+String handle_get_volume() {
+  return String(vol);
 }
 
 void handle_enqueue(String new_text) {
@@ -111,29 +113,100 @@ void handle_enqueue(String new_text) {
   tx_queue += new_text;
 }
 
-void handle_speed(String speed_wpm) {
-  Serial.print("[KEYER SPEED UPDATE] ");
-  Serial.println(speed_wpm);
+void handle_decr_speed() {
+  if(keyer_speed > keyer_min) {
+    keyer_speed--;
   
-  keyer_speed = speed_wpm.toInt();
+    Serial.print("[KEYER SPEED UPDATE] ");
+    Serial.println(keyer_speed);
+  }
 }
 
-void handle_bandwidth(String bw_setting) {
+void handle_incr_speed() {
+  if(keyer_speed < keyer_max) {
+    keyer_speed++;
+  
+    Serial.print("[KEYER SPEED UPDATE] ");
+    Serial.println(keyer_speed);
+  }
+}
+
+String handle_get_speed() {
+  return String(keyer_speed);
+}
+
+void handle_press_bw() {
   Serial.print("[BW CHANGE] ");
-  Serial.println(bw_setting);
+  Serial.println(rx_bw);
 
   flag_freq = true;
 
-  // TODO: handle and validate enums, rather than accepting any integer  
-  rx_bw = bw_setting.toInt();
-  if(rx_bw == 1)
+  if(rx_bw == OUTPUT_SEL_SSB)
     rx_bw = OUTPUT_SEL_CW;
   else
     rx_bw = OUTPUT_SEL_SSB;
 
-
   // TODO: adjust the ~700hz audio offset we put in for sidetone in CW mode, but won't want in SSB
 }
+
+String handle_get_bw() {
+  if(rx_bw == OUTPUT_SEL_CW)
+    return String("CW");
+  else
+    return String("SSB");
+}
+
+
+void handle_press_ant() {
+  Serial.print("[ANT CHANGE] ");
+  Serial.println(ant);
+
+  flag_freq = true;
+
+  if(ant == OUTPUT_ANT_DIRECT) {
+    gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_DIRECT);
+    ant = OUTPUT_ANT_XFMR;
+  }
+  else {
+    ant = OUTPUT_ANT_DIRECT;
+    gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_XFMR);
+  }
+}
+
+String handle_get_ant() {
+  if(ant == OUTPUT_ANT_DIRECT)
+    return String("50 Ω");
+  else
+    return String("EFHW");
+}
+
+void handle_press_lna() {
+  Serial.print("[LNA CHANGE] ");
+
+  if(lna_state) {
+    lna_state = false;
+    gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
+  }
+  else {
+    gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
+    lna_state = true;
+  }
+
+  Serial.println(lna_state);
+      
+  // force update
+  set_mode(MODE_RX);
+  flag_freq = true;
+
+}
+
+String handle_get_lna() {
+  if(lna_state)
+    return String("ON");
+  else
+    return String("OFF");
+}
+
 
 void handle_special(String special_setting) {
   Serial.print("[SPECIAL] ");
@@ -166,38 +239,53 @@ void init_web_server() {
   });
 
   // handler for frequency setting
-  server.on("/freq", HTTP_GET, [] (AsyncWebServerRequest *request) {
+  server.on("/set_freq", HTTP_GET, [] (AsyncWebServerRequest *request) {
     String input_message;
     if (request->hasParam("value"))
       input_message = request->getParam("value")->value();
     else
       input_message = "No message sent";
     
-    handle_freq(input_message);
+    handle_set_freq(input_message);
+    request->send(200, "text/plain", "OK");
+  });  
+
+  // handler for frequency getting
+  server.on("/get_freq", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", handle_get_freq());
+  });
+
+  // handler for S-Meter request
+  server.on("/get_s", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", handle_get_smeter());
+  });
+
+  // handler for battery voltage request
+  server.on("/get_vbat", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", handle_get_vbat());
+  });
+
+  // handler for dbg1
+  server.on("/get_debug", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", handle_debug());
+  });
+
+  // handler for increasing volume
+  server.on("/incr_vol", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    handle_incr_volume();
     request->send(200, "text/plain", "OK");
   });
 
-  // handler for setting individual clocks
-  server.on("/clk", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    String input_message, string1, string2, string3;
-    if (request->hasParam("value"))
-      input_message = request->getParam("value")->value();
-    else
-      input_message = "No message sent";
-    
-    int index1 = input_message.indexOf("_");
-    int index2 = input_message.indexOf("_", index1 + 1);
-
-    string1 = input_message.substring(0, index1);
-    string2 = input_message.substring(index1 + 1, index2);
-    string3 = input_message.substring(index2 + 1);
-
-    handle_clocks(string1, string2, string3);
-
+  // handler for decreasing volume
+  server.on("/decr_vol", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    handle_decr_volume();
     request->send(200, "text/plain", "OK");
   });
 
-  
+  // handler for getting volume
+  server.on("/get_vol", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", handle_get_volume());
+  });
 
   // handler for adding text to queue
   server.on("/enqueue", HTTP_GET, [] (AsyncWebServerRequest *request) {
@@ -211,40 +299,54 @@ void init_web_server() {
     request->send(200, "text/plain", "OK");
   });
 
-  // handler for adding text to queue
-  server.on("/vol", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    String input_message;
-    if (request->hasParam("value"))
-      input_message = request->getParam("value")->value();
-    else
-      input_message = "No message sent";
-
-    handle_volume(input_message);
+  // handler for increasing speed
+  server.on("/incr_speed", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    handle_incr_speed();
     request->send(200, "text/plain", "OK");
   });
 
-  // handler for adding text to queue
-  server.on("/speed", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    String input_message;
-    if (request->hasParam("value"))
-      input_message = request->getParam("value")->value();
-    else
-      input_message = "No message sent";
-
-    handle_speed(input_message);
+  // handler for decreasing speed
+  server.on("/decr_speed", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    handle_decr_speed();
     request->send(200, "text/plain", "OK");
   });
 
-  // handler for changing audio bandwidth
-  server.on("/bandwidth", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    String input_message;
-    if (request->hasParam("value"))
-      input_message = request->getParam("value")->value();
-    else
-      input_message = "No message sent";
+  // handler for getting speed
+  server.on("/get_speed", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", handle_get_speed());
+  });
 
-    handle_bandwidth(input_message);
+  // handler for bandwidth button
+  server.on("/press_bw", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    handle_press_bw();
     request->send(200, "text/plain", "OK");
+  });
+
+  // handler for getting speed
+  server.on("/get_bw", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", handle_get_bw());
+  });
+
+  // handler for antenna button
+  server.on("/press_ant", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    handle_press_ant();
+    request->send(200, "text/plain", "OK");
+  });
+
+  // handler for getting speed
+  server.on("/get_ant", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", handle_get_ant());
+  });
+
+  // handler for lna button
+  server.on("/press_lna", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    handle_press_lna();
+    request->send(200, "text/plain", "OK");
+  });
+
+  // handler for getting lna
+  server.on("/get_lna", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", handle_get_lna());
   });
 
   // handler for changing audio bandwidth
@@ -257,26 +359,6 @@ void init_web_server() {
 
     handle_special(input_message);
     request->send(200, "text/plain", "OK");
-  });
-
-  // handler for S-Meter request
-  server.on("/s", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", handle_s_meter());
-  });
-
-  // handler for battery voltage request
-  server.on("/vbat", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", handle_batt());
-  });
-
-  // handler for dbg1
-  server.on("/dbg1", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", handle_debug_1());
-  });
-
-  // handler for dbg2
-  server.on("/dbg2", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", handle_debug_2());
   });
 
   server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");

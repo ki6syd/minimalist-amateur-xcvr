@@ -1,15 +1,10 @@
-var freq_a = 7.060;
-var freq_b = 14.060;
-var active_vfo = "a";
-var band_1 = 7;
-var band_2 = 14;
-var interval = 0;
-var keyer_rpt_delay = 25000;    // TODO - this is currently the total time between enqueues. Change to time btwn calls.
-var repeat_flag = 0;
+var freq = 7.060;
+// var interval = 0;
+// var keyer_rpt_delay = 25000;    // TODO - this is currently the total time between enqueues. Change to time btwn calls.
+// var repeat_flag = 0;
 var vfo_digits = 5;
 var keyer_mem_1 = "CQ SOTA DE KI6SYD K";
-var keyer_mem_2 = "KI6SYD";
-var keyer_mem_3 = "S2S";
+var keyer_mem_2 = "QRZ DE KI6SYD K"
 
 
 function send_command(param, val) {
@@ -20,139 +15,45 @@ function send_command(param, val) {
   console.log(param, ': ', val)
 }
 
-
-function update_af(val) {
-  document.getElementById('af_gain').value = val; //update current slider value
-  send_command("vol", val)
-}
-
-
-function update_keyer(val) {
-  document.getElementById('keyer_speed_wpm').value = val; //update current slider value
-  send_command("speed", val)
-}
-
-
-function band(val) {
-  freq = parseFloat(document.getElementById('freq_mhz').value);
-  if(Math.floor(freq) != val) {
-    document.getElementById('freq_mhz').value = val
-  }
-
-  set_freq()
-}
-
-
 function set_freq() {
-  if(active_vfo == "a") {
-    freq_a = parseFloat(document.getElementById('freq_mhz').value);
-    document.getElementById('freq_mhz').value = freq_a.toFixed(vfo_digits);
-    send_command("freq", freq_a)
-  }
-  else if(active_vfo == "b") {
-    freq_b = parseFloat(document.getElementById('freq_mhz').value); 
-    document.getElementById('freq_mhz').value = freq_b.toFixed(vfo_digits);
-    send_command("freq", freq_b)
-  }
+  // send an update
+  freq = parseFloat(document.getElementById('freq_mhz').value);
+  // document.getElementById('freq_mhz').value = freq.toFixed(vfo_digits);
+  send_command("set_freq", freq)
 
   console.log('set')
+
+  // request freq back as a way to update
+  get_freq();
 }
 
-function set_clocks() {
-  clk0 = parseFloat(document.getElementById('clk0').value);
-  clk1 = parseFloat(document.getElementById('clk1').value);
-  clk2 = parseFloat(document.getElementById('clk2').value);
-
-  clock_string = clk0 + "_" + clk1 + "_" + clk2
-
-  send_command("clk", clock_string)
-
-  console.log('setting clocks')
-  console.log(clock_string)
+function get_freq() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      var response = parseFloat(this.responseText)/1e6;
+      console.log(response);
+      document.getElementById('freq_mhz').value = response.toFixed(vfo_digits);
+    }
+  };
+  xhttp.open("GET", "get_freq", true);
+  xhttp.send();
 }
 
+function next_band() {
+  var cur_freq = parseFloat(document.getElementById('freq_mhz').value);
+  var round_down_freq = Math.round(cur_freq);
 
-function swap_vfo() {
-  if(active_vfo == "a") { 
-    active_vfo = "b";
-    document.getElementById('vfo').value = 'VFO B';
-    document.getElementById('freq_mhz').value = freq_b.toFixed(vfo_digits);
-  }
-  else if(active_vfo == "b") { 
-    active_vfo = "a";
-    document.getElementById('vfo').value = 'VFO A';
-    document.getElementById('freq_mhz').value = freq_a.toFixed(vfo_digits);
-  }
+  // todo: clean this up.
+  if(round_down_freq == 7)
+    document.getElementById('freq_mhz').value = cur_freq + (10.11-7.06)
+  if(round_down_freq == 10)
+    document.getElementById('freq_mhz').value = cur_freq + (14.06-10.11)
+  if(round_down_freq == 14)
+    document.getElementById('freq_mhz').value = cur_freq + (7.06-14.06)
 
   set_freq();
 }
-
-
-function memory(num) {
-  if(repeat_flag == 0) {
-    if(num == 1)
-      send_command("enqueue", keyer_mem_1)
-    if(num == 2)
-      send_command("enqueue", keyer_mem_2)
-    if(num == 3)
-      send_command("enqueue", keyer_mem_3)
-  }
-  else {
-    if(num == 1) {
-      send_command("enqueue", keyer_mem_1)
-      interval = setInterval(function() { send_command("enqueue", keyer_mem_1);}, keyer_rpt_delay); 
-    }
-    if(num == 2) {
-      send_command("enqueue", keyer_mem_2)
-      interval = setInterval(function() { send_command("enqueue", keyer_mem_2);}, keyer_rpt_delay); 
-    }
-    if(num == 3) {
-      send_command("enqueue", keyer_mem_3)
-      interval = setInterval(function() { send_command("enqueue", keyer_mem_3);}, keyer_rpt_delay); 
-    }
-  }
-}
-
-
-function incr_decr(num) {
-  console.log(num)
-  document.getElementById('freq_mhz').value = parseFloat(document.getElementById('freq_mhz').value) + num
-
-  set_freq()
-}
-
-
-function repeat() {
-  if(repeat_flag == 0) {
-    repeat_flag = 1;
-    document.getElementById("rpt_button").style.backgroundColor='#888888';
-  }
-  else {
-    repeat_flag = 0;
-    document.getElementById("rpt_button").style.backgroundColor='#4d4c46';
-    clearInterval(interval);
-  }
-  console.log(repeat_flag);
-}
-
-function bw(val) {
-  send_command("bandwidth", val)
-}
-
-function special(val) {
-  send_command("special", val)
-}
-
-
-function read_freeform() {
-  var cur_char = document.getElementById('freeform').value
-  // replace space with _, it goes into URL
-  cur_char = cur_char.replace(" ", "_")
-
-  document.getElementById('freeform').value = ""
-  send_command("enqueue", cur_char)
-}
-
 
 
 function get_s_meter() {
@@ -163,10 +64,9 @@ function get_s_meter() {
       document.getElementById('s_meter').value = this.responseText;
     }
   };
-  xhttp.open("GET", "s", true);
+  xhttp.open("GET", "get_s", true);
   xhttp.send();
 }
-
 
 function get_v_bat() {
   var xhttp = new XMLHttpRequest();
@@ -176,7 +76,7 @@ function get_v_bat() {
       document.getElementById('v_bat').value = this.responseText;
     }
   };
-  xhttp.open("GET", "vbat", true);
+  xhttp.open("GET", "get_vbat", true);
   xhttp.send();
 }
 
@@ -186,22 +86,172 @@ function get_debug() {
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       console.log(this.responseText);
-      document.getElementById('dbg_1').value = this.responseText;
+      document.getElementById('dbg').value = this.responseText;
     }
   };
-  xhttp.open("GET", "dbg1", true);
+  xhttp.open("GET", "get_debug", true);
   xhttp.send();
+}
 
-  // debug 2
+function incr_vol() {
+  // send command to increase
+  send_command("incr_vol", "")
+
+  // pull new volume
+  get_volume();
+}
+
+function decr_vol() {
+  // send command to increase
+  send_command("decr_vol", "")
+
+  // pull new volume
+  get_volume();
+}
+
+function get_volume() {
   var xhttp = new XMLHttpRequest();
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       console.log(this.responseText);
-      document.getElementById('dbg_2').value = this.responseText;
+      document.getElementById('af_gain').value = this.responseText;
     }
   };
-  xhttp.open("GET", "dbg2", true);
+  xhttp.open("GET", "get_vol", true);
   xhttp.send();
+}
+
+function read_freeform() {
+  var cur_char = document.getElementById('freeform').value
+  // replace space with _, it goes into URL
+  cur_char = cur_char.replace(" ", "_")
+
+  document.getElementById('freeform').value = ""
+  send_command("enqueue", cur_char)
+}
+
+function incr_speed() {
+  // send command to increase
+  send_command("incr_speed", "")
+
+  // pull new speed
+  get_speed();
+}
+
+function decr_speed() {
+  // send command to increase
+  send_command("decr_speed", "")
+
+  // pull new speed
+  get_speed();
+}
+
+function get_speed() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      console.log(this.responseText);
+      document.getElementById('keyer_speed').value = this.responseText;
+    }
+  };
+  xhttp.open("GET", "get_speed", true);
+  xhttp.send();
+}
+
+function press_bw() {
+  // send command to increase
+  send_command("press_bw", "")
+
+  // pull new bandwidth
+  get_bw();
+}
+
+function get_bw() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      console.log(this.responseText);
+      document.getElementById('bw').value = this.responseText;
+    }
+  };
+  xhttp.open("GET", "get_bw", true);
+  xhttp.send();
+}
+
+
+function press_ant() {
+  // send command to increase
+  send_command("press_ant", "")
+
+  // pull new antenna setting
+  get_ant();
+}
+
+function get_ant() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      console.log(this.responseText);
+      document.getElementById('ant').value = this.responseText;
+    }
+  };
+  xhttp.open("GET", "get_ant", true);
+  xhttp.send();
+}
+
+function press_lna() {
+  // send command to increase
+  send_command("press_lna", "")
+
+  // pull new lna setting
+  get_lna();
+}
+
+function get_lna() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      console.log(this.responseText);
+      document.getElementById('lna').value = this.responseText;
+    }
+  };
+  xhttp.open("GET", "get_lna", true);
+  xhttp.send();
+}
+
+function special(val) {
+  send_command("special", val)
+}
+
+
+function memory(num) {
+  send_command("enqueue", keyer_mem)
+}
+
+function memory(num) {
+  if(num == 1)
+    send_command("enqueue", keyer_mem_1)
+  if(num == 2)
+    send_command("enqueue", keyer_mem_2)
+}
+
+function incr_decr_freq(num) {
+  document.getElementById('freq_mhz').value = parseFloat(document.getElementById('freq_mhz').value) + num
+
+  set_freq()
+}
+
+// load all parameters from radio
+function on_load() {
+  get_v_bat();
+  get_s_meter();
+  get_volume();
+  get_speed();
+  get_bw();
+  get_lna();
+  get_ant();
+  get_debug();
+  get_freq();
 }
 
 // add listener, and a function for enqueueing/deleting characters
@@ -218,7 +268,14 @@ document.getElementById('freq_mhz').addEventListener('keypress', function(event)
   }
 });
 
-// refresh every 2 seconds
-setInterval(function() { get_s_meter();}, 1000); 
-setInterval(function() { get_v_bat();}, 1000); 
+// refresh every few seconds
+setInterval(function() { get_v_bat();}, 500);
+setInterval(function() { get_s_meter();}, 250);
+setInterval(function() { get_volume();}, 3000); 
+setInterval(function() { get_speed();}, 5000); 
+setInterval(function() { get_bw();}, 3000); 
+setInterval(function() { get_lna();}, 3000); 
+setInterval(function() { get_ant();}, 3000); 
 setInterval(function() { get_debug();}, 500); 
+// don't do this repeatedly: makes frequency entry tough.
+// setInterval(function() { get_freq();}, 1000);
