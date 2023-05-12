@@ -79,8 +79,12 @@ void set_mode(mode_type new_mode) {
   if(new_mode == MODE_TX) {
     // mute and set volume to lowest setting before using sidetone
     gpio_write(OUTPUT_RX_MUTE, OUTPUT_MUTED);
+    
     // TODO: create a sidetone level option in json file
-    update_volume(1);
+    if(vol < 4)
+      update_volume(1);
+    else
+      update_volume(vol-1);
 
     // HACK: CW audio shows distortion with sidetone. use SSB.
     gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB);

@@ -40,6 +40,21 @@ function get_freq() {
   xhttp.send();
 }
 
+function next_band() {
+  var cur_freq = parseFloat(document.getElementById('freq_mhz').value);
+  var round_down_freq = Math.round(cur_freq);
+
+  // todo: clean this up.
+  if(round_down_freq == 7)
+    document.getElementById('freq_mhz').value = cur_freq + (10.11-7.06)
+  if(round_down_freq == 10)
+    document.getElementById('freq_mhz').value = cur_freq + (14.06-10.11)
+  if(round_down_freq == 14)
+    document.getElementById('freq_mhz').value = cur_freq + (7.06-14.06)
+
+  set_freq();
+}
+
 
 function get_s_meter() {
   var xhttp = new XMLHttpRequest();
@@ -221,12 +236,22 @@ function memory(num) {
 }
 
 function incr_decr_freq(num) {
-  get_freq()
-
-  console.log(num)
   document.getElementById('freq_mhz').value = parseFloat(document.getElementById('freq_mhz').value) + num
 
   set_freq()
+}
+
+// load all parameters from radio
+function on_load() {
+  get_v_bat();
+  get_s_meter();
+  get_volume();
+  get_speed();
+  get_bw();
+  get_lna();
+  get_ant();
+  get_debug();
+  get_freq();
 }
 
 // add listener, and a function for enqueueing/deleting characters
@@ -243,8 +268,14 @@ document.getElementById('freq_mhz').addEventListener('keypress', function(event)
   }
 });
 
-// refresh every 2 seconds
-setInterval(function() { get_s_meter();}, 1000); 
-setInterval(function() { get_v_bat();}, 1000);
+// refresh every few seconds
+setInterval(function() { get_v_bat();}, 500);
+setInterval(function() { get_s_meter();}, 250);
+setInterval(function() { get_volume();}, 3000); 
+setInterval(function() { get_speed();}, 5000); 
+setInterval(function() { get_bw();}, 3000); 
+setInterval(function() { get_lna();}, 3000); 
+setInterval(function() { get_ant();}, 3000); 
 setInterval(function() { get_debug();}, 500); 
-setInterval(function() { get_freq();}, 1000);_
+// don't do this repeatedly: makes frequency entry tough.
+// setInterval(function() { get_freq();}, 1000);

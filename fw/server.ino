@@ -163,10 +163,14 @@ void handle_press_ant() {
 
   flag_freq = true;
 
-  if(ant == OUTPUT_ANT_DIRECT)
+  if(ant == OUTPUT_ANT_DIRECT) {
+    gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_DIRECT);
     ant = OUTPUT_ANT_XFMR;
-  else
+  }
+  else {
     ant = OUTPUT_ANT_DIRECT;
+    gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_XFMR);
+  }
 }
 
 String handle_get_ant() {
@@ -178,16 +182,22 @@ String handle_get_ant() {
 
 void handle_press_lna() {
   Serial.print("[LNA CHANGE] ");
-  Serial.println(lna_state);
 
+  if(lna_state) {
+    lna_state = false;
+    gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
+  }
+  else {
+    gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
+    lna_state = true;
+  }
+
+  Serial.println(lna_state);
+      
+  // force update
+  set_mode(MODE_RX);
   flag_freq = true;
 
-  if(lna_state)
-    lna_state = false;
-  else
-    lna_state = true;
-
-  Serial.println(lna_state);
 }
 
 String handle_get_lna() {

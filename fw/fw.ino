@@ -168,6 +168,9 @@ void setup(void) {
   // TODO - bulk read from JSON, move everything out of init files
   min_vbat = load_json_config(hw_config_file, "v_bat_min_cutoff").toFloat();
   max_vbat = load_json_config(hw_config_file, "v_bat_max_cutoff").toFloat();
+
+  // initial read of battery voltage
+  last_vbat = analog_read(INPUT_VBAT);
 }
 
 
@@ -226,7 +229,7 @@ void loop(void) {
 
   // do analog read once per loop. vbat during tx, smeter during rx. 
   // noise comes from toggling adc mux, so reading both types doesn't work well
-  if(tx_rx_mode == MODE_TX)
+  if(tx_rx_mode == MODE_TX || tx_rx_mode == MODE_QSK_COUNTDOWN)
     last_vbat = analog_read(INPUT_VBAT);
   else {
     update_smeter();
