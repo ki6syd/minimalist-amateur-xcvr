@@ -28,7 +28,7 @@ The `MAX-3B` (**M**inimalist **A**mateur **X**cvr, **3** **B**and) is a bare-bon
 ### Transmitter
 
 * Class E amplifier with 8x 2N7002 surface mount MOSFETs
-* 10W @ 15V input on all three bands
+* 5W @ 12V input, 10W @ 16V input on all three bands
 * TX harmonics at least 43dB below fundamental (per Section 97.303: https://www.ecfr.gov/current/title-47/chapter-I/subchapter-D/part-97/subpart-D/section-97.307)
 * Key shaping circuit
 * Low pass filter for each band, switched in with relays
@@ -41,9 +41,9 @@ The `MAX-3B` (**M**inimalist **A**mateur **X**cvr, **3** **B**and) is a bare-bon
 * USB-C connector
     * USB-PD negotiation for 9-15V, and >=1.5A
     * If USB-PD negotiation fails, 5V supports RX and reprogramming
-* 5.5 x 2.1mm barrel jack for 6-15V DC input
-* TX: TBD mA @ 12V
-* RX: TBD mA @ 12V
+* 2 pin header (works with RC battery JST connector) for 6-15V DC input
+* TX: 530-660 mA @ 12V (depending on band)
+* RX: 100 mA @ 12V
 
 ### ESP8266 and Peripherals
 
