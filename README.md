@@ -6,7 +6,7 @@ The `MAX-3B` (**M**inimalist **A**mateur **X**cvr, **3** **B**and) is a bare-bon
 
 * Your phone's web browser is the screen! This gives a large, bright, highly-customizable screen. Send CW by typing on your screen  
 * Power from USB-PD or a 6-15V DC source. RX capability with 5V from USB
-* Integrated unun for EFHW antenna
+* Integrated 49:1 unun for EFHW antenna
 * Coverage of three HF bands (20m, 30m, and 40m tested)
 * CW TX / RX, plus SSB RX for cross-mode QSOs
 * Where possible, multiple options for integrated circuits are supported. The design aims to be buildable in today's supply-constrained market
@@ -84,6 +84,7 @@ Built-in firmware routines minimize test equipment required for frequency correc
 The following features are not implemented, but should be possible with existing hardware:
 * Direct frequency entry via CW key
 * WSPR beacon
+* FT8, RTTY, and other digital modes
 * Digital modes
 * CAT interface
 * CW decoder
@@ -91,7 +92,7 @@ The following features are not implemented, but should be possible with existing
 * Split operation
 * SOTA Watch integration (when cell service is available). Jump to frequency of a recent spot for S2S, post your own spot, and respot others.
 * Adjustable sidetone level
-
+* Contact logging and QSO transcript logging
 
 ## FAQ
 
