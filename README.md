@@ -2,45 +2,48 @@
 
 ## Overview
 
-The `MAX-3B` (**M**inimalist **A**mateur **X**cvr, **3** **B**and) is a bare bones QRP HF radio designed with the Summits On The Air (SOTA) operator in mind. There are a few goals for the project:
+The `MAX-3B` (**M**inimalist **A**mateur **X**cvr, **3** **B**and) is a bare-bones QRP HF radio designed with the Summits On The Air (SOTA) operator in mind. There are a few goals for the project:
 
-* Your phone's web browser is the screen! This gives a large, bright, highly-customizable screen. Send CW by typing on your screen.
-* Power from USB-PD or a 6-15V DC source. RX capability with 5V from USB.
+* Your phone's web browser is the screen! This gives a large, bright, highly-customizable screen. Send CW by typing on your screen  
+* Power from USB-PD or a 6-15V DC source. RX capability with 5V from USB
+* Integrated 49:1 unun for EFHW antenna
 * Coverage of three HF bands (20m, 30m, and 40m tested)
-* CW TX / RX, plus SSB RX for cross-mode QSOs.
-* Where possible, multiple options for integrated circuits are supported. The design aims to be buildable in today's supply-constrained market.
-* Similar BOM cost to LNR Mountain Topper radios.
+* CW TX / RX, plus SSB RX for cross-mode QSOs
+* Where possible, multiple options for integrated circuits are supported. The design aims to be buildable in today's supply-constrained market
+* Similar BOM cost to LNR Mountain Topper radios
 
 ## Technical Details
 
 ### Receiver
 
-* Bandpass filter for each band, switched in with relays. QRP Labs bandpass modules are the starting point for this design.
+* Bandpass filter for each band, switched in with relays. QRP Labs bandpass modules are the starting point for this design
 * Single conversion superheterodyne architecture with 10 MHz IF
 * IF bandwidth is ~3kHz for SSB reception
-* ~500 Hz audio filter can be switched in for CW reception. Filter is bypassed for SSB reception.
+* ~500 Hz audio filter can be switched in for CW reception. Filter is bypassed for SSB reception
 * TBD dB unwanted sideband rejection (CW mode)
 * Limiting and variable gain in AF chain for coarse control over headphone volume
-* Drives normal computer earbuds. PCB has placeholder footprint for 1W speaker driver
+* Drives normal computer earbuds
+* Bypassable LNA. TBD dBm MDS (LNA on), TBD dBm MDS (LNA off)
 
 ### Transmitter
 
-* Class E amplifier with 4x 2N7002 surface mount MOSFETs
-* 5W @ 15V input on both bands
+* Class E amplifier with 8x 2N7002 surface mount MOSFETs
+* 5W @ 12V input, 10W @ 16V input on all three bands
 * TX harmonics at least 43dB below fundamental (per Section 97.303: https://www.ecfr.gov/current/title-47/chapter-I/subchapter-D/part-97/subpart-D/section-97.307)
 * Key shaping circuit
 * Low pass filter for each band, switched in with relays
 * Semi-QSK
 * SMA connector for RF output
+* Relay for selection between 50 ohm output or integrated EFHW transformer
 
 ### Power
 
 * USB-C connector
     * USB-PD negotiation for 9-15V, and >=1.5A
     * If USB-PD negotiation fails, 5V supports RX and reprogramming
-* 5.5 x 2.1mm barrel jack for 6-15V DC input
-* TX: TBD mA @ 12V
-* RX: TBD mA @ 12V
+* 2 pin header (works with RC battery JST connector) for 6-15V DC input
+* TX: 530-660 mA @ 12V (depending on band)
+* RX: 100 mA @ 12V
 
 ### ESP8266 and Peripherals
 
@@ -66,20 +69,22 @@ The `MAX-3B` (**M**inimalist **A**mateur **X**cvr, **3** **B**and) is a bare bon
 
 ### Architecture
 
-The radio front panel and (most) hardware details are loaded into a file structure created inside the ESP8266 flash chip. File system changes are possible by uploading new SPIFFS data through the Arduino IDE, or by uploading/editing new files through the Ace.js web interface (accessible with: admin/password).
+The radio front panel and (most) hardware parameters are loaded into a file structure created inside the ESP8266 flash chip. File system changes are possible by uploading new SPIFFS data through the Arduino IDE, or by uploading/editing new files through the Ace.js web interface (accessible with: admin/password).
 
 * Hardware configuration parameters are stored inside `hardware_config.json`.
 * WiFi credentials are stored inside `credentials.json`.
-* Radio front panel layout stored in `index.html`.
-* Radio front panel default values stored in `script.js` 
+* Radio front panel layout in `index.html`.
+* Radio front panel default values and behavior in `script.js` 
 * Pinout-specific configurations are stored in the Arduino project.
 
+Built-in firmware routines minimize test equipment required for frequency correction, crystal filter tuning, filter frequency response testing, and SSB / CW filter frequency response testing.
 
-## New Features
+## Future Features
 
 The following features are not implemented, but should be possible with existing hardware:
-* Direct frequency entry
+* Direct frequency entry via CW key
 * WSPR beacon
+* FT8, RTTY, and other digital modes
 * Digital modes
 * CAT interface
 * CW decoder
@@ -87,29 +92,24 @@ The following features are not implemented, but should be possible with existing
 * Split operation
 * SOTA Watch integration (when cell service is available). Jump to frequency of a recent spot for S2S, post your own spot, and respot others.
 * Adjustable sidetone level
-* Oscillator frequency compensation
-* IF filter frequency correction
-* IF filter sweep
-* BPF filter sweep
-* AF filter sweep
-
+* Contact logging and QSO transcript logging
 
 ## FAQ
 
 ### Does this only work with iPhones? 
 
-Though the physical device is designed and tested with an iPhone 12 Mini, any web browser can act as the front panel for the `MAX-3B`. Collaboration on this project is appreciated; please get in touch with me if you would like to share a case design for a different phone, or add support for another screen size
+Though the physical device has been tested in the field with an iPhone 12 Mini, any web browser can act as the front panel for the `MAX-3B`.
 
 ### How well does this radio work?
 
 "Good enough." The receiver is based on the SA612 mixer, which has relatively poor large signal performance. (See: https://studyres.com/doc/7790754/pa1dsp---why-not-to-use-the-ne602). Robust band-pass filters are included to avoid interaction with out-of-band signals, and otherwise performance is generally acceptable in remote operating locations (such as a SOTA peak). This is a similar receiver architecture to the LNR Mountain Topper series, which is widely regarded as suitablly high performance for SOTA.
 
-The IF crystal filter is wider than most CW only radios in order to support SSB reception and minimize ringing from the crystal filter. The baseband audio bandpass filter provides ~500Hz bandwidth when CW reception is selected.
+The IF crystal filter is wider than most CW only radios in order to support SSB reception and minimize ringing from the crystal filter. An additional CW analog filter provides ~500Hz bandwidth when CW reception is selected.
 
 
 ### Why use T37-2 toroids even in the 20m band sections, where Type 6 is more appropriate?
 
-Performance is fine with Type 2, and it was simpler to buy a large bag of a single type of toroid.
+Performance is fine with Type 2, and it was simpler to use a single type of toroid.
 
 ### How accurate is the freqency?
 
@@ -127,7 +127,7 @@ Please consider working with me on the existing repository as opposed to forking
 
 ### I found a bug. What can I do?
 
-Please file a bug on Github or send an email to ki6syd@gmail.com!
+Please file a bug on Github or send an email to ki6syd@gmail.com
 
 ### How can I get one?
 
