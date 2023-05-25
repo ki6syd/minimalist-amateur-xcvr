@@ -77,7 +77,7 @@ String handle_get_vbat() {
 }
 
 String handle_debug() {
-  return String(dbg_1);
+  return String("0.0");
 }
 
 

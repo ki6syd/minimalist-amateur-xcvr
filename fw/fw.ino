@@ -75,14 +75,21 @@ PCF8574 pcf8574_audio(0x21);
 bool flag_freq = false, flag_vol = true, flag_special = false;
 bool dit_flag = false, dah_flag = false;
 
-// TODO: turn this into an enum
-bool lna_state = false;
-
 mode_type tx_rx_mode = MODE_QSK_COUNTDOWN;
 int64_t qsk_counter = 0;
 
-key_types key_type = KEY_PADDLE;
 
+
+// TODO: a few of these shouldn't be uint16_t's, figure out better enum strategy
+uint16_t rx_bw = OUTPUT_SEL_CW;
+uint16_t ant = OUTPUT_ANT_DIRECT;
+uint16_t keyer_speed = 0;
+uint16_t vol = 0;
+uint16_t special = 0;
+String tx_queue = "";
+// TODO: turn this into an enum
+bool lna_state = false;
+key_types key_type = KEY_PADDLE;
 output_pin lpf_relay = OUTPUT_LPF_1, bpf_relay = OUTPUT_BPF_1;
 
 float last_vbat = 0, last_smeter = 0;
@@ -108,19 +115,6 @@ uint16_t keyer_min = 5;
 uint16_t keyer_max = 30;
 uint16_t vol_min = 1;
 uint16_t vol_max = 5;
-
-// TODO: a few of these shouldn't be uint16_t's, figure out better enum strategy
-uint16_t rx_bw = OUTPUT_SEL_CW;
-uint16_t ant = OUTPUT_ANT_DIRECT;
-uint16_t keyer_speed = 0;
-uint16_t vol = 0;
-uint16_t special = 0;
-String tx_queue = "";
-
-uint64_t last_loop_time = 0;
-
-float dbg_1 = 0;
-float dbg_2 = 0;
 
 // TODO - restructure init functions so there's one batch read from JSON before configuring hardware
 
@@ -156,14 +150,22 @@ void setup(void) {
   // set volume to default value
   update_volume(vol);
 
-  // set LNA to default value
-  if(lna_state)
-    gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
-  else
-    gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
+  // set antenna impedance relay
+  if(load_json_config(hw_config_file, "ant_default") == "OUTPUT_ANT_DIRECT")
+    ant = OUTPUT_ANT_DIRECT;
+  if(load_json_config(hw_config_file, "ant_default") == "OUTPUT_ANT_XFMR")
+    ant = OUTPUT_ANT_XFMR;
+  gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_XFMR);
 
-  // select direct connection to output
-  gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_DIRECT);
+  // set lna option
+  if(load_json_config(hw_config_file, "lna_default").toInt()) {
+    lna_state = true;
+    gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
+  }
+  else {
+    lna_state = false;
+    gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
+  }    
 
   // TODO - bulk read from JSON, move everything out of init files
   min_vbat = load_json_config(hw_config_file, "v_bat_min_cutoff").toFloat();
@@ -175,9 +177,6 @@ void setup(void) {
 
 
 void loop(void) {
-  // update loop timer and debug variable
-  last_loop_time = micros();
-
   MDNS.update();
 
   // reconfig clocks if frequency has changed
@@ -256,13 +255,4 @@ void loop(void) {
     // force another ADC read so we don't get stuck in an undervoltage state. Only samples during TX normally.
     last_vbat = analog_read(INPUT_VBAT);
   }
-
-  // update debug values
-  // light up LED if loop took longer than expected.
-  dbg_1 = micros() - last_loop_time;
-  if (dbg_1 > 250)
-    gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
-  else
-    gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
-  dbg_2 = WiFi.RSSI();
 }
