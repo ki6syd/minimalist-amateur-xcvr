@@ -14,7 +14,7 @@ progress {
 }
 
 .label {
-  font-size: 18px;
+  font-size: 20px;
 }
 
 .vfo_display {
@@ -29,13 +29,13 @@ progress {
   color: gray;
   font-family: monospace;
   font-size: 25px;
-  width:180px;
+  width:150px;
 }
 
 .readout {
   color: #3389FF;
   font-family: monospace;
-  font-size: 20px;
+  font-size: 22px;
 }
 
 .button {
@@ -46,12 +46,29 @@ progress {
   text-align: center;
   text-decoration: none;
   display: inline-block;
-  font-size: 20px;
-  margin: 5px 2px;
+  font-size: 22px;
+  margin: 2px 2px;
   cursor: pointer;
   border-radius: 4px;
   touch-action: manipulation;
   line-height: 30px;
+}
+
+.button_emoji {
+  background-color: #4d4c46;
+  border: none;
+  color: white;
+  padding: 5px 5px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 28px;
+  margin: 2px 2px;
+  cursor: pointer;
+  border-radius: 4px;
+  touch-action: manipulation;
+  line-height: 30px;
+}
 }
 
 .table { 
@@ -65,6 +82,6 @@ progress {
   vertical-align: bottom;
   padding-top: 5px;
   padding-bottom: 5px;
-  padding-right: 30px;
+  padding-right: 15px;
   display: table-cell; 
 }

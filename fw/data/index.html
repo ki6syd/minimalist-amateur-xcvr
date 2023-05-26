@@ -16,21 +16,34 @@
       <input type="number" step="0.0005" pattern="[0-9]*" inputmode="decimal" id="freq_mhz" name="freq_mhz" value="7.0600" class="vfo_display">
     </div>
     <div>
-      <button type="button" id="set_freq_btn" class="button" onclick="set_freq()">SET</button>
-      <button type="button" class="button" onclick="next_band()">BAND</button>
-    </div>
-    <div>
-      
+      <label for="v_bat" class="label">VDD </label>
+      <output name="v_bat" class="readout" id="v_bat">0.0 V</output>
+      <br>
+      <label for="ant" class="label">ANT</label>
+      <output name="ant" class="readout" id="ant">50 &#937;</output>
+      <!--
+      <br>
+      <label for="af_slider" class="label">S</label>
+      <progress id="s_meter" value="1" max="9"></progress>
+    -->
     </div>
   </form>
 
   <form>
     <div>
-      <label for="v_bat" class="label">VDD </label>
-      <output name="v_bat" class="readout" id="v_bat">0.0 V</output>
+      <label for="af_gain" class="label">VOL</label>
+      <output name="af_gain" class="readout" id="af_gain">1</output>
       <br>
-      <label for="af_slider" class="label">S</label>
-      <progress id="s_meter" value="1" max="9"></progress>
+      <label for="keyer_speed" class="label">WPM</label>
+      <output name="keyer_speed" class="readout" id="keyer_speed">15</output>
+    </div>
+
+    <div>
+      <label for="bw" class="label">BW</label>
+      <output name="bw" class="readout" id="bw">CW</output>
+      <br>
+      <label for="lna" class="label">LNA</label>
+      <output name="lna" class="readout" id="lna">OFF</output>
     </div>
   </form>
 
@@ -42,38 +55,45 @@
       <button type="button" class="button" onclick="incr_decr_freq(.0005)">&uarr;</button>
       <button type="button" class="button" onclick="incr_decr_freq(.002)">&uarr;&uarr;</button>
     </div>
+
     <div>
+      <button type="button" class="button_emoji" onclick="decr_vol()">&#128264;</button>
+      <button type="button" class="button_emoji" onclick="incr_vol()">&#128266;</button>
+      
+    </div>
+    
+  </form>
+
+
+  <form>
+    <div>
+      <button type="button" id="set_freq_btn" class="button" onclick="set_freq()">SET</button>
+      <button type="button" class="button" onclick="next_band()">BND</button>
       <button type="button" class="button" onclick="press_bw()">BW</button>
+    </div>
+
+    <div>
+      <button type="button" class="button_emoji" onclick="decr_speed()">&#128034;</button>
+      <button type="button" class="button_emoji" onclick="incr_speed()">&#128007;</button>
+    </div>
+
+  </form>
+
+  <form>
+    <div>
       <button type="button" class="button" onclick="press_ant()">ANT</button>
       <button type="button" class="button" onclick="press_lna()">LNA</button>
     </div>
-    <div>
-      <label for="af_gain" class="label">VOL</label>
-      <output name="af_gain" class="readout" id="af_gain">1</output>
-      <br>
-      <label for="keyer_speed" class="label">WPM</label>
-      <output name="keyer_speed" class="readout" id="keyer_speed">15</output>
-    </div>
-  </form>
-  <form>
-    <div>
-      <button type="button" class="button" onclick="decr_vol()">&#128264;</button>
-      <button type="button" class="button" onclick="incr_vol()">&#128266;</button>
-      <button type="button" class="button" onclick="decr_speed()">&#128034;</button>
-      <button type="button" class="button" onclick="incr_speed()">&#128007;</button>
-    </div>
+
     <div>
       <button type="button" class="button" onclick="memory(1)">CQ</button>
-      <button type="button" class="button" onclick="memory(2)">MEM 1</button>
+      <button type="button" class="button" onclick="memory(2)">MEM</button>
     </div> 
-    <div>
-      <label for="bw" class="label">BW</label>
-      <output name="bw" class="readout" id="bw">CW</output>
-      <br>
-      <label for="lna" class="label">LNA</label>
-      <output name="lna" class="readout" id="lna">OFF</output>
-    </div>
   </form>
+
+
+
+  
   <form>
     <div>
       <input type="text" class="cw_input" id="freeform" name="freeform" placeholder="TEXT TO CW" value="">
@@ -83,19 +103,13 @@
       <a href="debug.html">DBG</a>
       <a href="clocks.html">CLK</a>
     </div>
-    <div>
-      <label for="ant" class="label">ANT</label>
-      <output name="ant" class="readout" id="ant">50 &#937;</output>
-      <br>
-      <label for="dbg" class="label">DBG</label>
-      <output name="dbg" class="readout" id="dbg">0.0</output>
-    </div>
+  </form>
+
+  <form>
+    <label for="dbg" class="label">DBG</label>
+    <output name="dbg" class="readout" id="dbg">0.0</output>
   </form>
 </div>
-<form>
-  
-  
-</form>
 
 <script src="./script.js"></script>
 </body>
