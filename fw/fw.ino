@@ -155,7 +155,7 @@ void setup(void) {
     ant = OUTPUT_ANT_DIRECT;
   if(load_json_config(hw_config_file, "ant_default") == "OUTPUT_ANT_XFMR")
     ant = OUTPUT_ANT_XFMR;
-  gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_XFMR);
+  gpio_write(OUTPUT_ANT_SEL, (output_state) ant);
 
   // set lna option
   if(load_json_config(hw_config_file, "lna_default").toInt()) {

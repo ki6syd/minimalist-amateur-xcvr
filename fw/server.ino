@@ -164,12 +164,12 @@ void handle_press_ant() {
   flag_freq = true;
 
   if(ant == OUTPUT_ANT_DIRECT) {
-    gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_DIRECT);
+    gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_XFMR);
     ant = OUTPUT_ANT_XFMR;
   }
   else {
     ant = OUTPUT_ANT_DIRECT;
-    gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_XFMR);
+    gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_DIRECT);
   }
 }
 

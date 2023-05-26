@@ -20,9 +20,9 @@ progress {
 .vfo_display {
   color: #3389FF;
   font-family: monospace;
-  width: 180px;
+  width: 150px;
   font-size: 35px;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.1em;
 }
 
 .cw_input {
