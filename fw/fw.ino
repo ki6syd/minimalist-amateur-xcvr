@@ -83,6 +83,7 @@ int64_t qsk_counter = 0;
 // TODO: a few of these shouldn't be uint16_t's, figure out better enum strategy
 uint16_t rx_bw = OUTPUT_SEL_CW;
 uint16_t ant = OUTPUT_ANT_DIRECT;
+uint16_t qsk_period = 500;
 uint16_t keyer_speed = 0;
 uint16_t vol = 0;
 uint16_t special = 0;
@@ -170,6 +171,8 @@ void setup(void) {
   // TODO - bulk read from JSON, move everything out of init files
   min_vbat = load_json_config(hw_config_file, "v_bat_min_cutoff").toFloat();
   max_vbat = load_json_config(hw_config_file, "v_bat_max_cutoff").toFloat();
+
+  qsk_period = load_json_config(hw_config_file, "qsk_delay_ms").toFloat();
 
   // initial read of battery voltage
   last_vbat = analog_read(INPUT_VBAT);

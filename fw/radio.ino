@@ -64,9 +64,8 @@ void set_clocks(uint64_t clk_0, uint64_t clk_1, uint64_t clk_2) {
 void set_mode(mode_type new_mode) {
   
   // for re-setting the mode to TX, reset the QSK counter
-  // TODO: use a real number here.
   if(new_mode == MODE_TX);
-    qsk_counter = 250;
+    qsk_counter = qsk_period;
 
   // no further action needed if there is no change in mode, or if we went from QSK_COUNTDOWN to TX
   if(new_mode == tx_rx_mode || (new_mode == MODE_TX && tx_rx_mode == MODE_QSK_COUNTDOWN))
@@ -81,11 +80,11 @@ void set_mode(mode_type new_mode) {
     gpio_write(OUTPUT_RX_MUTE, OUTPUT_MUTED);
     
     // TODO: create a sidetone level option in json file
-    if(vol < 4)
+    if(vol <= 2)
       update_volume(1);
     else
       update_volume(vol-1);
-
+      
     // HACK: CW audio shows distortion with sidetone. use SSB.
     gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB);
 
@@ -98,7 +97,7 @@ void set_mode(mode_type new_mode) {
     // turn off LNA for TX
     gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
 
-    // delay for settling
+    // delay for settling. TODO - check what happens if this is absent.
     my_delay(50);
 
     // start the power amp
@@ -162,7 +161,7 @@ void key_off() {
 
   gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
   
-  // TODO - parametrize this
+  // TODO - parametrize this, move into the mode switching logic?
   // this delay must be long enough for switching to fully discharge VBATT-SW
   // otherwise, some voltage remains when key_on() gets called and there is a click.
   my_delay(25);

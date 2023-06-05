@@ -268,9 +268,7 @@ void update_volume(uint16_t volume) {
   uint8_t vol_3 = 2;
   uint8_t vol_4 = 3;
 
-  Serial.print("[VOLUME] ");
-  Serial.println(volume);
-
+  // TODO: speed this up by only doing a single i2c write.
   switch(volume) {
     case 1:
       pcf8574_audio.write(vol_1, LOW);
@@ -409,7 +407,7 @@ void special_mode(uint16_t special_mode) {
         // xtal sweep: hold rf and audio frequencies constant, but adjust the two LO frequencies
 
         gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB);
-        
+        gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
         gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
 
         si5351.output_enable(SI5351_CLK2, 1);
@@ -460,10 +458,15 @@ void special_mode(uint16_t special_mode) {
         for(i=0; i < num_points; i++) {
           Serial.print("F_if (rel)=");
           Serial.print(((int64_t) (f_if_min+i*step_size)) - (int64_t) f_if_orig);
+          
+          // this next statement is a hack to help with readability in printout
+          if(((int64_t) (f_if_min+i*step_size)) - (int64_t) f_if_orig > -1000)
+            Serial.print("\t");
+            
           Serial.print("\t");
           Serial.print(meter_readings[i]);
           Serial.print("\t");
-          for(uint16_t j=0; j < meter_readings[i]/0.02; j++)
+          for(uint16_t j=0; j < meter_readings[i]/0.005; j++)
             Serial.print("-");
           Serial.println();
         }
@@ -475,6 +478,7 @@ void special_mode(uint16_t special_mode) {
         
         gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB);
         gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
+        gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
 
         // turn on CLK2
         si5351.output_enable(SI5351_CLK2, 1);
@@ -519,10 +523,15 @@ void special_mode(uint16_t special_mode) {
         for(i=0; i < num_points; i++) {
           Serial.print("F_rf (kHz)=");
           Serial.print((f_rf_min+i*step_size)/1000);
+
+          // this next statement is a hack to help with readability in printout
+          if((f_rf_min+i*step_size)/1000 < 10000)
+            Serial.print("\t");
+          
           Serial.print("\t");
           Serial.print(meter_readings[i]);
           Serial.print("\t");
-          for(uint16_t j=0; j < meter_readings[i]/0.02; j++)
+          for(uint16_t j=0; j < meter_readings[i]/0.005; j++)
             Serial.print("-");
           Serial.println();
         }
@@ -580,7 +589,7 @@ void special_mode(uint16_t special_mode) {
           Serial.print("\t");
           Serial.print(meter_readings[i]);
           Serial.print("\t");
-          for(uint16_t j=0; j < meter_readings[i]/0.02; j++)
+          for(uint16_t j=0; j < meter_readings[i]/0.005; j++)
             Serial.print("-");
           Serial.println();
         }
@@ -635,7 +644,7 @@ void special_mode(uint16_t special_mode) {
           Serial.print("\t");
           Serial.print(meter_readings[i]);
           Serial.print("\t");
-          for(uint16_t j=0; j < meter_readings[i]/0.02; j++)
+          for(uint16_t j=0; j < meter_readings[i]/0.005; j++)
             Serial.print("-");
           Serial.println();
         }
