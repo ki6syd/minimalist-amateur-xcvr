@@ -671,5 +671,60 @@ void special_mode(uint16_t special_mode) {
         gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_XFMR);
         break;
       }
+
+      case 27: {
+        gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB);
+        gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
+        gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
+
+        uint64_t f_rf_orig = f_rf;
+        uint64_t f_rf_min = f_rf - 25000;
+        uint64_t f_rf_max = f_rf + 25000;
+        uint16_t step_size = 2500;
+        uint16_t num_points = (f_rf_max-f_rf_min)/step_size;
+
+        float meter_readings[num_points];
+        uint16_t i = 0;
+
+        for(f_rf=f_rf_min; f_rf < f_rf_max; f_rf += step_size) {
+          f_vfo = update_vfo(f_rf, f_bfo, f_audio);
+          set_clocks(f_bfo, f_vfo, f_rf);
+
+          Serial.print("VFO: ");
+          print_uint64_t(f_vfo);
+          Serial.print("BFO: ");
+          print_uint64_t(f_bfo);
+          Serial.println();
+
+          my_delay(50);
+
+          update_smeter();
+          meter_readings[i] = last_smeter;
+          i++;
+        }
+        // return if to original value
+        f_rf = f_rf_orig;
+        f_vfo = update_vfo(f_rf, f_bfo, f_audio);
+        set_clocks(f_bfo, f_vfo, f_rf);
+        
+        gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
+        Serial.println("Done measuring noise level");
+
+
+        // TODO - clean this up
+        for(i=0; i < num_points; i++) {
+          Serial.print("F_rf (rel)=");
+          Serial.print(((int64_t) (f_rf_min+i*step_size)) - (int64_t) f_rf_orig);
+            
+          Serial.print("\t");
+          Serial.print(meter_readings[i]);
+          Serial.print("\t");
+          for(uint16_t j=0; j < meter_readings[i]/0.001; j++)
+            Serial.print("-");
+          Serial.println();
+        }
+        
+        break;
+      }
     }
 }
