@@ -10,22 +10,42 @@
 
 <body onload="on_load()">
 
+
 <div class="table">
+
+	<form>
+		<div>
+	      <output name="watchdog" class="connected" id="watchdog">DISCONNECTED</output>
+	    </div>
+	</form>
+
   <form>
     <div>
       <input type="number" step="0.0005" pattern="[0-9]*" inputmode="decimal" id="freq_mhz" name="freq_mhz" value="7.0600" class="vfo_display">
     </div>
+
+    <div>
+      <label for="af_slider" class="label">S</label>
+      <progress id="s_meter" value="1" max="9"></progress>
+    </div>
+    
+  </form>
+
+  <form>
+    <div>
+      <label for="time" class="label">UTC </label>
+      <output name="time" class="readout" id="time">00:00</output>
+      <br>
+      <label for="lna" class="label">LNA</label>
+      <output name="lna" class="readout" id="lna">OFF</output>
+    </div>
+
     <div>
       <label for="v_bat" class="label">VDD </label>
       <output name="v_bat" class="readout" id="v_bat">0.0 V</output>
       <br>
       <label for="ant" class="label">ANT</label>
       <output name="ant" class="readout" id="ant">50 &#937;</output>
-      <!--
-      <br>
-      <label for="af_slider" class="label">S</label>
-      <progress id="s_meter" value="1" max="9"></progress>
-    -->
     </div>
   </form>
 
@@ -34,16 +54,16 @@
       <label for="af_gain" class="label">VOL</label>
       <output name="af_gain" class="readout" id="af_gain">1</output>
       <br>
-      <label for="keyer_speed" class="label">WPM</label>
-      <output name="keyer_speed" class="readout" id="keyer_speed">15</output>
+      <label for="mon" class="label">MON</label>
+      <output name="mon" class="readout" id="mon">+1</output>
     </div>
 
     <div>
-      <label for="bw" class="label">BW</label>
-      <output name="bw" class="readout" id="bw">CW</output>
+      <label for="keyer_speed" class="label">WPM</label>
+      <output name="keyer_speed" class="readout" id="keyer_speed">15</output>
       <br>
-      <label for="lna" class="label">LNA</label>
-      <output name="lna" class="readout" id="lna">OFF</output>
+      <label for="bw" class="label">BW</label>
+      <output name="bw" class="readout" id="bw">CW</output>      
     </div>
   </form>
 
@@ -83,10 +103,11 @@
     <div>
       <button type="button" class="button" onclick="press_ant()">ANT</button>
       <button type="button" class="button" onclick="press_lna()">LNA</button>
+      <button type="button" class="button" onclick="memory(1)">CQ</button>
     </div>
 
     <div>
-      <button type="button" class="button" onclick="memory(1)">CQ</button>
+      <button type="button" class="button_emoji" onclick="press_mon()">&#127897;</button>
       <button type="button" class="button" onclick="memory(2)">MEM</button>
     </div> 
   </form>

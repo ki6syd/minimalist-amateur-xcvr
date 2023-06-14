@@ -10,7 +10,7 @@ a {
 }
 
 progress {
-  width: 70px;
+  width: 80px;
 }
 
 .label {
@@ -20,8 +20,16 @@ progress {
 .vfo_display {
   color: #3389FF;
   font-family: monospace;
-  width: 150px;
-  font-size: 35px;
+  width: 160px;
+  font-size: 30px;
+  letter-spacing: 0.1em;
+}
+
+.vfo_display_invalid {
+  color: #BA3329;
+  font-family: monospace;
+  width: 160px;
+  font-size: 30px;
   letter-spacing: 0.1em;
 }
 
@@ -36,6 +44,18 @@ progress {
   color: #3389FF;
   font-family: monospace;
   font-size: 22px;
+}
+
+.connected {
+  color: #3389FF;
+  font-family: monospace;
+  font-size: 16px;
+}
+
+.connected_alert {
+  color: #BA3329;
+  font-family: monospace;
+  font-size: 16px;
 }
 
 .button {
