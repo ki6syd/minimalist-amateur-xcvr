@@ -1,11 +1,15 @@
 # minimalist-amateur-xcvr
 
+<img src="https://github.com/ki6syd/minimalist-amateur-xcvr/assets/5254153/eeb4f692-5a7f-4d44-ac96-7d128720d492" width=600>
+<img src="https://github.com/ki6syd/minimalist-amateur-xcvr/assets/5254153/ff5473f6-9672-49af-8c2d-012048149501" width=600>
+
+
 ## Overview
 
 The `MAX-3B` (**M**inimalist **A**mateur **X**cvr, **3** **B**and) is a bare-bones QRP HF radio designed with the Summits On The Air (SOTA) operator in mind. There are a few goals for the project:
 
 * Your phone's web browser is the screen! This gives a large, bright, highly-customizable screen. Send CW by typing on your screen  
-* Power from USB-PD or a 6-15V DC source. RX capability with 5V from USB
+* Power from USB-PD power bank or a 6-15V DC source. RX capability with 5V from USB
 * Integrated 49:1 unun for EFHW antenna
 * Coverage of three HF bands (20m, 30m, and 40m tested)
 * CW TX / RX, plus SSB RX for cross-mode QSOs
@@ -69,12 +73,13 @@ The `MAX-3B` (**M**inimalist **A**mateur **X**cvr, **3** **B**and) is a bare-bon
 
 ### Architecture
 
-The radio front panel and (most) hardware parameters are loaded into a file structure created inside the ESP8266 flash chip. File system changes are possible by uploading new SPIFFS data through the Arduino IDE, or by uploading/editing new files through the Ace.js web interface (accessible with: admin/password).
+The radio front panel and (most) hardware parameters are loaded into a file structure created inside the ESP8266 flash chip (SPIFFS). File system changes are possible by uploading new JSON files through the Arduino IDE, or by uploading/editing new JSON files through the Ace.js web interface (accessible with: admin/password). Any settings in the JSON file 
 
-* Hardware configuration parameters are stored inside `hardware_config.json`.
-* WiFi credentials are stored inside `credentials.json`.
-* Radio front panel layout in `index.html`.
-* Radio front panel default values and behavior in `script.js` 
+* Hardware configuration parameters are stored inside `hardware_config.json`. Any unit-to-unit variation would be captured in this file
+* Preferences and default values are stored inside `preferences.json`
+* WiFi credentials are stored inside `credentials.json`. This file is excluded from the git repository.
+* Radio front panel layout in `index.html` and `style.css`
+* Radio front panel behavior in `script.js` 
 * Pinout-specific configurations are stored in the Arduino project.
 
 Built-in firmware routines minimize test equipment required for frequency correction, crystal filter tuning, filter frequency response testing, and SSB / CW filter frequency response testing.
@@ -83,39 +88,38 @@ Built-in firmware routines minimize test equipment required for frequency correc
 
 The following features are not implemented, but should be possible with existing hardware:
 * Direct frequency entry via CW key
+* CW beacon
 * WSPR beacon
 * FT8, RTTY, and other digital modes
-* Digital modes
 * CAT interface
 * CW decoder
 * RIT
 * Split operation
 * SOTA Watch integration (when cell service is available). Jump to frequency of a recent spot for S2S, post your own spot, and respot others.
-* Adjustable sidetone level
 * Contact logging and QSO transcript logging
+* Firmware download over WiFi
 
 ## FAQ
 
 ### Does this only work with iPhones? 
 
-Though the physical device has been tested in the field with an iPhone 12 Mini, any web browser can act as the front panel for the `MAX-3B`.
+Any web browser, including a computer, can act as the front panel for the `MAX-3B`. Multiple devices can connect to `radio.local` simultaneously
 
 ### How well does this radio work?
 
-"Good enough." The receiver is based on the SA612 mixer, which has relatively poor large signal performance. (See: https://studyres.com/doc/7790754/pa1dsp---why-not-to-use-the-ne602). Robust band-pass filters are included to avoid interaction with out-of-band signals, and otherwise performance is generally acceptable in remote operating locations (such as a SOTA peak). This is a similar receiver architecture to the LNR Mountain Topper series, which is widely regarded as suitablly high performance for SOTA.
+Good enough. The receiver is based on the SA612 mixer, which has relatively poor large signal performance. (See: https://studyres.com/doc/7790754/pa1dsp---why-not-to-use-the-ne602). Robust band-pass filters are included to avoid interaction with out-of-band signals, and otherwise performance is generally acceptable in remote operating locations (such as a SOTA peak). This is a similar receiver architecture to the LNR Mountain Topper series, which is widely regarded as suitablly high performance for SOTA. Subjective RX quality was similar to a MTR-2B in a field test.
 
 The IF crystal filter is wider than most CW only radios in order to support SSB reception and minimize ringing from the crystal filter. An additional CW analog filter provides ~500Hz bandwidth when CW reception is selected.
 
+Transmit power is typically sufficient to complete a SOTA activation.
 
 ### Why use T37-2 toroids even in the 20m band sections, where Type 6 is more appropriate?
 
-Performance is fine with Type 2, and it was simpler to use a single type of toroid.
+Performance is acceptable with Type 2, and it was simpler to use a single type of toroid.
 
 ### How accurate is the freqency?
 
-TBD. 
-
-The same 26MHz crystal part number is used for both the ESP8266 and Si5351 clock generator. The Si5351 configuration code uses the crystal frequency defined in the JSON file, and the IF filter frequency is also defined here.
+The same 26MHz crystal part number is used for both the ESP8266 and Si5351 clock generator. The Si5351 configuration code uses the crystal frequency defined in the JSON file, and the IF filter frequency is also defined here.  Temperaure drift has not yet been characterized.
 
 ### Can I modify this project? Can we collaborate?
 
@@ -131,7 +135,11 @@ Please file a bug on Github or send an email to ki6syd@gmail.com
 
 ### How can I get one?
 
-Currently, the `MAX-3B` is not for sale, and I am not able to support production runs of new hardware. I have a few boards set aside for people who commit significant time to field testing or software development.
+Currently, the `MAX-3B` is not for sale, and I am not able to support regular production runs of new hardware. I have a few boards set aside for people who commit significant time to field testing or software development.
+
+### What are the steps to rework a board, assemble everything, and test it?
+
+Instructions not yet complete.
 
 ### Can I have access to the raw schematic and layout files?
 
