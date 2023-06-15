@@ -2,6 +2,8 @@
 
 <img src="https://github.com/ki6syd/minimalist-amateur-xcvr/assets/5254153/eeb4f692-5a7f-4d44-ac96-7d128720d492" width=600>
 <img src="https://github.com/ki6syd/minimalist-amateur-xcvr/assets/5254153/ff5473f6-9672-49af-8c2d-012048149501" width=600>
+<img src="https://github.com/ki6syd/minimalist-amateur-xcvr/assets/5254153/09bc22dd-788e-4c7a-852b-746e7c5a65f2" width=600>
+
 
 
 ## Overview
