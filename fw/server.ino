@@ -207,6 +207,23 @@ String handle_get_lna() {
     return String("OFF");
 }
 
+void handle_press_mon() {
+  Serial.print("[MON CHANGE] ");
+
+  mon_offset++;
+
+  if(mon_offset > 2)
+    mon_offset = -2;
+
+  Serial.println(mon_offset);
+}
+
+String handle_get_mon() {
+  if(mon_offset < 0)
+    return String(mon_offset);
+  else
+    return String("+") + String(mon_offset);
+}
 
 void handle_special(String special_setting) {
   Serial.print("[SPECIAL] ");
@@ -347,6 +364,17 @@ void init_web_server() {
   // handler for getting lna
   server.on("/get_lna", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(200, "text/plain", handle_get_lna());
+  });
+
+  // handler for lna button
+  server.on("/press_mon", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    handle_press_mon();
+    request->send(200, "text/plain", "OK");
+  });
+
+  // handler for getting monitor volume
+  server.on("/get_mon", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", handle_get_mon());
   });
 
   // handler for changing audio bandwidth

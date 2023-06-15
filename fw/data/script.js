@@ -2,7 +2,9 @@ var freq = 7.060;
 // var interval = 0;
 // var keyer_rpt_delay = 25000;    // TODO - this is currently the total time between enqueues. Change to time btwn calls.
 // var repeat_flag = 0;
-var vfo_digits = 5;
+var wd_count_max = 5;
+var wd_count = wd_count_max;
+var vfo_digits = 4;
 var keyer_mem_1 = "CQ SOTA DE KI6SYD K";
 var keyer_mem_2 = "QRZ DE KI6SYD K"
 
@@ -27,6 +29,17 @@ function set_freq() {
   get_freq();
 }
 
+// TODO: move these limits to top of file
+function freq_in_band(num) {
+  if(num >= 7 && num <= 7.3)
+    return true;
+  if(num >= 10.1 && num <= 10.15)
+    return true;
+  if(num >= 14 && num <= 14.35)
+    return true;
+  return false;
+}
+
 function get_freq() {
   var xhttp = new XMLHttpRequest();
   xhttp.onreadystatechange = function() {
@@ -34,6 +47,12 @@ function get_freq() {
       var response = parseFloat(this.responseText)/1e6;
       console.log(response);
       document.getElementById('freq_mhz').value = response.toFixed(vfo_digits);
+
+      if(freq_in_band(response))
+        document.getElementById('freq_mhz').className = 'vfo_display'
+      else
+        document.getElementById('freq_mhz').className = 'vfo_display_invalid'
+
     }
   };
   xhttp.open("GET", "get_freq", true);
@@ -42,6 +61,7 @@ function get_freq() {
 
 function next_band() {
   var cur_freq = parseFloat(document.getElementById('freq_mhz').value);
+  console.log(cur_freq)
   var round_down_freq = Math.round(cur_freq);
 
   // todo: clean this up.
@@ -62,6 +82,9 @@ function get_s_meter() {
     if (this.readyState == 4 && this.status == 200) {
       console.log(this.responseText);
       document.getElementById('s_meter').value = this.responseText;
+
+      // do heartbeat update in this function, we look at S meter often.
+      wd_count = wd_count_max;
     }
   };
   xhttp.open("GET", "get_s", true);
@@ -219,6 +242,18 @@ function get_lna() {
   xhttp.send();
 }
 
+function zeroPad(num, places) {
+  var zero = places - num.toString().length + 1;
+  return Array(+(zero > 0 && zero)).join("0") + num;
+}
+
+function get_time() {
+  const d = new Date();
+  var time = zeroPad(d.getUTCHours(), 2) + ":" + zeroPad(d.getUTCMinutes(), 2);
+  document.getElementById('time').value = time;
+}
+
+
 function special(val) {
   send_command("special", val)
 }
@@ -235,10 +270,43 @@ function memory(num) {
     send_command("enqueue", keyer_mem_2)
 }
 
+function press_mon() {
+  // send command to increase
+  send_command("press_mon", "")
+
+  // pull new lna setting
+  get_mon();
+}
+
+function get_mon() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      console.log(this.responseText);
+      document.getElementById('mon').value = this.responseText;
+    }
+  };
+  xhttp.open("GET", "get_mon", true);
+  xhttp.send();
+}
+
 function incr_decr_freq(num) {
   document.getElementById('freq_mhz').value = parseFloat(document.getElementById('freq_mhz').value) + num
 
   set_freq()
+}
+
+function watchdog_update() {
+  wd_count = wd_count - 1;
+
+  if(wd_count <= 0) {
+    document.getElementById('watchdog').value = "DISCONNECTED";
+    document.getElementById('watchdog').className = 'connected_alert'
+  }
+  else {
+    document.getElementById('watchdog').value = "CONNECTED";
+    document.getElementById('watchdog').className = 'connected'
+  }
 }
 
 // load all parameters from radio
@@ -250,8 +318,10 @@ function on_load() {
   get_bw();
   get_lna();
   get_ant();
+  get_mon();
   get_debug();
   get_freq();
+  get_time();
 }
 
 // add listener, and a function for enqueueing/deleting characters
@@ -276,6 +346,10 @@ setInterval(function() { get_speed();}, 5000);
 setInterval(function() { get_bw();}, 3000); 
 setInterval(function() { get_lna();}, 3000); 
 setInterval(function() { get_ant();}, 3000); 
-setInterval(function() { get_debug();}, 500); 
+setInterval(function() { get_mon();}, 3000); 
+setInterval(function() { get_debug();}, 500);
+setInterval(function() { get_time();}, 5000) 
+// watchdog update runs slightly slower than s-meter
+setInterval(function() {watchdog_update();}, 300)
 // don't do this repeatedly: makes frequency entry tough.
 // setInterval(function() { get_freq();}, 1000);
