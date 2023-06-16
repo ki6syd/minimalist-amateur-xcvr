@@ -17,6 +17,10 @@ progress {
   font-size: 20px;
 }
 
+.label_small {
+  font-size: 16px;
+}
+
 .vfo_display {
   color: #3389FF;
   font-family: monospace;
@@ -37,7 +41,7 @@ progress {
   color: gray;
   font-family: monospace;
   font-size: 25px;
-  width:150px;
+  width:160px;
 }
 
 .readout {
@@ -46,13 +50,13 @@ progress {
   font-size: 22px;
 }
 
-.connected {
+.readout_small {
   color: #3389FF;
   font-family: monospace;
   font-size: 16px;
 }
 
-.connected_alert {
+.readout_small_alert {
   color: #BA3329;
   font-family: monospace;
   font-size: 16px;
@@ -104,4 +108,10 @@ progress {
   padding-bottom: 5px;
   padding-right: 15px;
   display: table-cell; 
+}
+
+div.middle-div {
+  position: relative;
+  top: 50%;
+  transform: translateY(-15%);
 }

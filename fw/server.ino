@@ -163,14 +163,14 @@ void handle_press_ant() {
 
   flag_freq = true;
 
+  // TODO: create a flag for antenna changes, don't want to change at unsafe time.
   if(ant == OUTPUT_ANT_DIRECT) {
-    gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_XFMR);
     ant = OUTPUT_ANT_XFMR;
   }
   else {
     ant = OUTPUT_ANT_DIRECT;
-    gpio_write(OUTPUT_ANT_SEL, OUTPUT_ANT_DIRECT);
   }
+  gpio_write(OUTPUT_ANT_SEL, (output_state) ant);
 }
 
 String handle_get_ant() {

@@ -2,7 +2,7 @@ var freq = 7.060;
 // var interval = 0;
 // var keyer_rpt_delay = 25000;    // TODO - this is currently the total time between enqueues. Change to time btwn calls.
 // var repeat_flag = 0;
-var wd_count_max = 5;
+var wd_count_max = 10;
 var wd_count = wd_count_max;
 var vfo_digits = 4;
 var keyer_mem_1 = "CQ SOTA DE KI6SYD K";
@@ -301,11 +301,11 @@ function watchdog_update() {
 
   if(wd_count <= 0) {
     document.getElementById('watchdog').value = "DISCONNECTED";
-    document.getElementById('watchdog').className = 'connected_alert'
+    document.getElementById('watchdog').className = 'readout_small_alert'
   }
   else {
     document.getElementById('watchdog').value = "CONNECTED";
-    document.getElementById('watchdog').className = 'connected'
+    document.getElementById('watchdog').className = 'readout_small'
   }
 }
 
@@ -350,6 +350,6 @@ setInterval(function() { get_mon();}, 3000);
 setInterval(function() { get_debug();}, 500);
 setInterval(function() { get_time();}, 5000) 
 // watchdog update runs slightly slower than s-meter
-setInterval(function() {watchdog_update();}, 300)
+setInterval(function() {watchdog_update();}, 250)
 // don't do this repeatedly: makes frequency entry tough.
 // setInterval(function() { get_freq();}, 1000);
