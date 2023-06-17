@@ -195,7 +195,16 @@ void loop(void) {
       gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
 
       gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
-      set_clocks(f_bfo, f_vfo, f_rf);
+      
+      // TODO: this logic might make more sense elsewhere. Also should consider the concept of USB/LSB, dial freq, and mode rather than this mess of if statements.
+      if(rx_bw == OUTPUT_SEL_CW)
+        set_clocks(f_bfo, f_vfo, f_rf);
+      else {
+        if(f_rf < 10e6)
+          set_clocks(f_bfo, f_vfo, f_rf - f_audio);
+        else
+          set_clocks(f_bfo, f_vfo, f_rf + f_audio);
+      }
       gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
     }
     else

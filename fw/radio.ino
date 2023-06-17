@@ -196,13 +196,14 @@ void init_radio() {
   f_rf_max_band3 = load_json_config(hw_config_file, "f_rf_max_hz_band3").toFloat();
   
   // load frequencies from flash
+  // TODO: need a better way to update all the frequencies at once. Introduce concept of USB/LSB, RX mode, and dial frequency.
   uint64_t xtal = load_json_config(hw_config_file, "xtal_freq_hz").toFloat();
   f_audio = load_json_config(hw_config_file, "sidetone_pitch_hz").toFloat();
   f_if = load_json_config(hw_config_file, "if_freq_hz").toFloat();
   f_bfo = f_if + f_audio;
   // f_bfo = f_if + 2500;
 
-  // calculate clocks based on the default
+  // load default frequency from JSON, use function in server module
   handle_set_freq(load_json_config(hw_config_file, "f_rf_default_mhz"));
 
 
