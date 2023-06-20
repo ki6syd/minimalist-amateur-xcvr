@@ -296,7 +296,6 @@ void morse_letter(String letter) {
     dit();
   }
   
-
   // intercharacter delay
   my_delay(MORSE_SYMBOL_MS_WPM * MORSE_INTERCHAR_LEN / keyer_speed);
 }

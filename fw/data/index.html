@@ -10,7 +10,6 @@
 
 <body onload="on_load()">
 
-
 <div class="table">
 
 	<form>
@@ -25,7 +24,7 @@
 
   <form>
     <div>
-      <input type="number" step="0.0005" pattern="[0-9]*" inputmode="decimal" id="freq_mhz" name="freq_mhz" value="7.0600" class="vfo_display">
+      <input type="number" step="0.0005" pattern="[0-9]*" inputmode="decimal" id="freq_mhz" name="freq_mhz" value="0.0" class="vfo_display">
     </div>
 
     <div class="middle-div">
@@ -107,7 +106,7 @@
     <div>
       <button type="button" class="button" onclick="press_ant()">ANT</button>
       <button type="button" class="button" onclick="press_lna()">LNA</button>
-      <button type="button" class="button" onclick="memory(1)">CQ</button>
+      <button id="cq" type="button" class="button" onclick="memory(1)" data-long-press-delay="750">CQ</button>
     </div>
 
     <div>
@@ -132,6 +131,16 @@
 
 </div>
 
+<hr>
+
+<form>
+	<label class="label">Recent Spots from SOTAwatch</label>
+
+	<div id="spots" class="scrollable"></div>	
+</form>
+
 <script src="./script.js"></script>
+<script src="long-press-event.min.js"></script>
+
 </body>
 </html>

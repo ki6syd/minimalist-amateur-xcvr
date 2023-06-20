@@ -110,7 +110,11 @@ void handle_enqueue(String new_text) {
   Serial.print(new_text);
   Serial.println("<end>");
 
-  tx_queue += new_text;
+  // add to queue if there is no "*" (used to clear queue from UI
+  if(new_text.indexOf("*") < 0)
+    tx_queue += new_text;
+  else
+    tx_queue = "";
 }
 
 void handle_decr_speed() {
@@ -205,6 +209,10 @@ String handle_get_lna() {
     return String("ON");
   else
     return String("OFF");
+}
+
+String handle_get_queue_len() {
+  return String(tx_queue.length());
 }
 
 void handle_press_mon() {
@@ -375,6 +383,11 @@ void init_web_server() {
   // handler for getting monitor volume
   server.on("/get_mon", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(200, "text/plain", handle_get_mon());
+  });
+
+  // handler for getting queue length
+  server.on("/get_queue_len", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", handle_get_queue_len());
   });
 
   // handler for changing audio bandwidth
