@@ -726,5 +726,30 @@ void special_mode(uint16_t special_mode) {
         
         break;
       }
+
+      case 28: {
+        uint64_t f_rf_orig = f_rf;
+
+        // from: https://github.com/kholia/Easy-FT8-Beacon-v3/blob/master/Easy-FT8-Beacon-v3/Easy-FT8-Beacon-v3.ino
+        uint8_t fixed_buffer[] = {3, 1, 4, 0, 6, 5, 2, 7, 0, 7, 4, 2, 2, 2, 2, 5, 6, 4, 1, 7, 5, 7, 2, 6, 0, 6, 1, 2, 0, 5, 2, 0, 3, 6, 2, 1, 3, 1, 4, 0, 6, 5, 2, 3, 1, 7, 6, 4, 3, 2, 5, 6, 1, 5, 7, 1, 5, 4, 2, 2, 5, 6, 3, 2, 5, 7, 5, 0, 7, 7, 7, 3, 3, 1, 4, 0, 6, 5, 2};
+
+        gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
+
+        si5351.output_enable(SI5351_CLK2, 1);
+        
+        for(uint8_t i = 0; i < 79; i++)
+        {
+          f_rf = f_rf_orig + ((uint64_t) (fixed_buffer[i] * 6.25)) + 1700 - f_audio;
+          set_clocks(f_bfo, f_vfo, f_rf);
+
+          my_delay(145);
+        }
+
+        si5351.output_enable(SI5351_CLK2, 0);
+
+        gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
+        
+        break;
+      }
     }
 }
