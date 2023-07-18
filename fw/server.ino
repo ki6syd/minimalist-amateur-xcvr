@@ -244,6 +244,8 @@ void handle_special(String special_setting) {
 
 // this is mostly copied from Async FS Browser example
 // Moved to a function to keep the main file simpler
+
+// TODO: use other HTTP_xxx methods, especially so we can p
 void init_web_server() {
   /*
   ws.onEvent(onWsEvent);

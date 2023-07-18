@@ -248,7 +248,7 @@ void loop(void) {
     update_smeter();
   }
 
-  // TODO - have some better logic for this, and extract the 1.0v rationality threshold
+  // TODO - have some better logic for this, and extract the 1.0v rationality threshold into a settings file
   if (last_vbat > max_vbat || (last_vbat < min_vbat && last_vbat > 1.0)) {
     Serial.print("[SAFETY] VBat out of range ");
     Serial.println(last_vbat);

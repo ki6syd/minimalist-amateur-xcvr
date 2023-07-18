@@ -3,7 +3,6 @@ void init_wifi_mdns() {
   WiFi.persistent(false);
   
   // attempt to connect to home wifi network
-
   Serial.println("[WIFI] Attempting to connect to home network.");
   WiFi.mode(WIFI_STA);
   WiFi.begin(load_json_config(credential_file, "ssid_home"), load_json_config(credential_file, "pass_home"));

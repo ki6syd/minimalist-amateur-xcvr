@@ -730,24 +730,34 @@ void special_mode(uint16_t special_mode) {
       case 28: {
         uint64_t f_rf_orig = f_rf;
 
+       
+
         // from: https://github.com/kholia/Easy-FT8-Beacon-v3/blob/master/Easy-FT8-Beacon-v3/Easy-FT8-Beacon-v3.ino
-        uint8_t fixed_buffer[] = {3, 1, 4, 0, 6, 5, 2, 7, 0, 7, 4, 2, 2, 2, 2, 5, 6, 4, 1, 7, 5, 7, 2, 6, 0, 6, 1, 2, 0, 5, 2, 0, 3, 6, 2, 1, 3, 1, 4, 0, 6, 5, 2, 3, 1, 7, 6, 4, 3, 2, 5, 6, 1, 5, 7, 1, 5, 4, 2, 2, 5, 6, 3, 2, 5, 7, 5, 0, 7, 7, 7, 3, 3, 1, 4, 0, 6, 5, 2};
+        // https://kholia.github.io/ft8_encoder.html
+        // S KI6SYD/6QUG
+        // uint8_t fixed_buffer[] = {3,1,4,0,6,5,2,3,7,6,5,3,4,7,2,7,4,7,1,0,5,3,5,5,7,1,4,0,5,3,4,0,1,1,4,2,3,1,4,0,6,5,2,6,2,0,0,2,7,0,2,1,3,4,6,0,1,5,3,6,0,0,7,6,3,2,5,7,5,7,5,1,3,1,4,0,6,5,2};
 
-        gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
+        // testing
+        uint8_t fixed_buffer[] = {3,1,4,0,6,5,2,3,7,6,5,3,4,7,2,7,4,7,1,0,5,3,5,4,5,0,1,6,6,4,4,0,0,5,3,6,3,1,4,0,6,5,2,0,4,2,2,0,7,4,6,1,0,7,2,0,5,3,7,1,3,5,2,0,1,6,5,7,0,7,0,4,3,1,4,0,6,5,2};
 
-        si5351.output_enable(SI5351_CLK2, 1);
-        
-        for(uint8_t i = 0; i < 79; i++)
-        {
-          f_rf = f_rf_orig + ((uint64_t) (fixed_buffer[i] * 6.25)) + 1700 - f_audio;
-          set_clocks(f_bfo, f_vfo, f_rf);
+        // CQ
+        // uint8_t fixed_buffer[] = {3,1,4,0,6,5,2,0,0,0,0,0,0,0,0,1,1,1,2,6,5,3,1,0,4,0,0,3,2,0,6,4,2,4,6,0,3,1,4,0,6,5,2,4,6,6,0,5,5,1,0,6,4,6,0,4,7,1,5,5,2,7,0,1,5,1,3,4,1,6,1,7,3,1,4,0,6,5,2};
 
-          my_delay(145);
+        for(uint64_t f_tx = 14074000; f_tx < 14076001; f_tx += 250) {
+          key_on();
+          
+          for(uint8_t i = 0; i < 79; i++)
+          {
+            f_rf = f_tx + ((uint64_t) (fixed_buffer[i] * 6.25));
+            set_clocks(f_bfo, f_vfo, f_rf);
+  
+            my_delay(145);
+          }
+  
+          key_off();
+
+          my_delay(2350);
         }
-
-        si5351.output_enable(SI5351_CLK2, 0);
-
-        gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
         
         break;
       }

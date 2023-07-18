@@ -44,6 +44,7 @@ void update_relays(uint64_t f_rf) {
 }
 
 // update SI5351 clocks
+// TODO: update this so it's possible to take in smaller steps, such as FT8 at 6.25Hz tone spacing
 void set_clocks(uint64_t clk_0, uint64_t clk_1, uint64_t clk_2) {    
   Serial.println("[SI5351] Clocks updating:");
   Serial.print("\t");
