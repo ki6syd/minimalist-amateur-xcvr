@@ -49,6 +49,12 @@ function send_command(param, val) {
   console.log(param, ': ', val)
 }
 
+function http_test() {
+  var xhr = new XMLHttpRequest();
+  xhr.open("POST", "/sotamat?call=ki6syd&suffix=tce0", true);
+  xhr.send();
+}
+
 function set_freq() {
   // send an update
   freq = parseFloat(document.getElementById('freq_mhz').value);

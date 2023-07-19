@@ -7,6 +7,7 @@
 #include <Wire.h>
 #include <PCF8574.h>
 #include <si5351.h>
+#include <JTEncode.h>
 
 enum output_pin {
   OUTPUT_RX_MUTE,
@@ -68,6 +69,7 @@ const int led = LED_BUILTIN;
 
 AsyncWebServer server(80);
 Si5351 si5351;
+JTEncode jtencode;
 PCF8574 pcf8574_relays(0x20);
 PCF8574 pcf8574_audio(0x21);
 
@@ -77,7 +79,6 @@ bool dit_flag = false, dah_flag = false;
 
 mode_type tx_rx_mode = MODE_QSK_COUNTDOWN;
 int64_t qsk_counter = 0;
-
 
 
 // TODO: a few of these shouldn't be uint16_t's, figure out better enum strategy
