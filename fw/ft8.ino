@@ -35,16 +35,46 @@ void handle_sotamat(String call, String suffix) {
   uint8_t space_start = FT8_MSG_LEN - suffix.length() - call.length() - 2;
   message[space_start] = ' ';
   
-
-  uint8_t tx_buffer[255];
-  memset(tx_buffer, 0, 255);
-  jtencode.ft8_encode(message, tx_buffer);
+  memset(ft8_buffer, 0, 255);
+  jtencode.ft8_encode(message, ft8_buffer);
 
   Serial.println("[FT8] Calculated buffer: ");
 
   for(uint8_t i=0; i<255; i++) {
-    Serial.print(tx_buffer[i]);
+    Serial.print(ft8_buffer[i]);
     Serial.print(" ");
   }
   Serial.println();
+
+  // set a flag indicating there is something in the queue
+  // TODO - need to set up a queue. And, should not be doing the encoding in the handler. Left it here for proof of concept.
+  flag_ft8 = true;
+}
+
+// TODO - this is a placeholder, should accept some sort of object out of a queue
+void send_ft8() {
+  uint64_t f_rf_orig = f_rf;
+
+  // loop over frequencies
+  for(uint64_t f_tx = 14074000; f_tx < 14075001; f_tx += 250) {
+    key_on();
+
+    // send symbols
+    for(uint8_t i = 0; i < 79; i++)
+    {
+      f_rf = f_tx + ((uint64_t) (ft8_buffer[i] * 6.25));
+      set_clocks(f_bfo, f_vfo, f_rf);
+
+      my_delay(145);
+    }
+
+    key_off();
+
+    my_delay(2350);
+  }
+
+  // return to original frequency
+  f_rf = f_rf_orig;
+  f_vfo = update_vfo(f_rf, f_bfo, f_audio);
+  set_clocks(f_bfo, f_vfo, f_rf);
 }

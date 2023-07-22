@@ -74,12 +74,14 @@ PCF8574 pcf8574_relays(0x20);
 PCF8574 pcf8574_audio(0x21);
 
 // flag_freq indicates whether frequency OR rx bandwidth need to change
-bool flag_freq = false, flag_vol = true, flag_special = false;
+bool flag_freq = false, flag_vol = true, flag_special = false, flag_ft8 = false;
 bool dit_flag = false, dah_flag = false;
 
 mode_type tx_rx_mode = MODE_QSK_COUNTDOWN;
 int64_t qsk_counter = 0;
 
+// memory for ft8 buffer
+uint8_t ft8_buffer[255];
 
 // TODO: a few of these shouldn't be uint16_t's, figure out better enum strategy
 uint16_t rx_bw = OUTPUT_SEL_CW;
@@ -226,6 +228,12 @@ void loop(void) {
   if (flag_special) {
     flag_special = false;
     special_mode(special);
+  }
+
+  // todo - queues 
+  if(flag_ft8) {
+    flag_ft8 = false;
+    send_ft8();
   }
 
   // handle key inputs

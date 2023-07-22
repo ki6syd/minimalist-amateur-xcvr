@@ -55,6 +55,16 @@ function http_test() {
   xhr.send();
 }
 
+// placeholder function, test only
+function sotamat() {
+  var call = document.getElementById('call').value;
+  var suffix = document.getElementById('suffix').value;
+
+  var xhr = new XMLHttpRequest();
+  xhr.open("POST", "/sotamat?call="+call+"&suffix="+suffix, true);
+  xhr.send();
+}
+
 function set_freq() {
   // send an update
   freq = parseFloat(document.getElementById('freq_mhz').value);
