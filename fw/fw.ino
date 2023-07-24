@@ -8,6 +8,7 @@
 #include <PCF8574.h>
 #include <si5351.h>
 #include <JTEncode.h>
+#include <TimeLib.h>
 
 enum output_pin {
   OUTPUT_RX_MUTE,
@@ -73,15 +74,31 @@ JTEncode jtencode;
 PCF8574 pcf8574_relays(0x20);
 PCF8574 pcf8574_audio(0x21);
 
+
+// ------------------------------ FT8 variables ------------------------------
+uint8_t ft8_buffer[255];
+bool ft8_busy = false;
+uint64_t ft8_freq = 14070000;
+
+
+// ------------------------------ time variables ------------------------------
+uint64_t time_offset = 0;
+
+
+
 // flag_freq indicates whether frequency OR rx bandwidth need to change
 bool flag_freq = false, flag_vol = true, flag_special = false, flag_ft8 = false;
 bool dit_flag = false, dah_flag = false;
 
+
+
 mode_type tx_rx_mode = MODE_QSK_COUNTDOWN;
 int64_t qsk_counter = 0;
 
-// memory for ft8 buffer
-uint8_t ft8_buffer[255];
+
+
+
+
 
 // TODO: a few of these shouldn't be uint16_t's, figure out better enum strategy
 uint16_t rx_bw = OUTPUT_SEL_CW;
@@ -232,8 +249,8 @@ void loop(void) {
 
   // todo - queues 
   if(flag_ft8) {
-    flag_ft8 = false;
     send_ft8();
+    
   }
 
   // handle key inputs
@@ -246,7 +263,7 @@ void loop(void) {
   handle_keyer_queue();
 
   // decrement QSK timer if needed
-  handle_qsk_timer();
+  update_qsk_timer();
 
 
   // do analog read once per loop. vbat during tx, smeter during rx. 

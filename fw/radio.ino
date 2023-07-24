@@ -144,7 +144,7 @@ void key_off() {
 }
 
 
-void handle_qsk_timer() {
+void update_qsk_timer() {
   if(tx_rx_mode == MODE_QSK_COUNTDOWN && qsk_counter > 0) {
     qsk_counter -= 10;
     my_delay(10);

@@ -38,7 +38,7 @@ void init_file_system() {
 // this is mostly copied from Async FS Browser example
 // Moved to a function to keep the main file simpler
 
-// TODO: use other HTTP_xxx methods, especially so we can p
+// TODO: use other HTTP_xxx methods
 void init_web_server() {
   /*
   ws.onEvent(onWsEvent);
@@ -53,13 +53,33 @@ void init_web_server() {
   // todo: put config password into JSON
   server.addHandler(new SPIFFSEditor(load_json_config(credential_file, "user_settings"), load_json_config(credential_file, "pass_settings")));
 
-  // heap size check
-  server.on("/heap", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", String(ESP.getFreeHeap()));
+  // handlers for FT8 messages
+  server.on("/ft8", HTTP_POST, [](AsyncWebServerRequest *request){
+    handle_ft8(HTTP_POST, request);
   });
+
+
+  // handlers for time
+  server.on("/time", HTTP_PUT, [](AsyncWebServerRequest *request){
+    handle_time(HTTP_PUT, request);
+  });
+  // handlers for time
+  server.on("/time", HTTP_GET, [](AsyncWebServerRequest *request){
+    handle_time(HTTP_GET, request);
+  });
+
+
+
+
+
+
+
+  
 
   // handler for sotamat message
   server.on("/sotamat", HTTP_POST, [](AsyncWebServerRequest *request){
+
+    print_request_details(request);
     
     int params = request->params();
     if(params == 2) {
@@ -233,29 +253,7 @@ void init_web_server() {
       Serial.printf("UNKNOWN");
     Serial.printf(" http://%s%s\n", request->host().c_str(), request->url().c_str());
 
-    if(request->contentLength()){
-      Serial.printf("_CONTENT_TYPE: %s\n", request->contentType().c_str());
-      Serial.printf("_CONTENT_LENGTH: %u\n", request->contentLength());
-    }
-
-    int headers = request->headers();
-    int i;
-    for(i=0;i<headers;i++){
-      AsyncWebHeader* h = request->getHeader(i);
-      Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
-    }
-
-    int params = request->params();
-    for(i=0;i<params;i++){
-      AsyncWebParameter* p = request->getParam(i);
-      if(p->isFile()){
-        Serial.printf("_FILE[%s]: %s, size: %u\n", p->name().c_str(), p->value().c_str(), p->size());
-      } else if(p->isPost()){
-        Serial.printf("_POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
-      } else {
-        Serial.printf("_GET[%s]: %s\n", p->name().c_str(), p->value().c_str());
-      }
-    }
+    print_request_details(request);
 
     request->send(404);
   });
@@ -274,4 +272,31 @@ void init_web_server() {
       Serial.printf("BodyEnd: %u\n", total);
   });
   server.begin();
+}
+
+
+void print_request_details(AsyncWebServerRequest *request) {
+  if(request->contentLength()){
+    Serial.printf("_CONTENT_TYPE: %s\n", request->contentType().c_str());
+    Serial.printf("_CONTENT_LENGTH: %u\n", request->contentLength());
+  }
+
+  int headers = request->headers();
+  int i;
+  for(i=0;i<headers;i++){
+    AsyncWebHeader* h = request->getHeader(i);
+    Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
+  }
+
+  int params = request->params();
+  for(i=0;i<params;i++){
+    AsyncWebParameter* p = request->getParam(i);
+    if(p->isFile()){
+      Serial.printf("_FILE[%s]: %s, size: %u\n", p->name().c_str(), p->value().c_str(), p->size());
+    } else if(p->isPost()){
+      Serial.printf("_POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
+    } else {
+      Serial.printf("_GET[%s]: %s\n", p->name().c_str(), p->value().c_str());
+    }
+  }
 }

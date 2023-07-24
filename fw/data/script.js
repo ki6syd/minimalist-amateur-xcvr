@@ -14,6 +14,7 @@ var rpt_timer = rpt_dly
 var sota_url_1 = "https://api2.sota.org.uk/api/spots/";
 var sota_url_2 = "/all/"
 var sotlas_url = "https://sotl.as/summits/"
+var qrz_url = "https://www.qrz.com/db/"
 var num_spots = 20;
 var spot_fetch_errors = 0;
 
@@ -51,18 +52,43 @@ function send_command(param, val) {
 
 function http_test() {
   var xhr = new XMLHttpRequest();
-  xhr.open("POST", "/sotamat?call=ki6syd&suffix=tce0", true);
+  xhr.open("POST", "/ft8?messageText=S%20ki6syd%2Ftce0", true);
+  xhr.send();
+}
+
+function set_epoch_ms() {
+  const time_now = Date.now();
+
+  var xhr = new XMLHttpRequest();
+  xhr.open("PUT", "/time?timeNow="+time_now)
   xhr.send();
 }
 
 // placeholder function, test only
 function sotamat() {
+  var sotamatString = document.getElementById('sotamatString').value;
+  var timeNow = Date.now();
+  var rf = 14074000;
+  var af = 1500;
+
+  var tmp = '/ft8' + 
+            '?messageText=' + sotamatString + 
+            '&timeNow=' + timeNow +
+            '&rfFrequency' + rf +
+            '&audioFrequency' + af;
+
+  var xhr = new XMLHttpRequest();
+  xhr.open("POST", tmp, true);
+  xhr.send();
+
+  /*
   var call = document.getElementById('call').value;
   var suffix = document.getElementById('suffix').value;
 
   var xhr = new XMLHttpRequest();
   xhr.open("POST", "/sotamat?call="+call+"&suffix="+suffix, true);
   xhr.send();
+  */
 }
 
 function set_freq() {
@@ -98,11 +124,18 @@ function freq_in_band(num) {
 }
 
 function get_freq() {
+  console.log(document.activeElement.id);
+
+  // don't update if the user is typing in this text box
+  if(document.activeElement.id == 'freq_mhz')
+    return;
+
   var xhttp = new XMLHttpRequest();
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       var response = parseFloat(this.responseText)/1e6;
-      document.getElementById('freq_mhz').value = response.toFixed(vfo_digits);
+      response = response.toFixed(vfo_digits)
+      document.getElementById('freq_mhz').value = response
 
       if(freq_in_band(response))
         document.getElementById('freq_mhz').className = 'vfo_display'
@@ -161,7 +194,8 @@ function get_debug() {
   var xhttp = new XMLHttpRequest();
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
-      document.getElementById('dbg').value = this.responseText;
+      // document.getElementById('dbg').value = this.responseText;
+      document.getElementById('dbg').value = document.activeElement.id;
     }
   };
   xhttp.open("GET", "get_debug", true);
@@ -384,6 +418,10 @@ function watchdog_update() {
 }
 
 function json_spots_to_table(num_spots, col_names, table_id) {
+  
+  // delete me!! TODO
+  set_epoch_ms();
+
   var url_string = sota_url_1 + num_spots + sota_url_2;
 
   var container = document.getElementById(table_id);
@@ -421,18 +459,24 @@ function json_spots_to_table(num_spots, col_names, table_id) {
 
         // get activator
         td = document.createElement("td");
-        td.innerText = item.activatorCallsign;
+        var a = document.createElement("a")
+        var a_text = document.createTextNode(item.activatorCallsign);
+        var href_string = qrz_url + item.activatorCallsign;
+        a.setAttribute('href', href_string);
+        a.setAttribute('target', "_blank")
+        a.setAttribute('rel', "noreferrer")
+        a.appendChild(a_text)
+        td.appendChild(a)
         tr.appendChild(td);
 
         // get frequency
         td = document.createElement("td");
-        var a = document.createElement("a")
-        var a_text = document.createTextNode(item.frequency);
-        var href_string = "javascript:jump_to_spot(" + item.frequency + ", \"" + item.mode + "\")";
+        a = document.createElement("a")
+        a_text = document.createTextNode(item.frequency);
+        href_string = "javascript:jump_to_spot(" + item.frequency + ", \"" + item.mode + "\")";
         a.setAttribute('href', href_string);
         a.appendChild(a_text)
         td.appendChild(a)
-        // td.innerText = document.createElement("a")item.frequency;
         tr.appendChild(td);
 
         // get mode
@@ -547,6 +591,7 @@ setInterval(function() {watchdog_update();}, 300)
 // repeat logic runs every 500ms
 setInterval(function() {repeat_update();}, 500)
 // don't do this repeatedly: makes frequency entry tough.
-// setInterval(function() { get_freq();}, 1000);
+setInterval(function() { get_freq();}, 1000);
 // pull new SOTA spots every 30 seconds
-setInterval(function() {json_spots_to_table(num_spots, col_names, "spots");}, 30000)
+setInterval(function() {json_spots_to_table(num_spots, col_names, "spots");}, 10000)
+//setInterval(function() {json_spots_to_table(num_spots, col_names, "spots");}, 30000)

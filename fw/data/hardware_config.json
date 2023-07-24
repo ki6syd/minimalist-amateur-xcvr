@@ -4,7 +4,7 @@
 	"wifi_channel": "11",
 	"sidetone_level": "1",
 	"sidetone_pitch_hz": "700",
-	"ant_default": "OUTPUT_ANT_XFMR",
+	"ant_default": "OUTPUT_ANT_DIRECT",
 	"lna_default": "0",
 	"xtal_freq_hz": "26000083",
 	"if_freq_hz": "10001500",
