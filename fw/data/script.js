@@ -64,15 +64,14 @@ function set_epoch_ms() {
   xhr.send();
 }
 
-// placeholder function, test only
-function sotamat() {
-  var sotamatString = document.getElementById('sotamatString').value;
+function send_ft8() {
+  var ft8String = document.getElementById('ft8String').value;
   var timeNow = Date.now();
   var rf = 14074000;
   var af = 1500;
 
   var tmp = '/ft8' + 
-            '?messageText=' + sotamatString + 
+            '?messageText=' + ft8String + 
             '&timeNow=' + timeNow +
             '&rfFrequency' + rf +
             '&audioFrequency' + af;
@@ -80,15 +79,12 @@ function sotamat() {
   var xhr = new XMLHttpRequest();
   xhr.open("POST", tmp, true);
   xhr.send();
+}
 
-  /*
-  var call = document.getElementById('call').value;
-  var suffix = document.getElementById('suffix').value;
-
+function stop_ft8() {
   var xhr = new XMLHttpRequest();
-  xhr.open("POST", "/sotamat?call="+call+"&suffix="+suffix, true);
+  xhr.open("DELETE", '/ft8', true);
   xhr.send();
-  */
 }
 
 function set_freq() {

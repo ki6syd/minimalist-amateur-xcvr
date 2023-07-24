@@ -57,6 +57,12 @@ void init_web_server() {
   server.on("/ft8", HTTP_POST, [](AsyncWebServerRequest *request){
     handle_ft8(HTTP_POST, request);
   });
+  server.on("/ft8", HTTP_GET, [](AsyncWebServerRequest *request){
+    handle_ft8(HTTP_GET, request);
+  });
+  server.on("/ft8", HTTP_DELETE, [](AsyncWebServerRequest *request){
+    handle_ft8(HTTP_DELETE, request);
+  });
 
 
   // handlers for time
@@ -76,21 +82,6 @@ void init_web_server() {
 
   
 
-  // handler for sotamat message
-  server.on("/sotamat", HTTP_POST, [](AsyncWebServerRequest *request){
-
-    print_request_details(request);
-    
-    int params = request->params();
-    if(params == 2) {
-      handle_sotamat(request->getParam("call")->value(), request->getParam("suffix")->value());
-    }
-    else {
-      Serial.println("[SERVER] Did not understand sotamat message, wrong number of parameters");
-    }
-    
-    request->send(200, "text/plain", "OK");
-  });
 
   // handler for frequency setting
   server.on("/set_freq", HTTP_GET, [] (AsyncWebServerRequest *request) {

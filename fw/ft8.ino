@@ -82,11 +82,24 @@ void handle_ft8(WebRequestMethodComposite request_type, AsyncWebServerRequest *r
 
     request->send(200, "text/plain", "OK");
   }
+  else if(request_type == HTTP_GET) {
+    
+  }
+  if(request_type == HTTP_DELETE) {
+    if(!ft8_busy)
+      request->send(404, "text/plain", "Not sending FT8.");
+
+    // FT8 sending loop watches this variable. Will abort when it sees ft8_busy==false
+    ft8_busy = false;
+    request->send(204, "text/plain", "Stopped sending FT8.");
+  }
   
   
 }
 
-
+/*
+ * Delete me! Part of older interface
+ * 
 void handle_sotamat(String call, String suffix) {
 
   Serial.print("[FT8] Call:");
@@ -129,6 +142,7 @@ void handle_sotamat(String call, String suffix) {
   // TODO - need to set up a queue. And, should not be doing the encoding in the handler. Left it here for proof of concept.
   flag_ft8 = true;
 }
+*/
 
 // function returns when time rolls past the first 15 second interval since calling
 void wait_ft8_window() {
@@ -165,10 +179,14 @@ void send_ft8() {
   key_on();
   for(uint8_t i = 0; i < 79; i++)
   {
+    // abort sending if a callback has said that FT8 is no longer busy
+    if(!ft8_busy)
+      continue;
+    
     f_rf = ft8_freq + ((uint64_t) (ft8_buffer[i] * 6.25));
     set_clocks(f_bfo, f_vfo, f_rf);
 
-    my_delay(145);
+    my_delay(145);    
   }
   key_off();
 
