@@ -215,6 +215,15 @@ void loop(void) {
       gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
 
       gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
+
+      // update antenna connection
+      gpio_write(OUTPUT_ANT_SEL, (output_state) ant);
+
+      // set LNA hardware
+      if(lna_state)
+        gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
+      else
+        gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
       
       // TODO: this logic might make more sense elsewhere. Also should consider the concept of USB/LSB, dial freq, and mode rather than this mess of if statements.
       if(rx_bw == OUTPUT_SEL_CW)
@@ -260,7 +269,7 @@ void loop(void) {
     dah();
 
   // send a letter from the queue if there is anything
-  handle_keyer_queue();
+  update_keyer_queue();
 
   // decrement QSK timer if needed
   update_qsk_timer();

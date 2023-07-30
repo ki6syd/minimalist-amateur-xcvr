@@ -1,4 +1,23 @@
+void handle_debug(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) {
+  if(request_type == HTTP_POST) {
+    // look for required parameters in the message
+    if(!request->hasParam("command")) {
+      Serial.println("[DEBUG] command not sent");
+      request->send(400, "text/plain", "command not sent");
+      return;
+    }
 
+    special = request->getParam("command")->value().toInt();
+
+    flag_special = true;
+    request->send(200, "text/plain", "OK");
+  }
+  else if(request_type == HTTP_GET) {
+    request->send(200, "text/plain", String (0));
+  }
+}
+
+  
 void special_mode(uint16_t special_mode) {
   switch(special) {
       case 1:

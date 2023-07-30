@@ -1,4 +1,4 @@
-#define SERVER_DEBUG
+  #define SERVER_DEBUG
 
 
 // copied directly from Async FS Browser examples
@@ -55,13 +55,29 @@ void init_web_server() {
 
   // handlers for FT8 messages
   server.on("/ft8", HTTP_POST, [](AsyncWebServerRequest *request){
+    print_request_details(request);
     handle_ft8(HTTP_POST, request);
-  });
-  server.on("/ft8", HTTP_GET, [](AsyncWebServerRequest *request){
-    handle_ft8(HTTP_GET, request);
   });
   server.on("/ft8", HTTP_DELETE, [](AsyncWebServerRequest *request){
     handle_ft8(HTTP_DELETE, request);
+  });
+
+
+  // handlers for CW messages
+  server.on("/cw", HTTP_POST, [](AsyncWebServerRequest *request){
+    handle_cw(HTTP_POST, request);
+  });
+  server.on("/cw", HTTP_DELETE, [](AsyncWebServerRequest *request){
+    handle_cw(HTTP_DELETE, request);
+  });
+  
+
+  // handler for digital mode messages
+  server.on("/queue", HTTP_GET, [](AsyncWebServerRequest *request){
+    handle_queue(HTTP_GET, request);
+  });
+  server.on("/queue", HTTP_DELETE, [](AsyncWebServerRequest *request){
+    handle_queue(HTTP_DELETE, request);
   });
 
 
@@ -69,157 +85,87 @@ void init_web_server() {
   server.on("/time", HTTP_PUT, [](AsyncWebServerRequest *request){
     handle_time(HTTP_PUT, request);
   });
-  // handlers for time
   server.on("/time", HTTP_GET, [](AsyncWebServerRequest *request){
     handle_time(HTTP_GET, request);
   });
 
 
-
-
-
-
-
-  
-
-
-  // handler for frequency setting
-  server.on("/set_freq", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    String input_message;
-    if (request->hasParam("value"))
-      input_message = request->getParam("value")->value();
-    else
-      input_message = "No message sent";
-    
-    handle_set_freq(input_message);
-    request->send(200, "text/plain", "OK");
-  });  
-
-  // handler for frequency getting
-  server.on("/get_freq", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", handle_get_freq());
+  // handlers for frequency
+  server.on("/frequency", HTTP_PUT, [](AsyncWebServerRequest *request){
+    handle_frequency(HTTP_PUT, request);
+  });
+  server.on("/frequency", HTTP_GET, [](AsyncWebServerRequest *request){
+    handle_frequency(HTTP_GET, request);
   });
 
-  // handler for S-Meter request
-  server.on("/get_s", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", handle_get_smeter());
+  // handlers for rx bandwidth
+  server.on("/rxBandwidth", HTTP_PUT, [](AsyncWebServerRequest *request){
+    handle_rx_bandwidth(HTTP_PUT, request);
+  });
+  server.on("/rxBandwidth", HTTP_GET, [](AsyncWebServerRequest *request){
+    handle_rx_bandwidth(HTTP_GET, request);
   });
 
-  // handler for battery voltage request
-  server.on("/get_vbat", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", handle_get_vbat());
+  server.on("/sMeter", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", String(last_smeter));
   });
 
-  // handler for dbg1
-  server.on("/get_debug", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", handle_debug());
+  server.on("/inputVoltage", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", String(last_vbat));
   });
 
-  // handler for increasing volume
-  server.on("/incr_vol", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    handle_incr_volume();
-    request->send(200, "text/plain", "OK");
+  server.on("/debug", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", String(0));
   });
 
-  // handler for decreasing volume
-  server.on("/decr_vol", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    handle_decr_volume();
-    request->send(200, "text/plain", "OK");
+  // handlers for volume
+  server.on("/volume", HTTP_PUT, [](AsyncWebServerRequest *request){
+    handle_volume(HTTP_PUT, request);
+  });
+  server.on("/volume", HTTP_GET, [](AsyncWebServerRequest *request){
+    handle_volume(HTTP_GET, request);
   });
 
-  // handler for getting volume
-  server.on("/get_vol", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", handle_get_volume());
+  // handlers for volume
+  server.on("/sidetone", HTTP_PUT, [](AsyncWebServerRequest *request){
+    handle_sidetone(HTTP_PUT, request);
+  });
+  server.on("/sidetone", HTTP_GET, [](AsyncWebServerRequest *request){
+    handle_sidetone(HTTP_GET, request);
   });
 
-  // handler for adding text to queue
-  server.on("/enqueue", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    String input_message;
-    if (request->hasParam("value"))
-      input_message = request->getParam("value")->value();
-    else
-      input_message = "No message sent";
-
-    handle_enqueue(input_message);
-    request->send(200, "text/plain", "OK");
+  // handlers for cw speed
+  server.on("/cwSpeed", HTTP_PUT, [](AsyncWebServerRequest *request){
+    handle_cw_speed(HTTP_PUT, request);
+  });
+  server.on("/cwSpeed", HTTP_GET, [](AsyncWebServerRequest *request){
+    handle_cw_speed(HTTP_GET, request);
   });
 
-  // handler for increasing speed
-  server.on("/incr_speed", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    handle_incr_speed();
-    request->send(200, "text/plain", "OK");
+  // handlers for antenna
+  server.on("/antenna", HTTP_PUT, [](AsyncWebServerRequest *request){
+    handle_antenna(HTTP_PUT, request);
+  });
+  server.on("/antenna", HTTP_GET, [](AsyncWebServerRequest *request){
+    handle_antenna(HTTP_GET, request);
   });
 
-  // handler for decreasing speed
-  server.on("/decr_speed", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    handle_decr_speed();
-    request->send(200, "text/plain", "OK");
+
+  // handlers for antenna
+  server.on("/lna", HTTP_PUT, [](AsyncWebServerRequest *request){
+    handle_lna(HTTP_PUT, request);
+  });
+  server.on("/lna", HTTP_GET, [](AsyncWebServerRequest *request){
+    handle_lna(HTTP_GET, request);
   });
 
-  // handler for getting speed
-  server.on("/get_speed", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", handle_get_speed());
+
+  // handlers for special commands
+  server.on("/debug", HTTP_PUT, [](AsyncWebServerRequest *request){
+    handle_debug(HTTP_PUT, request);
   });
-
-  // handler for bandwidth button
-  server.on("/press_bw", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    handle_press_bw();
-    request->send(200, "text/plain", "OK");
-  });
-
-  // handler for getting speed
-  server.on("/get_bw", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", handle_get_bw());
-  });
-
-  // handler for antenna button
-  server.on("/press_ant", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    handle_press_ant();
-    request->send(200, "text/plain", "OK");
-  });
-
-  // handler for getting speed
-  server.on("/get_ant", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", handle_get_ant());
-  });
-
-  // handler for lna button
-  server.on("/press_lna", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    handle_press_lna();
-    request->send(200, "text/plain", "OK");
-  });
-
-  // handler for getting lna
-  server.on("/get_lna", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", handle_get_lna());
-  });
-
-  // handler for lna button
-  server.on("/press_mon", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    handle_press_mon();
-    request->send(200, "text/plain", "OK");
-  });
-
-  // handler for getting monitor volume
-  server.on("/get_mon", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", handle_get_mon());
-  });
-
-  // handler for getting queue length
-  server.on("/get_queue_len", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", handle_get_queue_len());
-  });
-
-  // handler for changing audio bandwidth
-  server.on("/special", HTTP_GET, [] (AsyncWebServerRequest *request) {
-    String input_message;
-    if (request->hasParam("value"))
-      input_message = request->getParam("value")->value();
-    else
-      input_message = "No message sent";
-
-    handle_special(input_message);
-    request->send(200, "text/plain", "OK");
+  server.on("/debug", HTTP_GET, [](AsyncWebServerRequest *request){
+    handle_debug(HTTP_GET, request);
   });
 
   server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");

@@ -24,12 +24,12 @@
 
   <form>
     <div>
-      <input type="number" step="0.0005" pattern="[0-9]*" inputmode="decimal" id="freq_mhz" name="freq_mhz" value="0.0" class="vfo_display">
+      <input type="number" step="0.0005" pattern="[0-9]*" inputmode="decimal" id="freq_mhz" name="freq_mhz" value="7.06" class="vfo_display">
     </div>
 
-    <div class="middle-div">
-      <label for="af_slider" class="label">S</label>
+    <div class="middle-div">      
       <progress id="s_meter" value="1" max="9"></progress>
+      <label for="af_slider" class="label">	&#128246;</label>
     </div>
     
   </form>
@@ -48,7 +48,7 @@
       <output name="v_bat" class="readout" id="v_bat">0.0 V</output>
       <br>
       <label for="ant" class="label">ANT</label>
-      <output name="ant" class="readout" id="ant">50 &#937;</output>
+      <output name="ant" class="readout" id="ant">DIRECT</output>
     </div>
   </form>
 
@@ -73,15 +73,15 @@
 
   <form>
     <div>
-      <button type="button" class="button" onclick="incr_decr_freq(-.002)">&darr;&darr;</button>
-      <button type="button" class="button" onclick="incr_decr_freq(-.0005)">&darr;</button>
-      <button type="button" class="button" onclick="incr_decr_freq(.0005)">&uarr;</button>
-      <button type="button" class="button" onclick="incr_decr_freq(.002)">&uarr;&uarr;</button>
+      <button type="button" class="button" onclick="adj_freq(-.002)">&darr;&darr;</button>
+      <button type="button" class="button" onclick="adj_freq(-.0005)">&darr;</button>
+      <button type="button" class="button" onclick="adj_freq(.0005)">&uarr;</button>
+      <button type="button" class="button" onclick="adj_freq(.002)">&uarr;&uarr;</button>
     </div>
 
     <div>
-      <button type="button" class="button_emoji" onclick="decr_vol()">&#128264;</button>
-      <button type="button" class="button_emoji" onclick="incr_vol()">&#128266;</button>
+      <button type="button" class="button_emoji" onclick="adj_vol(-1)">&#128264;</button>
+      <button type="button" class="button_emoji" onclick="adj_vol(1)">&#128266;</button>
       
     </div>
     
@@ -96,8 +96,8 @@
     </div>
 
     <div>
-      <button type="button" class="button_emoji" onclick="decr_speed()">&#128034;</button>
-      <button type="button" class="button_emoji" onclick="incr_speed()">&#128007;</button>
+      <button type="button" class="button_emoji" onclick="adj_speed(-1)">&#128034;</button>
+      <button type="button" class="button_emoji" onclick="adj_speed(1)">&#128007;</button>
     </div>
 
   </form>
@@ -106,12 +106,12 @@
     <div>
       <button type="button" class="button" onclick="press_ant()">ANT</button>
       <button type="button" class="button" onclick="press_lna()">LNA</button>
-      <button id="cq" type="button" class="button" onclick="memory(1)" data-long-press-delay="750">CQ</button>
+      <button id="cq" type="button" class="button" onclick="memory(0)" data-long-press-delay="750">CQ</button>
     </div>
 
     <div>
       <button type="button" class="button_emoji" onclick="press_mon()">	&#128066;</button>
-      <button type="button" class="button_emoji" onclick="memory(2)">&#129504;</button>
+      <button type="button" class="button_emoji" onclick="memory(1)">&#129504;</button>
     </div> 
   </form>
 
@@ -126,6 +126,7 @@
       <a href="/edit">SETUP</a>
       <a href="debug.html">DBG</a>
       <a href="ft8.html">FT8</a>
+      <a href="sotamat://">SOTAMAT</a>
     </div>
   </form>
 

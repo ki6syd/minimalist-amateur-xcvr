@@ -1,6 +1,79 @@
 #define ADC_SCALING_VBAT      0.0349
 #define ADC_SCALING_AUDIO     0.00976
 
+
+void handle_antenna(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) {
+  if(request_type == HTTP_PUT) {
+    // look for required parameters in the message
+    if(!request->hasParam("antennaPath")) {
+      Serial.println("[IO] antennaPath not received");
+      request->send(400, "text/plain", "antennaPath not found");
+      return;
+    }
+
+    String ant_path = request->getParam("antennaPath")->value();
+
+    if(ant_path == "DIRECT")
+      ant = OUTPUT_ANT_DIRECT;
+    else if(ant_path = "EFHW")
+      ant = OUTPUT_ANT_XFMR;
+    else {
+      request->send(400, "text/plain", "Requested antenna pathway not possible");
+      return;
+    }
+
+    // hardware update will happen through main loop
+    flag_freq = true;
+    request->send(200, "text/plain", "OK");
+  }
+  else if(request_type == HTTP_GET) {
+    String result;
+    if(ant == OUTPUT_ANT_DIRECT)
+      result = "DIRECT";
+    else if(ant == OUTPUT_ANT_XFMR)
+      result = "EFHW";
+    
+    request->send(200, "text/plain", result);
+  }
+}
+
+
+void handle_lna(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) {
+  if(request_type == HTTP_PUT) {
+    // look for required parameters in the message
+    if(!request->hasParam("lnaState")) {
+      Serial.println("[IO] lnaState not received");
+      request->send(400, "text/plain", "lnaState not found");
+      return;
+    }
+
+    String lna = request->getParam("lnaState")->value();
+
+    if(lna == "ON")
+      lna_state = true;
+    else if(lna = "OFF")
+      lna_state = false;
+    else {
+      request->send(400, "text/plain", "Requested LNA state not possible");
+      return;
+    }
+
+    // hardware update will happen through main loop
+    flag_freq = true;
+    request->send(200, "text/plain", "OK");
+  }
+  else if(request_type == HTTP_GET) {
+    String lna = "";
+    if(lna_state)
+      lna = "ON";
+    else
+      lna = "OFF";
+    
+    request->send(200, "text/plain", lna);
+  }
+}
+
+
 // TODO: get rid of hard-coded pin numbering below
 
 void init_gpio() {  

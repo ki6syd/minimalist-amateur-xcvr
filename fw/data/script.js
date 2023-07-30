@@ -3,13 +3,13 @@ var wd_count_max = 15;
 var wd_count = wd_count_max;
 var queue_len = 0;
 var vfo_digits = 4;
-var keyer_mem_1 = "CQ SOTA DE KI6SYD K";
-var keyer_mem_2 = "QRZ DE KI6SYD K"
-var cancel_char = "*"
-var rpt_flag = false
-var rpt_dly = 10000
-var rpt_timer = rpt_dly
-
+var keyer_mem = ["CQ SOTA DE KI6SYD K", "QRZ DE KI6SYD"]
+var rpt_flag = false;
+var rpt_dly = 10000;
+var rpt_timer = rpt_dly;
+var rpt_count_step_ms = 500;
+var mon_min = -2;
+var mon_max = 2;
 
 var sota_url_1 = "https://api2.sota.org.uk/api/spots/";
 var sota_url_2 = "/all/"
@@ -20,92 +20,9 @@ var spot_fetch_errors = 0;
 
 col_names = ['UTC', 'Call', 'Freq', 'Mode', 'Summit']
 
-
-function GET(yourUrl){
-    var Httpreq = new XMLHttpRequest(); // a new request
-    Httpreq.open("GET",yourUrl,false);
-    Httpreq.send(null);
-    // console.log(Httpreq.responseText);
-    return Httpreq.responseText;          
-}
-
-
 function zeroPad(num, places) {
   var zero = places - num.toString().length + 1;
   return Array(+(zero > 0 && zero)).join("0") + num;
-}
-
-function get_time() {
-  const d = new Date();
-  var time = zeroPad(d.getUTCHours(), 2) + ":" + zeroPad(d.getUTCMinutes(), 2);
-  document.getElementById('time').value = time;
-}
-
-
-function send_command(param, val) {
-  var xhr = new XMLHttpRequest();
-  xhr.open("GET", "/"+param+"?value="+val, true);
-  xhr.send();
-
-  console.log(param, ': ', val)
-}
-
-function http_test() {
-  var xhr = new XMLHttpRequest();
-  xhr.open("POST", "/ft8?messageText=S%20ki6syd%2Ftce0", true);
-  xhr.send();
-}
-
-function set_epoch_ms() {
-  const time_now = Date.now();
-
-  var xhr = new XMLHttpRequest();
-  xhr.open("PUT", "/time?timeNow="+time_now)
-  xhr.send();
-}
-
-function send_ft8() {
-  var ft8String = document.getElementById('ft8String').value;
-  var timeNow = Date.now();
-  var rf = 14074000;
-  var af = 1500;
-
-  var tmp = '/ft8' + 
-            '?messageText=' + ft8String + 
-            '&timeNow=' + timeNow +
-            '&rfFrequency' + rf +
-            '&audioFrequency' + af;
-
-  var xhr = new XMLHttpRequest();
-  xhr.open("POST", tmp, true);
-  xhr.send();
-}
-
-function stop_ft8() {
-  var xhr = new XMLHttpRequest();
-  xhr.open("DELETE", '/ft8', true);
-  xhr.send();
-}
-
-function set_freq() {
-  // send an update
-  freq = parseFloat(document.getElementById('freq_mhz').value);
-  // document.getElementById('freq_mhz').value = freq.toFixed(vfo_digits);
-  send_command("set_freq", freq)
-
-  // request freq back as a way to update
-  get_freq();
-}
-
-// convenient way for sotawatch links to set frequency
-function jump_to_spot(freq, mode) {
-  document.getElementById('freq_mhz').value = freq.toFixed(vfo_digits);
-  set_freq()
-
-  // TODO - fix this hack.
-  var v = document.getElementById('bw').value
-  if(mode.toUpperCase() != document.getElementById('bw').value.toUpperCase())
-    press_bw();
 }
 
 // TODO: move these limits to top of file
@@ -119,15 +36,91 @@ function freq_in_band(num) {
   return false;
 }
 
-function get_freq() {
-  console.log(document.activeElement.id);
+function get_utc_time() {
+  const d = new Date();
+  var time = zeroPad(d.getUTCHours(), 2) + ":" + zeroPad(d.getUTCMinutes(), 2);
+  document.getElementById('time').value = time;
+}
 
+function http_request(type, path, keys, values) {
+  // form the string to send
+  var str = "/" + path + "?";
+  for(var i = 0; i < keys.length; i++) {
+    str += keys[i] + "=" + values[i] + "&";
+  }
+  str = str.substring(0, str.length - 1);
+
+  var xhr = new XMLHttpRequest();
+  xhr.open(type, str, true);
+  // add a callback if the type is GET
+  if(type == "GET") {
+    xhr.onreadystatechange = arguments[4]
+  }
+  xhr.send();
+}
+
+function send_command(param, val) {
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", "/"+param+"?value="+val, true);
+  xhr.send();
+
+  console.log(param, ': ', val)
+}
+
+function send_ft8() {
+  var ft8String = document.getElementById('ft8String').value;
+  var timeNow = Date.now();
+  var rf = 14074000;
+  var af = 1500;
+
+  http_request("POST", "ft8", ["messageText", "timeNow", "rfFrequency", "audioFrequency"], [ft8String, timeNow, rf, af])
+}
+
+function stop_ft8() {
+  http_request("DELETE", "ft8", [], [])
+}
+
+function send_cw() {
+  var cur_char = document.getElementById('freeform').value
+  // replace space with _, it goes into URL
+  cur_char = cur_char.replace(" ", "_")
+
+  document.getElementById('freeform').value = ""
+
+  http_request("POST", "cw", ["messageText"], [cur_char])
+}
+
+function get_queue_len() {
+  func = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      queue_len = parseInt(this.responseText)
+    }
+  };
+  http_request("GET", "queue", [], [], func)
+}
+
+function set_epoch_ms() {
+  const time_now = Date.now();
+  http_request("PUT", "time", ["timeNow"], [time_now])
+}
+
+
+function set_freq() {
+  freq = parseFloat(document.getElementById('freq_mhz').value) * 1e6;
+  http_request("PUT", "frequency", ["frequency"], [freq])
+
+  // request freq back as a way to update UI fast
+  get_freq();
+}
+
+
+function get_freq() {
   // don't update if the user is typing in this text box
   if(document.activeElement.id == 'freq_mhz')
     return;
 
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
+  // define callback function
+  func = function() {
     if (this.readyState == 4 && this.status == 200) {
       var response = parseFloat(this.responseText)/1e6;
       response = response.toFixed(vfo_digits)
@@ -137,11 +130,16 @@ function get_freq() {
         document.getElementById('freq_mhz').className = 'vfo_display'
       else
         document.getElementById('freq_mhz').className = 'vfo_display_invalid'
-
     }
   };
-  xhttp.open("GET", "get_freq", true);
-  xhttp.send();
+  http_request("GET", "frequency", [], [], func)
+}
+
+function adj_freq(change) {
+  document.getElementById('freq_mhz').value = parseFloat(document.getElementById('freq_mhz').value) + change
+
+  set_freq()
+  get_freq()
 }
 
 function next_band() {
@@ -157,12 +155,200 @@ function next_band() {
     document.getElementById('freq_mhz').value = cur_freq + (7.06-14.06)
 
   set_freq();
+  get_freq();
 }
 
 
+function set_volume() {
+  vol = document.getElementById('af_gain').value;
+  http_request("PUT", "volume", ["audioLevel"], [vol])
+}
+
+
+function get_volume() {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById('af_gain').value = this.responseText;
+    }
+  };
+  http_request("GET", "volume", [], [], func)
+}
+
+function adj_vol(change) {
+  new_vol = parseInt(document.getElementById('af_gain').value) + change;
+  document.getElementById('af_gain').value = new_vol
+
+  // set and get volume to force update on both sides
+  set_volume();
+  get_volume();
+}
+
+
+
+function set_sidetone() {
+  sidetone = document.getElementById('mon').value;
+  http_request("PUT", "sidetone", ["sidetoneLevelOffset"], [sidetone])
+}
+
+function get_sidetone() {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById('mon').value = this.responseText;
+    }
+  };
+  http_request("GET", "sidetone", [], [], func)
+}
+
+function press_mon() {
+  var mon = parseInt(document.getElementById('mon').value);
+  if(mon < mon_max)
+    mon = mon + 1;
+  else
+    mon = mon_min;
+
+  document.getElementById('mon').value = mon;
+
+  set_sidetone();
+  get_sidetone();
+}
+
+
+function set_speed() {
+  speed = document.getElementById('keyer_speed').value;
+  http_request("PUT", "cwSpeed", ["speed"], [speed])
+}
+
+function get_speed() {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById('keyer_speed').value = this.responseText;
+    }
+  };
+  http_request("GET", "cwSpeed", [], [], func)
+}
+
+function adj_speed(change) {
+  var new_speed = parseInt(document.getElementById('keyer_speed').value) + change;
+
+  document.getElementById('keyer_speed').value = new_speed;
+
+  set_speed();
+  get_speed();
+}
+
+
+function set_bw() {
+  bw = document.getElementById('bw').value;
+  console.log(bw)
+  http_request("PUT", "rxBandwidth", ["bw"], [bw])
+}
+
+function get_bw() {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById('bw').value = this.responseText;
+    }
+  };
+  http_request("GET", "rxBandwidth", [], [], func)
+}
+
+function press_bw() {
+  var bw = document.getElementById('bw').value;
+
+  if(bw == "CW")
+    bw = "SSB"
+  else if(bw == "SSB")
+    bw = "CW"
+  else
+    return;
+
+  document.getElementById('bw').value = bw;
+
+  set_bw();
+  get_bw();
+}
+
+function set_lna() {
+  lna = document.getElementById('lna').value;
+  http_request("PUT", "lna", ["lnaState"], [lna])
+}
+
+function get_lna() {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById('lna').value = this.responseText;
+    }
+  };
+  http_request("GET", "lna", [], [], func)
+}
+
+function press_lna() {
+  var lna = document.getElementById('lna').value;
+
+  if(lna == "ON")
+    lna = "OFF"
+  else if(lna == "OFF")
+    lna = "ON"
+  else
+    return;
+
+  document.getElementById('lna').value = lna;
+
+  set_lna();
+  get_lna();
+}
+
+function set_antenna() {
+  antenna = document.getElementById('ant').value;
+  http_request("PUT", "antenna", ["antennaPath"], [antenna])
+}
+
+function get_antenna() {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById('ant').value = this.responseText;
+    }
+  };
+  http_request("GET", "antenna", [], [], func)
+}
+
+function press_ant() {
+  var antenna = document.getElementById('ant').value;
+
+  if(antenna == "DIRECT")
+    antenna = "EFHW";
+  else if(antenna == "EFHW")
+    antenna = "DIRECT";
+  else {
+    get_antenna();
+    return;
+  }
+
+  document.getElementById('ant').value = antenna;
+
+  set_antenna();
+  get_antenna();
+}
+
+function get_input_voltage() {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById('v_bat').value = this.responseText;
+    }
+  };
+  http_request("GET", "inputVoltage", [], [], func)
+}
+
 function get_s_meter() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
+  // define callback function
+  func = function() {
     if (this.readyState == 4 && this.status == 200) {
       document.getElementById('s_meter').value = this.responseText;
 
@@ -170,235 +356,71 @@ function get_s_meter() {
       wd_count = wd_count_max;
     }
   };
-  xhttp.open("GET", "get_s", true);
-  xhttp.send();
+  http_request("GET", "sMeter", [], [], func)
 }
 
-function get_v_bat() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      document.getElementById('v_bat').value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "get_vbat", true);
-  xhttp.send();
+
+function debug_action(number) {
+  http_request("POST", "debug", ["command"], [number])
 }
 
 function get_debug() {
-  // debug 1
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
+  // define callback function
+  func = function() {
     if (this.readyState == 4 && this.status == 200) {
-      // document.getElementById('dbg').value = this.responseText;
-      document.getElementById('dbg').value = document.activeElement.id;
+      document.getElementById('dbg').value = this.responseText;
+
+      // do heartbeat update in this function, we look at S meter often.
+      wd_count = wd_count_max;
     }
   };
-  xhttp.open("GET", "get_debug", true);
-  xhttp.send();
+  http_request("GET", "debug", [], [], func)
 }
 
-function incr_vol() {
-  // send command to increase
-  send_command("incr_vol", "")
-
-  // pull new volume
-  get_volume();
-}
-
-function decr_vol() {
-  // send command to increase
-  send_command("decr_vol", "")
-
-  // pull new volume
-  get_volume();
-}
-
-function get_volume() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      document.getElementById('af_gain').value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "get_vol", true);
-  xhttp.send();
-}
-
-function read_freeform() {
-  var cur_char = document.getElementById('freeform').value
-  // replace space with _, it goes into URL
-  cur_char = cur_char.replace(" ", "_")
-
-  document.getElementById('freeform').value = ""
-  send_command("enqueue", cur_char)
-}
-
-function incr_speed() {
-  // send command to increase
-  send_command("incr_speed", "")
-
-  // pull new speed
-  get_speed();
-}
-
-function decr_speed() {
-  // send command to increase
-  send_command("decr_speed", "")
-
-  // pull new speed
-  get_speed();
-}
-
-function get_speed() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      document.getElementById('keyer_speed').value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "get_speed", true);
-  xhttp.send();
-}
-
-function press_bw() {
-  // send command to increase
-  send_command("press_bw", "")
-
-  // pull new bandwidth
-  get_bw();
-}
-
-function get_bw() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      document.getElementById('bw').value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "get_bw", true);
-  xhttp.send();
-}
-
-
-function press_ant() {
-  // send command to increase
-  send_command("press_ant", "")
-
-  // pull new antenna setting
-  get_ant();
-}
-
-function get_ant() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      document.getElementById('ant').value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "get_ant", true);
-  xhttp.send();
-}
-
-function press_lna() {
-  // send command to increase
-  send_command("press_lna", "")
-
-  // pull new lna setting
-  get_lna();
-}
-
-function get_lna() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      document.getElementById('lna').value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "get_lna", true);
-  xhttp.send();
-}
-
-
-function special(val) {
-  send_command("special", val)
-}
 
 // TODO - remove concept of multiple memories, keep CQ separate. This function will cancel repeat on CQ if you press mem.
 function memory(num) {
+  // force update on keyer queue length
+  get_queue_len();
+
   // button press should cancel repeat and clear the queue, regardless of whether repeat is on
   if(queue_len > 0) {
-    console.log("canceling queue")
     rpt_flag = false;
-    // enqueue a special character to clear the queue
-    send_command("enqueue", cancel_char)
+    http_request("DELETE", "queue", [], [])
     document.getElementById('cq').className = 'button'
   }
   // button press should add to queue when repeat mode is off
   else {
-    if(num == 1) {
-      send_command("enqueue", keyer_mem_1)
-      queue_len = keyer_mem_1.length
-    }
-    if(num == 2) {
-      send_command("enqueue", keyer_mem_2)
-      queue_len = keyer_mem_2.length
-    }
+    // don't ask for a keyer message that doesn't exist
+    if(num > keyer_mem.length)
+      return;
+
+    // send and update keyer length
+    http_request("POST", "cw", ["messageText"], [keyer_mem[num]])
+    get_queue_len();
   }
 }
 
-function press_mon() {
-  // send command to increase
-  send_command("press_mon", "")
 
-  // pull new lna setting
-  get_mon();
-}
-
-function get_mon() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      document.getElementById('mon').value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "get_mon", true);
-  xhttp.send();
-}
-
-function get_queue_len() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      queue_len = this.responseText;
-      console.log(queue_len)
-    }
-  };
-  xhttp.open("GET", "get_queue_len", true);
-  xhttp.send();
-}
 
 function repeat_update() {
+  get_queue_len();
+
   // update timer if we are on repeat and the queue is empty
   if(rpt_flag && queue_len == 0)
-    rpt_timer = rpt_timer - 500;
+    rpt_timer = rpt_timer - rpt_count_step_ms;
 
   // enqueue the CQ memory again if both of these are true:
   //    1. repeat flag is on
   //    2. repeat timer has expired
   if(rpt_flag && rpt_timer <= 0) {
-    send_command("enqueue", keyer_mem_1)
+    memory(0);
 
     // reset the repeat timer. will start decrementing when queue expires
     rpt_timer = rpt_dly;
   }
 }
 
-function incr_decr_freq(num) {
-  document.getElementById('freq_mhz').value = parseFloat(document.getElementById('freq_mhz').value) + num
-
-  set_freq()
-}
 
 function watchdog_update() {
   wd_count = wd_count - 1;
@@ -411,6 +433,17 @@ function watchdog_update() {
     document.getElementById('watchdog').value = "CONNECTED";
     document.getElementById('watchdog').className = 'readout_small'
   }
+}
+
+// convenient way for sotawatch links to set frequency
+function jump_to_spot(freq, mode) {
+  document.getElementById('freq_mhz').value = freq.toFixed(vfo_digits);
+  set_freq()
+
+  // TODO - fix this hack.
+  var v = document.getElementById('bw').value
+  if(mode.toUpperCase() != document.getElementById('bw').value.toUpperCase())
+    press_bw();
 }
 
 function json_spots_to_table(num_spots, col_names, table_id) {
@@ -437,8 +470,10 @@ function json_spots_to_table(num_spots, col_names, table_id) {
    table.append(tr) // Append the header to the table
 
   try {
-    var json_obj = JSON.parse(GET(url_string));
-    console.log(json_obj);
+    var req = new XMLHttpRequest(); // a new request
+    req.open("GET", url_string, false);
+    req.send(null);
+    var json_obj = JSON.parse(req.responseText);
      
      // Loop through the JSON data and create table rows
      json_obj.forEach((item) => {
@@ -529,23 +564,22 @@ function json_spots_to_table(num_spots, col_names, table_id) {
 
 // load all parameters from radio
 function on_load() {
-  get_v_bat();
+  get_input_voltage();
   get_s_meter();
   get_volume();
+  get_sidetone();
   get_speed();
   get_bw();
   get_lna();
-  get_ant();
-  get_mon();
-  get_queue_len();
+  get_antenna();
   get_debug();
   get_freq();
-  get_time();
+  get_utc_time();
   json_spots_to_table(num_spots, col_names, "spots");
 }
 
 // add listener, and a function for enqueueing/deleting characters
-document.getElementById('freeform').addEventListener('input', read_freeform);
+document.getElementById('freeform').addEventListener('input', send_cw);
 
 // add listener to VFO text area, so enter press is equivalent to "SET" button
 document.getElementById('freq_mhz').addEventListener('keypress', function(event) {
@@ -564,30 +598,27 @@ document.getElementById('cq').addEventListener('long-press', function(e) {
   e.preventDefault()
   document.getElementById('cq').className = 'button_pressed'
   rpt_flag = true;
-  // clear out the queue before adding to it
-  send_command("enqueue", cancel_char)
+
   // call CQ
-  send_command("enqueue", keyer_mem_1)
+  memory(0);
 });
 
-// refresh every few seconds
-setInterval(function() { get_v_bat();}, 500);
+// refresh variables
+setInterval(function() { get_freq();}, 500);
+setInterval(function() { get_input_voltage();}, 500);
 setInterval(function() { get_s_meter();}, 250);
 setInterval(function() { get_volume();}, 3000); 
 setInterval(function() { get_speed();}, 5000); 
 setInterval(function() { get_bw();}, 3000); 
 setInterval(function() { get_lna();}, 3000); 
-setInterval(function() { get_ant();}, 3000); 
-setInterval(function() { get_mon();}, 3000); 
-setInterval(function() { get_queue_len();}, 1000); 
+setInterval(function() { get_antenna();}, 3000); 
+setInterval(function() { get_sidetone();}, 3000); 
+setInterval(function() { get_queue_len();}, 2000); 
 setInterval(function() { get_debug();}, 500);
-setInterval(function() { get_time();}, 5000) 
+setInterval(function() { get_utc_time();}, 5000) 
 // watchdog update runs slightly slower than s-meter
 setInterval(function() {watchdog_update();}, 300)
 // repeat logic runs every 500ms
-setInterval(function() {repeat_update();}, 500)
-// don't do this repeatedly: makes frequency entry tough.
-setInterval(function() { get_freq();}, 1000);
-// pull new SOTA spots every 30 seconds
+setInterval(function() { repeat_update();}, rpt_count_step_ms)
+// pull new SOTA spots every 10 seconds
 setInterval(function() {json_spots_to_table(num_spots, col_names, "spots");}, 10000)
-//setInterval(function() {json_spots_to_table(num_spots, col_names, "spots");}, 30000)

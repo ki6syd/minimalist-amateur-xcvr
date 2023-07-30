@@ -20,7 +20,78 @@ void init_keyer() {
   }
 }
 
-void handle_keyer_queue() {
+void handle_cw(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) { 
+  if(request_type == HTTP_POST) {
+    // look for required parameters in the message
+    if(!request->hasParam("messageText")) {
+      request->send(400, "text/plain", "messageText not found");
+      return;
+    }
+  
+    String message_text = request->getParam("messageText")->value();
+
+    // update keyer speed if parameter given
+    if(request->hasParam("speed")) {
+      uint8_t tmp = request->getParam("speed")->value().toInt();
+      
+      if(tmp < keyer_min || tmp > keyer_max) {
+        request->send(400, "text/plain", "Invalid speed");
+        return;
+      }
+      else {
+        keyer_speed = tmp;
+      }
+    }
+
+    if(request->hasParam("rfFrequency")) {
+      // TODO: add better logic. Blindly follows command for now.
+      f_rf = (uint64_t) request->getParam("rfFrequency")->value().toFloat();
+      
+      flag_freq = true;
+      // TODO: make sure we don't get negative numbers
+      // TODO: consider making this part of frequency setting?
+      f_vfo = update_vfo(f_rf, f_bfo, f_audio);
+    }
+
+    // add to queue;
+    tx_queue += message_text;
+    request->send(200, "text/plain", "OK");
+  }
+  if(request_type == HTTP_DELETE) {
+    if(tx_queue.length() == 0)
+      request->send(404, "text/plain", "Nothing in CW queue");
+
+    tx_queue = "";
+
+    request->send(204, "text/plain", "Stopped sending CW.");
+  }
+}
+
+void handle_cw_speed(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) { 
+  if(request_type == HTTP_PUT) {
+    // look for required parameters in the message
+    if(!request->hasParam("speed")) {
+      request->send(400, "text/plain", "speed not found");
+      return;
+    }
+  
+    uint8_t new_speed = request->getParam("speed")->value().toInt();
+
+    if(new_speed < keyer_min || new_speed > keyer_max) {
+      request->send(400, "text/plain", "Invalid speed");
+      return;
+    }
+
+    keyer_speed = new_speed;
+    
+    request->send(200, "text/plain", "OK");
+  }
+  if(request_type == HTTP_GET) {
+    request->send(200, "text/plain", String(keyer_speed));
+  }
+}
+
+void update_keyer_queue() {
   // handle one character in the queue
   if(tx_queue.length() > 0) {   
     Serial.print("[DEQUEUE] ");
@@ -151,7 +222,7 @@ void morse_letter(String letter) {
       dit();
       dah();
   }
-  if(letter == "r" || letter == "PR") {
+  if(letter == "r" || letter == "R") {
       dit();
       dah();
       dit();

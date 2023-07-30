@@ -1,3 +1,68 @@
+void handle_frequency(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) {
+  if(request_type == HTTP_PUT) {
+    // look for required parameters in the message
+    if(!request->hasParam("frequency")) {
+      Serial.println("[RADIO] frequency not sent");
+      request->send(400, "text/plain", "frequency not sent");
+      return;
+    }
+
+    uint64_t freq_request = request->getParam("frequency")->value().toFloat();
+
+    // check frequency bounds before doing anything else
+    if((freq_request < f_rf_min_band1 && freq_request > f_rf_max_band1) && (freq_request < f_rf_min_band2 && freq_request > f_rf_max_band2) && (freq_request < f_rf_min_band3 && freq_request > f_rf_max_band3)) {
+      request->send(400, "text/plain", "Radio hardware does not support this frequency.");
+      return;
+    }
+
+    // set flag, main loop will update clocks
+    flag_freq = true;
+    f_rf = freq_request;
+    // TODO: make sure we don't get negative numbers
+    // TODO: consider making this part of frequency setting?
+    f_vfo = update_vfo(f_rf, f_bfo, f_audio);
+  
+    Serial.print("RF: ");
+    print_uint64_t(f_rf);
+    Serial.print("\tVFO: ");
+    print_uint64_t(f_vfo);
+    Serial.print("\tBFO: ");
+    print_uint64_t(f_bfo);
+    Serial.println();
+
+    request->send(200, "text/plain", "OK");
+  }
+  if(request_type == HTTP_GET) {
+    request->send(200, "text/plain", String(f_rf));
+  }
+}
+
+
+void set_dial_freq(String freq) {
+  Serial.print("[FREQ UPDATE] ");
+  Serial.print(freq);
+  Serial.print("\t");
+  
+  uint64_t tmp = freq.toFloat() * 1000000;
+
+  // check frequency bounds before doing anything else
+  if((tmp < f_rf_min_band1 && tmp > f_rf_max_band1) && (tmp < f_rf_min_band2 && tmp > f_rf_max_band2) && (tmp < f_rf_min_band3 && tmp > f_rf_max_band3))
+    return;
+
+  flag_freq = true;
+  f_rf = tmp;
+  // TODO: make sure we don't get negative numbers
+  f_vfo = update_vfo(f_rf, f_bfo, f_audio);
+
+  Serial.print("RF: ");
+  print_uint64_t(f_rf);
+  Serial.print("\tVFO: ");
+  print_uint64_t(f_vfo);
+  Serial.print("\tBFO: ");
+  print_uint64_t(f_bfo);
+  Serial.println();
+}
+
 // updates the relay references
 // turns off all relays and then enables the new RX relay
 void update_relays(uint64_t f_rf) {
@@ -176,7 +241,7 @@ void init_radio() {
   // f_bfo = f_if + 2500;
 
   // load default frequency from JSON, use function in server module
-  handle_set_freq(load_json_config(hw_config_file, "f_rf_default_mhz"));
+  set_dial_freq(load_json_config(hw_config_file, "f_rf_default_mhz"));
 
 
   // initialize radio hardare

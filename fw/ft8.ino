@@ -25,7 +25,8 @@ void handle_ft8(WebRequestMethodComposite request_type, AsyncWebServerRequest *r
     
     // check message length
     if(message_text.length() != 13) {
-      Serial.println("[FT8] Wrong message length");
+      Serial.print("[FT8] Wrong message length: ");
+      Serial.println(message_text.length());
       request->send(400, "text/plain", "messageText incorrect length");
       return;
     }
@@ -82,9 +83,6 @@ void handle_ft8(WebRequestMethodComposite request_type, AsyncWebServerRequest *r
 
     request->send(200, "text/plain", "OK");
   }
-  else if(request_type == HTTP_GET) {
-    
-  }
   if(request_type == HTTP_DELETE) {
     if(!ft8_busy)
       request->send(404, "text/plain", "Not sending FT8.");
@@ -93,8 +91,28 @@ void handle_ft8(WebRequestMethodComposite request_type, AsyncWebServerRequest *r
     ft8_busy = false;
     request->send(204, "text/plain", "Stopped sending FT8.");
   }
-  
-  
+}
+
+
+void handle_queue(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) {
+  if(request_type == HTTP_GET) {
+    uint8_t queue_length = 0;
+    if(ft8_busy)
+      queue_length = 1;
+    if(tx_queue.length() > 0)
+      queue_length = tx_queue.length();
+
+    request->send(200, "text/plain", String(queue_length));
+  }
+  else if(request_type == HTTP_DELETE) {
+    if(!ft8_busy && tx_queue.length() == 0)
+      request->send(404, "text/plain", "Nothing in digital modes queue.");
+
+    // FT8 sending loop watches this variable. Will abort when it sees ft8_busy==false
+    ft8_busy = false;
+    tx_queue = "";
+    request->send(204, "text/plain", "Stopped sending digital modes.");
+  }
 }
 
 /*
