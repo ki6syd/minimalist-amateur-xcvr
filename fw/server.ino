@@ -161,8 +161,8 @@ void init_web_server() {
 
 
   // handlers for special commands
-  server.on("/debug", HTTP_PUT, [](AsyncWebServerRequest *request){
-    handle_debug(HTTP_PUT, request);
+  server.on("/debug", HTTP_POST, [](AsyncWebServerRequest *request){
+    handle_debug(HTTP_POST, request);
   });
   server.on("/debug", HTTP_GET, [](AsyncWebServerRequest *request){
     handle_debug(HTTP_GET, request);

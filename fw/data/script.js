@@ -3,7 +3,7 @@ var wd_count_max = 15;
 var wd_count = wd_count_max;
 var queue_len = 0;
 var vfo_digits = 4;
-var keyer_mem = ["CQ SOTA DE KI6SYD K", "QRZ DE KI6SYD"]
+var keyer_mem = ["CQ SOTA DE KI6SYD K", "QRZ DE KI6SYD K"]
 var rpt_flag = false;
 var rpt_dly = 10000;
 var rpt_timer = rpt_dly;
@@ -361,7 +361,7 @@ function get_s_meter() {
 
 
 function debug_action(number) {
-  http_request("POST", "debug", ["command"], [number])
+	http_request("POST", "debug", ["command"], [number])
 }
 
 function get_debug() {
@@ -447,9 +447,6 @@ function jump_to_spot(freq, mode) {
 }
 
 function json_spots_to_table(num_spots, col_names, table_id) {
-  
-  // delete me!! TODO
-  set_epoch_ms();
 
   var url_string = sota_url_1 + num_spots + sota_url_2;
 
@@ -575,6 +572,7 @@ function on_load() {
   get_debug();
   get_freq();
   get_utc_time();
+  set_epoch_ms();
   json_spots_to_table(num_spots, col_names, "spots");
 }
 
@@ -616,9 +614,10 @@ setInterval(function() { get_sidetone();}, 3000);
 setInterval(function() { get_queue_len();}, 2000); 
 setInterval(function() { get_debug();}, 500);
 setInterval(function() { get_utc_time();}, 5000) 
+setInterval(function() { set_epoch_ms();}, 60000)
 // watchdog update runs slightly slower than s-meter
-setInterval(function() {watchdog_update();}, 300)
+setInterval(function() { watchdog_update();}, 300)
 // repeat logic runs every 500ms
 setInterval(function() { repeat_update();}, rpt_count_step_ms)
 // pull new SOTA spots every 10 seconds
-setInterval(function() {json_spots_to_table(num_spots, col_names, "spots");}, 10000)
+setInterval(function() { json_spots_to_table(num_spots, col_names, "spots");}, 10000)
