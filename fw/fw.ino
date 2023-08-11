@@ -260,7 +260,6 @@ void loop(void) {
   // todo - queues 
   if(flag_ft8) {
     send_ft8();
-    
   }
 
   // handle key inputs

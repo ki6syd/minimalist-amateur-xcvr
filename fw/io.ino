@@ -107,10 +107,7 @@ void init_gpio() {
   pinMode(13, INPUT_PULLUP);
   attach_paddle_isr(true, true);
 
-
   analogWriteFreq(load_json_config(hw_config_file, "sidetone_pitch_hz").toInt());
-  // set sidetone pin low
-  //analogWrite(D4, 0);
 
   // select audio filter routing
   gpio_write(OUTPUT_BW_SEL, (output_state) rx_bw);

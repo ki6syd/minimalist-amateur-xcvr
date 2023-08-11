@@ -48,8 +48,6 @@ void init_wifi_mdns() {
     MDNS.addService("http", "tcp", 80);
     Serial.println("[MDNS] Started MDNS with hostname from JSON");
   }
-  
-
 
   // for testing only
   // WiFi.mode(WIFI_OFF);
