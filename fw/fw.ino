@@ -2,6 +2,7 @@
 #include <ESPAsyncTCP.h>
 #include <ESP8266mDNS.h>
 #include <ESPAsyncWebServer.h>
+#include <AsyncElegantOTA.h>
 #include <SPIFFSEditor.h>
 #include <ArduinoJson.h>
 #include <Wire.h>

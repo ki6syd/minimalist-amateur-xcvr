@@ -38,7 +38,6 @@ void init_file_system() {
 // this is mostly copied from Async FS Browser example
 // Moved to a function to keep the main file simpler
 
-// TODO: use other HTTP_xxx methods
 void init_web_server() {
   /*
   ws.onEvent(onWsEvent);
@@ -208,6 +207,10 @@ void init_web_server() {
     if(index + len == total)
       Serial.printf("BodyEnd: %u\n", total);
   });
+
+  // turn on OTA server
+  AsyncElegantOTA.begin(&server);
+  
   server.begin();
 }
 
