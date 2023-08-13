@@ -1,4 +1,6 @@
 void init_wifi_mdns() {
+  IPAddress ip;
+  
   // this call before any others helps, per: https://stackoverflow.com/questions/44139082/esp8266-takes-long-time-to-connect
   WiFi.persistent(false);
   
@@ -21,21 +23,49 @@ void init_wifi_mdns() {
     Serial.println("[WIFI] Failed to connect to home network. Starting AP.");
     // begin by forgetting old credentials
     WiFi.disconnect(true);
-    
+
+    // set up AP
     WiFi.mode(WIFI_AP);
-    // TODO - put softAPConfig addresses in config file
     WiFi.softAPConfig(IPAddress(192, 168, 1, 1), IPAddress(192, 168, 1, 1), IPAddress(255, 255, 255, 0));
-    
     WiFi.softAP(load_json_config(credential_file, "ssid_ap"), load_json_config(credential_file, "pass_ap"), load_json_config(credential_file, "wifi_channel").toInt());
-    Serial.print("[WIFI] Soft AP Addr ");
-    Serial.println(WiFi.softAPIP());
+    ip = WiFi.softAPIP();
   }
   else {
     Serial.println("[WIFI] Successful connection to home network.");
-    Serial.print("[WIFI] IP addres: ");
-    Serial.println(WiFi.localIP());
+    ip = WiFi.localIP();
   }
 
+  Serial.print("[WIFI] IP address: ");
+  Serial.println(ip);
+
+  Serial.print("[WIFI] Connection status: ");
+  Serial.println(WiFi.status());
+
+  // do a scan of all networks and print info. Useful info: https://randomnerdtutorials.com/esp32-useful-wi-fi-functions-arduino/
+  // todo - add a flag to turn this debug on/off
+  Serial.println("[WIFI] scan starting");
+  int n = WiFi.scanNetworks();
+  Serial.print("[WIFI] found networks: ");
+  Serial.println(n);
+  for(int i = 0; i < n; i++) {
+    Serial.print("[WIFI] SSID: ");
+    Serial.println(WiFi.SSID(i));
+    Serial.print("[WIFI] RSSI: ");
+    Serial.println(WiFi.RSSI(i));
+    Serial.print("[WIFI] Encryption: ");
+    Serial.println(WiFi.encryptionType(i));
+    Serial.println("\n");
+
+    my_delay(100); 
+  }
+  
+  // set red LED for 10 seconds if we didn't get a normal IP, for debug
+  // and do a scan
+  if(ip[0] != 192) {
+    gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
+    gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
+    my_delay(10000);
+  }
 
   int wifi_dBm = load_json_config(hw_config_file, "wifi_power_dbm").toInt();
   WiFi.setOutputPower(wifi_dBm);
