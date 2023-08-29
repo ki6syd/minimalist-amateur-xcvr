@@ -293,10 +293,10 @@ void gpio_write(output_pin pin, output_state state) {
       // not supported in hardware v1
       if(hardware_rev == "max-3b_v2") {
         if(state == OUTPUT_ON) {
-          pcf8574_20.write(6, LOW);
+          pcf8574_20.write(6, HIGH);
         }
         if(state == OUTPUT_OFF) {
-          pcf8574_20.write(6, HIGH);
+          pcf8574_20.write(6, LOW);
         }
       }
       break;

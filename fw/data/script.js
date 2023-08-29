@@ -148,11 +148,11 @@ function next_band() {
 
   // todo: clean this up.
   if(round_down_freq == 7)
-    document.getElementById('freq_mhz').value = cur_freq + (10.11-7.06)
-  if(round_down_freq == 10)
-    document.getElementById('freq_mhz').value = cur_freq + (14.06-10.11)
+    document.getElementById('freq_mhz').value = cur_freq + (14.0-7.0)
   if(round_down_freq == 14)
-    document.getElementById('freq_mhz').value = cur_freq + (7.06-14.06)
+    document.getElementById('freq_mhz').value = cur_freq + (21.0-14.0)
+  if(round_down_freq == 21)
+    document.getElementById('freq_mhz').value = cur_freq + (7.0-21.0)
 
   set_freq();
   get_freq();
@@ -338,31 +338,31 @@ function press_ant() {
 
 
 function set_speaker() {
-  spkr = document.getElementById('spkr').value;
-  http_request("PUT", "speaker", ["speakerState"], [spkr])
+  speaker = document.getElementById('speaker').value;
+  http_request("PUT", "speaker", ["speakerState"], [speaker])
 }
 
 function get_speaker() {
   // define callback function
   func = function() {
     if (this.readyState == 4 && this.status == 200) {
-      document.getElementById('spkr').value = this.responseText;
+      document.getElementById('speaker').value = this.responseText;
     }
   };
   http_request("GET", "speaker", [], [], func)
 }
 
-function press_spkr() {
-  var spkr = parseInt(document.getElementById('spkr').value);
-  if(spkr == 'ON')
-    spkr = 'OFF'
+function press_speaker() {
+  var speaker = document.getElementById('speaker').value;
+  if(speaker == 'ON')
+    speaker = 'OFF'
   else
-    spkr = 'ON'
+    speaker = 'ON'
 
-  document.getElementById('spkr').value = spkr;
+  document.getElementById('speaker').value = speaker;
 
-  set_spkr();
-  get_spkr();
+  set_speaker();
+  get_speaker();
 }
 
 
@@ -599,7 +599,7 @@ function on_load() {
   get_bw();
   get_lna();
   get_antenna();
-  get_debug();
+  // get_debug();
   get_freq();
   get_utc_time();
   set_epoch_ms();
@@ -642,7 +642,7 @@ setInterval(function() { get_lna();}, 3000);
 setInterval(function() { get_antenna();}, 3000); 
 setInterval(function() { get_sidetone();}, 3000); 
 setInterval(function() { get_queue_len();}, 2000); 
-setInterval(function() { get_debug();}, 500);
+// setInterval(function() { get_debug();}, 500);
 setInterval(function() { get_utc_time();}, 5000) 
 setInterval(function() { set_epoch_ms();}, 60000)
 // watchdog update runs slightly slower than s-meter
