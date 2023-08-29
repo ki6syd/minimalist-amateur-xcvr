@@ -1,8 +1,10 @@
+// useful for flash use debug: "C:\Program Files (x86)\Arduino\hardware\tools\avr\bin\avr-nm.exe" --size-sort -C -r fw.ino.elf
+
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
 #include <ESP8266mDNS.h>
 #include <ESPAsyncWebServer.h>
-#include <AsyncElegantOTA.h>
+#include <Updater.h>
 #include <SPIFFSEditor.h>
 #include <ArduinoJson.h>
 #include <Wire.h>
@@ -96,7 +98,8 @@ bool dit_flag = false, dah_flag = false;
 mode_type tx_rx_mode = MODE_QSK_COUNTDOWN;
 int64_t qsk_counter = 0;
 
-
+// used in OTA
+size_t content_len;
 
 
 
@@ -140,7 +143,6 @@ uint16_t vol_min = 1;
 uint16_t vol_max = 5;
 
 // TODO - restructure init functions so there's one batch read from JSON before configuring hardware
-
 void setup(void) {
   // short delay to make sure serial monitor catches everything
   my_delay(2000);

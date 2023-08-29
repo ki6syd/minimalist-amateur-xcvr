@@ -1,53 +1,82 @@
-  #define SERVER_DEBUG
+// useful reference for OTA: https://github.com/lbernstone/asyncUpdate/blob/master/AsyncUpdate.ino 
 
+// OTA update function
+void handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
+  gpio_write(OUTPUT_GREEN_LED, OUTPUT_ON);
 
-// copied directly from Async FS Browser examples
-// moved to separate tab to keep main file simple.
+  // decide which partition to write. Relies on "spiffs" being in name
+  if (!index){
+    Serial.println("[OTA] Upload Beginning");
 
-/*
-// this is basically everything copied from the FS Browser example. 
-// Moved to a function to keep the main file simpler
-void init_file_system() {
-  // initialize filesystem
-  fileSystemConfig.setAutoFormat(false);
-  fileSystem->setConfig(fileSystemConfig);
-  fsOK = fileSystem->begin();
-  Serial.println(fsOK ? F("Filesystem initialized.") : F("Filesystem init failed!"));
-  
-  // Debug: dump on console contents of filesystem with no filter and check filenames validity
-  Dir dir = fileSystem->openDir("");
-  Serial.println(F("List of files at root of filesystem:"));
-  while (dir.next()) {
-    String error = checkForUnsupportedPath(dir.fileName());
-    String fileInfo = dir.fileName() + (dir.isDirectory() ? " [DIR]" : String(" (") + dir.fileSize() + "b)");
-    Serial.println(error + fileInfo);
-    if (error.length() > 0) {
-      unsupportedFiles += error + fileInfo + '\n';
+    uint32_t free_space = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
+    uint32_t sketch_size = ESP.getSketchSize();
+    content_len = request->contentLength();
+
+    // SPIFFS selected for upload
+    if(filename.indexOf("spiffs") > -1) {
+      // check file size. Fail fast if too large
+      if(content_len > free_space) {
+        Serial.println("[OTA] Cannot OTA.");
+        Serial.print("[OTA] Content length: ");
+        Serial.println(content_len);
+        Serial.print("[OTA] Free space: ");
+        Serial.println(free_space);
+        request->send(400, "text/plain", "Content length is larger than available space");
+        return;
+      }
+
+      // begin update
+      Update.runAsync(true);
+      if (!Update.begin(free_space, U_FS)) {
+        Update.printError(Serial);
+        request->send(400, "text/plain", "Upload failure, see serial log.");
+        return;
+      }
+    }
+    // program upload
+    else {
+      // begin update
+      Update.runAsync(true);
+      if (!Update.begin(content_len, U_FLASH)) {
+        Update.printError(Serial);
+        request->send(400, "text/plain", "Upload failure, see serial log.");
+        return;
+      }
     }
   }
-  Serial.println();
+  
+  // receive data, write it to flash, show progress
+  if (Update.write(data, len) != len) {
+    Update.printError(Serial);
+  }
+  // todo: add callback function for webpage display
+  Serial.printf("Progress: %d%%\n", (Update.progress()*100)/Update.size());
 
-  // Keep the "unsupportedFiles" variable to show it, but clean it up
-  unsupportedFiles.replace("\n", "<br/>");
-  unsupportedFiles = unsupportedFiles.substring(0, unsupportedFiles.length() - 5);
+
+  // upload complete
+  if (final) {
+    AsyncWebServerResponse *response = request->beginResponse(302, "text/plain", "Please wait while the device reboots");
+    response->addHeader("Refresh", "20");  
+    response->addHeader("Location", "/");
+    
+    request->send(response);
+    if (!Update.end(true)){
+      Update.printError(Serial);
+    } else {
+      Serial.println("[OTA] Update complete.");
+      Serial.flush();
+      ESP.restart();
+    }
+  }
+
+  gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
 }
-*/
-
 
 
 // this is mostly copied from Async FS Browser example
 // Moved to a function to keep the main file simpler
 
 void init_web_server() {
-  /*
-  ws.onEvent(onWsEvent);
-  server.addHandler(&ws);
-
-  events.onConnect([](AsyncEventSourceClient *client){
-    client->send("hello!",NULL,millis(),1000);
-  });
-  server.addHandler(&events);
-  */
 
   // todo: put config password into JSON
   server.addHandler(new SPIFFSEditor(load_json_config(credential_file, "user_settings"), load_json_config(credential_file, "pass_settings")));
@@ -167,6 +196,10 @@ void init_web_server() {
     handle_debug(HTTP_GET, request);
   });
 
+  server.on("/ota", HTTP_POST, [](AsyncWebServerRequest *request) {
+        request->send(200);
+      }, handleUpload);
+
   server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
 
   server.onNotFound([](AsyncWebServerRequest *request){
@@ -208,9 +241,6 @@ void init_web_server() {
       Serial.printf("BodyEnd: %u\n", total);
   });
 
-  // turn on OTA server
-  AsyncElegantOTA.begin(&server);
-  
   server.begin();
 }
 
