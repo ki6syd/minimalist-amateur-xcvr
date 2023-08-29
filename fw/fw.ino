@@ -31,7 +31,8 @@ enum output_pin {
   OUTPUT_AF_SEL_4,
   OUTPUT_BW_SEL,
   OUTPUT_LNA_SEL,
-  OUTPUT_ANT_SEL
+  OUTPUT_ANT_SEL,
+  OUTPUT_SPKR_EN
 };
 
 enum input_pin {
@@ -52,7 +53,7 @@ enum output_state {
   OUTPUT_MUTED,
   OUTPUT_UNMUTED,
   OUTPUT_ANT_DIRECT,
-  OUTPUT_ANT_XFMR
+  OUTPUT_ANT_XFMR,
 };
 
 enum mode_type {
@@ -74,8 +75,8 @@ const int led = LED_BUILTIN;
 AsyncWebServer server(80);
 Si5351 si5351;
 JTEncode jtencode;
-PCF8574 pcf8574_relays(0x20);
-PCF8574 pcf8574_audio(0x21);
+PCF8574 pcf8574_20(0x20);
+PCF8574 pcf8574_21(0x21);
 
 
 // ------------------------------ FT8 variables ------------------------------
@@ -102,6 +103,8 @@ int64_t qsk_counter = 0;
 size_t content_len;
 
 
+// used in io
+String hardware_rev = "";
 
 
 // TODO: a few of these shouldn't be uint16_t's, figure out better enum strategy
@@ -115,6 +118,7 @@ uint16_t special = 0;
 String tx_queue = "";
 // TODO: turn this into an enum
 bool lna_state = false;
+bool speaker_state = false;
 key_types key_type = KEY_PADDLE;
 output_pin lpf_relay = OUTPUT_LPF_1, bpf_relay = OUTPUT_BPF_1;
 
@@ -136,11 +140,10 @@ uint64_t f_rf_max_band2 = 0;
 uint64_t f_rf_min_band3 = 0;
 uint64_t f_rf_max_band3 = 0;
 
-// TODO: load these from JSON
-uint16_t keyer_min = 5;
-uint16_t keyer_max = 30;
-uint16_t vol_min = 1;
-uint16_t vol_max = 5;
+uint16_t keyer_min = 0;
+uint16_t keyer_max = 0;
+uint16_t vol_min = 0;
+uint16_t vol_max = 0;
 
 // TODO - restructure init functions so there's one batch read from JSON before configuring hardware
 void setup(void) {
@@ -173,6 +176,7 @@ void setup(void) {
   gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_OFF);
 
   // set volume to default value
+  init_audio();
   update_volume(vol);
 
   // set antenna impedance relay
@@ -227,6 +231,12 @@ void loop(void) {
         gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
       else
         gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
+
+      // set speaker
+      if(speaker_state)
+        gpio_write(OUTPUT_SPKR_EN, OUTPUT_ON);
+      else
+        gpio_write(OUTPUT_SPKR_EN, OUTPUT_OFF);
       
       // TODO: this logic might make more sense elsewhere. Also should consider the concept of USB/LSB, dial freq, and mode rather than this mess of if statements.
       if(rx_bw == OUTPUT_SEL_CW)

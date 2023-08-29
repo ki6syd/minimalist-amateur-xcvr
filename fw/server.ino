@@ -179,6 +179,15 @@ void init_web_server() {
   });
 
 
+  // handlers for speaker
+  server.on("/speaker", HTTP_PUT, [](AsyncWebServerRequest *request){
+    handle_speaker(HTTP_PUT, request);
+  });
+  server.on("/speaker", HTTP_GET, [](AsyncWebServerRequest *request){
+    handle_speaker(HTTP_GET, request);
+  });
+
+
   // handlers for antenna
   server.on("/lna", HTTP_PUT, [](AsyncWebServerRequest *request){
     handle_lna(HTTP_PUT, request);

@@ -29,9 +29,9 @@ function zeroPad(num, places) {
 function freq_in_band(num) {
   if(num >= 7 && num <= 7.3)
     return true;
-  if(num >= 10.1 && num <= 10.15)
+  if(num >= 14.0 && num <= 14.35)
     return true;
-  if(num >= 14 && num <= 14.35)
+  if(num >= 21 && num <= 21.45)
     return true;
   return false;
 }
@@ -335,6 +335,36 @@ function press_ant() {
   set_antenna();
   get_antenna();
 }
+
+
+function set_speaker() {
+  spkr = document.getElementById('spkr').value;
+  http_request("PUT", "speaker", ["speakerState"], [spkr])
+}
+
+function get_speaker() {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById('spkr').value = this.responseText;
+    }
+  };
+  http_request("GET", "speaker", [], [], func)
+}
+
+function press_spkr() {
+  var spkr = parseInt(document.getElementById('spkr').value);
+  if(spkr == 'ON')
+    spkr = 'OFF'
+  else
+    spkr = 'ON'
+
+  document.getElementById('spkr').value = spkr;
+
+  set_spkr();
+  get_spkr();
+}
+
 
 function get_input_voltage() {
   // define callback function
