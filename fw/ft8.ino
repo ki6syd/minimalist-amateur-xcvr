@@ -115,53 +115,6 @@ void handle_queue(WebRequestMethodComposite request_type, AsyncWebServerRequest 
   }
 }
 
-/*
- * Delete me! Part of older interface
- * 
-void handle_sotamat(String call, String suffix) {
-
-  Serial.print("[FT8] Call:");
-  Serial.print(call);
-  Serial.print(" + suffix: ");
-  Serial.println(suffix);
-  
-  // TODO - some enforcement on call and suffix length. plenty of vulnerability here, right now.
-  
-  // use this as a starting point
-  char message[] = {"SOTAMAT XXXXX"};
-  
-  // copy in suffix
-  for(uint8_t i=0; i < suffix.length(); i++)
-    message[FT8_MSG_LEN - i - 1] = suffix.charAt(suffix.length()-i-1);
-
-  // copy in slash (/)
-  uint8_t slash_start = FT8_MSG_LEN - suffix.length() - 1;
-  message[slash_start] = '/';
-
-  // copy in suffix
-  for(uint8_t i=0; i < call.length(); i++)
-    message[FT8_MSG_LEN - suffix.length() - i - 2] = call.charAt(call.length()-i-1);
-
-  // copy in space
-  uint8_t space_start = FT8_MSG_LEN - suffix.length() - call.length() - 2;
-  message[space_start] = ' ';
-  
-  memset(ft8_buffer, 0, 255);
-  jtencode.ft8_encode(message, ft8_buffer);
-
-  Serial.println("[FT8] Calculated buffer: ");
-  for(uint8_t i=0; i<79; i++) {
-    Serial.print(ft8_buffer[i]);
-    Serial.print(" ");
-  }
-  Serial.println();
-
-  // set a flag indicating there is something in the queue
-  // TODO - need to set up a queue. And, should not be doing the encoding in the handler. Left it here for proof of concept.
-  flag_ft8 = true;
-}
-*/
-
 // function returns when time rolls past the first 15 second interval since calling
 void wait_ft8_window() {
   Serial.println("[FT8] Waiting for window to begin");

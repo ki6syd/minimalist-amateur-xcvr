@@ -19,9 +19,6 @@ void handle_rx_bandwidth(WebRequestMethodComposite request_type, AsyncWebServerR
       request->send(400, "text/plain", "Requested bandwidth not possible");
     }
 
-    Serial.print("[AUDIO] bw: ");
-    Serial.println(rx_bw);
-
     // indicate that relays need an update
     flag_freq = true;
 

@@ -135,8 +135,8 @@ void special_mode(uint16_t special_mode) {
         Serial.println();
 
         uint64_t f_if_orig = f_if;
-        uint64_t f_if_min = f_if-5000;
-        uint64_t f_if_max = f_if+3000;
+        uint64_t f_if_min = f_if-10000;
+        uint64_t f_if_max = f_if+10000;
         uint16_t step_size = 200;
         uint16_t num_points = (f_if_max-f_if_min)/step_size;
 

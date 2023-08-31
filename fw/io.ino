@@ -245,9 +245,9 @@ void gpio_write(output_pin pin, output_state state) {
       }
       if(hardware_rev == "max-3b_v2") {
         if(state == OUTPUT_SEL_CW)
-          pcf8574_21.write(0, HIGH);
+          pcf8574_21.write(6, HIGH);
         if(state == OUTPUT_SEL_SSB)
-          pcf8574_21.write(0, LOW);
+          pcf8574_21.write(6, LOW);
       }
       break;
 
