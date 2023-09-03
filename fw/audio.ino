@@ -128,8 +128,12 @@ void handle_speaker(WebRequestMethodComposite request_type, AsyncWebServerReques
 }
 
 void init_audio() {
-  vol_min = load_json_config(hw_config_file, "vol_min").toInt();
-  vol_max = load_json_config(hw_config_file, "vol_max").toInt();
+  vol_min = load_json_config(preference_file, "vol_min").toInt();
+  vol_max = load_json_config(preference_file, "vol_max").toInt();
 
+  // turn off speaker at startup
   gpio_write(OUTPUT_SPKR_EN, OUTPUT_OFF);
+
+  // set volume to minimum at startup
+  update_volume(vol_min);
 }

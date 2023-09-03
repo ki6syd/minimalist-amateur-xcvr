@@ -1,9 +1,8 @@
 #define ADC_SCALING_VBAT      0.0349
 #define ADC_SCALING_AUDIO     0.00976
 
-// pinout definitions depend on hardware version
-// #define MAX_3B_V1
-#define MAX_3B_V2
+// relay operating time
+#define RELAY_DELAY 5
 
 void handle_antenna(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) {
   if(request_type == HTTP_PUT) {
@@ -87,7 +86,7 @@ void init_gpio() {
   pinMode(16, OUTPUT);
 
   // figure out which hardware version we are running
-  hardware_rev = load_json_config(hw_config_file, "hardware_rev");
+  hardware_rev = load_json_config(hardware_file, "hardware_rev");
 
   // set up the relay driver IO expander
   if(!pcf8574_20.begin() && !pcf8574_21.begin())
@@ -113,13 +112,13 @@ void init_gpio() {
   pinMode(13, INPUT_PULLUP);
   attach_paddle_isr(true, true);
 
-  analogWriteFreq(load_json_config(hw_config_file, "sidetone_pitch_hz").toInt());
+  analogWriteFreq(load_json_config(preference_file, "sidetone_pitch_hz").toInt());
 
   // select audio filter routing
   gpio_write(OUTPUT_BW_SEL, (output_state) rx_bw);
 
   // load audio default value
-  vol = (uint16_t) load_json_config(hw_config_file, "af_gain_default").toFloat();
+  vol = (uint16_t) load_json_config(preference_file, "af_gain_default").toFloat();
 }
 
 
@@ -157,6 +156,7 @@ ICACHE_RAM_ATTR void paddle_isr() {
 }
 
 
+// relay related commands add a 5ms delay so function doesn't return until it should have toggled
 void gpio_write(output_pin pin, output_state state) {
   switch(pin) {
     case OUTPUT_RX_MUTE:
@@ -199,6 +199,7 @@ void gpio_write(output_pin pin, output_state state) {
         pcf8574_20.write(0, HIGH);
       if(state == OUTPUT_OFF)
         pcf8574_20.write(0, LOW);
+      my_delay(RELAY_DELAY);
       break;
       
     case OUTPUT_BPF_1:
@@ -206,6 +207,7 @@ void gpio_write(output_pin pin, output_state state) {
         pcf8574_20.write(5, HIGH);
       if(state == OUTPUT_OFF)
         pcf8574_20.write(5, LOW);
+      my_delay(RELAY_DELAY);
       break;
 
     case OUTPUT_LPF_2:
@@ -213,6 +215,7 @@ void gpio_write(output_pin pin, output_state state) {
         pcf8574_20.write(1, HIGH);
       if(state == OUTPUT_OFF)
         pcf8574_20.write(1, LOW);
+      my_delay(RELAY_DELAY);
       break;
 
     case OUTPUT_BPF_2:
@@ -220,6 +223,7 @@ void gpio_write(output_pin pin, output_state state) {
         pcf8574_20.write(4, HIGH);
       if(state == OUTPUT_OFF)
         pcf8574_20.write(4, LOW);
+      my_delay(RELAY_DELAY);
       break;
 
     case OUTPUT_LPF_3:
@@ -227,6 +231,7 @@ void gpio_write(output_pin pin, output_state state) {
         pcf8574_20.write(2, HIGH);
       if(state == OUTPUT_OFF)
         pcf8574_20.write(2, LOW);
+      my_delay(RELAY_DELAY);
       break;
 
     case OUTPUT_BPF_3:
@@ -234,6 +239,7 @@ void gpio_write(output_pin pin, output_state state) {
         pcf8574_20.write(3, HIGH);
       if(state == OUTPUT_OFF)
         pcf8574_20.write(3, LOW);
+      my_delay(RELAY_DELAY);
       break;
 
     case OUTPUT_BW_SEL:

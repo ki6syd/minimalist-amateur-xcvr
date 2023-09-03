@@ -1,5 +1,4 @@
 {
-	"hardware_rev": "max-3b_v2",
 	"mdns_hostname": "radio",
 	"wifi_power_dbm": "10",
 	"wifi_channel": "11",
@@ -7,8 +6,6 @@
 	"sidetone_pitch_hz": "700",
 	"ant_default": "OUTPUT_ANT_DIRECT",
 	"lna_default": "0",
-	"xtal_freq_hz": "25999815",
-	"if_freq_hz": "9999400",
 	"f_rf_min_hz_band1": "7000000",
 	"f_rf_max_hz_band1": "7300000",
 	"f_rf_min_hz_band2": "14000000",

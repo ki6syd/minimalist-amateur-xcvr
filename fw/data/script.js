@@ -71,7 +71,7 @@ function send_ft8() {
   var ft8String = document.getElementById('ft8String').value;
   var timeNow = Date.now();
   var rf = 14074000;
-  var af = 1500;
+  var af = parseInt(document.getElementById('ft8AudioFreq').value);
 
   http_request("POST", "ft8", ["messageText", "timeNow", "rfFrequency", "audioFrequency"], [ft8String, timeNow, rf, af])
 }

@@ -124,8 +124,13 @@ void set_mode(mode_type new_mode) {
     else
       update_volume(vol + mon_offset);
       
-    // HACK: CW audio shows distortion with sidetone. use SSB.
-    gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB);
+    // HACK for v1: CW audio shows distortion with sidetone. use SSB.
+    if(hardware_rev == "max-3b_v1") {
+      gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB);
+    }
+    if(hardware_rev == "max-3b_v2") {
+      // do nothing, stay on same bw
+    }
 
     my_delay(10);
     
@@ -145,9 +150,13 @@ void set_mode(mode_type new_mode) {
     Serial.println("[MODE] TX");
   }
   if(new_mode == MODE_RX) {    
+    // this delay helps make sure switching depletes all voltage on the drain of the FETs
+    my_delay(25);
     si5351.output_enable(SI5351_CLK2, 0);
 
-    my_delay(10);
+    // this delay prevents RX chain from starting up before switching has stopped
+    my_delay(25);
+    
     // change over clocks to RX
     si5351.output_enable(SI5351_CLK0, 1);
     si5351.output_enable(SI5351_CLK1, 1);
@@ -225,23 +234,23 @@ void update_qsk_timer() {
 // TODO: load calibration factors and freq offsets out of the JSON file
 void init_radio() {
   // load frequency limits from flash
-  f_rf_min_band1 = load_json_config(hw_config_file, "f_rf_min_hz_band1").toFloat();
-  f_rf_max_band1 = load_json_config(hw_config_file, "f_rf_max_hz_band1").toFloat();
-  f_rf_min_band2 = load_json_config(hw_config_file, "f_rf_min_hz_band2").toFloat();
-  f_rf_max_band2 = load_json_config(hw_config_file, "f_rf_max_hz_band2").toFloat();
-  f_rf_min_band3 = load_json_config(hw_config_file, "f_rf_min_hz_band3").toFloat();
-  f_rf_max_band3 = load_json_config(hw_config_file, "f_rf_max_hz_band3").toFloat();
+  f_rf_min_band1 = load_json_config(preference_file, "f_rf_min_hz_band1").toFloat();
+  f_rf_max_band1 = load_json_config(preference_file, "f_rf_max_hz_band1").toFloat();
+  f_rf_min_band2 = load_json_config(preference_file, "f_rf_min_hz_band2").toFloat();
+  f_rf_max_band2 = load_json_config(preference_file, "f_rf_max_hz_band2").toFloat();
+  f_rf_min_band3 = load_json_config(preference_file, "f_rf_min_hz_band3").toFloat();
+  f_rf_max_band3 = load_json_config(preference_file, "f_rf_max_hz_band3").toFloat();
   
   // load frequencies from flash
   // TODO: need a better way to update all the frequencies at once. Introduce concept of USB/LSB, RX mode, and dial frequency.
-  uint64_t xtal = load_json_config(hw_config_file, "xtal_freq_hz").toFloat();
-  f_audio = load_json_config(hw_config_file, "sidetone_pitch_hz").toFloat();
-  f_if = load_json_config(hw_config_file, "if_freq_hz").toFloat();
+  uint64_t xtal = load_json_config(hardware_file, "xtal_freq_hz").toFloat();
+  f_audio = load_json_config(preference_file, "sidetone_pitch_hz").toFloat();
+  f_if = load_json_config(hardware_file, "if_freq_hz").toFloat();
   f_bfo = f_if + f_audio;
   // f_bfo = f_if + 2500;
 
   // load default frequency from JSON, use function in server module
-  set_dial_freq(load_json_config(hw_config_file, "f_rf_default_mhz"));
+  set_dial_freq(load_json_config(preference_file, "f_rf_default_mhz"));
 
 
   // initialize radio hardare

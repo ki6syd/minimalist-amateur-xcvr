@@ -67,14 +67,14 @@ void init_wifi_mdns() {
     my_delay(10000);
   }
 
-  int wifi_dBm = load_json_config(hw_config_file, "wifi_power_dbm").toInt();
+  int wifi_dBm = load_json_config(preference_file, "wifi_power_dbm").toInt();
   WiFi.setOutputPower(wifi_dBm);
   Serial.print("[WIFI] Power set to ");
   Serial.print(wifi_dBm);
   Serial.println(" dBm");
 
   // start MDNS
-  if (MDNS.begin(load_json_config(hw_config_file, "mdns_hostname"))) {
+  if (MDNS.begin(load_json_config(preference_file, "mdns_hostname"))) {
     MDNS.addService("http", "tcp", 80);
     Serial.println("[MDNS] Started MDNS with hostname from JSON");
   }

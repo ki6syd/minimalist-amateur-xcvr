@@ -68,8 +68,9 @@ enum key_types {
   KEY_PADDLE
 };
 
-const char * hw_config_file = "/hardware_config.json";
+const char * preference_file = "/preferences.json";
 const char * credential_file = "/credentials.json";
+const char * hardware_file = "/hardware_info.json";
 const int led = LED_BUILTIN;
 
 AsyncWebServer server(80);
@@ -148,7 +149,7 @@ uint16_t vol_max = 0;
 // TODO - restructure init functions so there's one batch read from JSON before configuring hardware
 void setup(void) {
   // short delay to make sure serial monitor catches everything
-  my_delay(2000);
+  // my_delay(2000);
 
   Serial.begin(115200);
   SPIFFS.begin();
@@ -157,6 +158,7 @@ void setup(void) {
   // Serial.setDebugOutput(true);
 
   init_gpio();
+  init_audio();
   gpio_write(OUTPUT_GREEN_LED, OUTPUT_ON);
 
   // start up wifi and MDNS
@@ -175,19 +177,15 @@ void setup(void) {
   // turn off TX power
   gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_OFF);
 
-  // set volume to default value
-  init_audio();
-  update_volume(vol);
-
   // set antenna impedance relay
-  if(load_json_config(hw_config_file, "ant_default") == "OUTPUT_ANT_DIRECT")
+  if(load_json_config(preference_file, "ant_default") == "OUTPUT_ANT_DIRECT")
     ant = OUTPUT_ANT_DIRECT;
-  if(load_json_config(hw_config_file, "ant_default") == "OUTPUT_ANT_XFMR")
+  if(load_json_config(preference_file, "ant_default") == "OUTPUT_ANT_XFMR")
     ant = OUTPUT_ANT_XFMR;
   gpio_write(OUTPUT_ANT_SEL, (output_state) ant);
 
   // set lna option
-  if(load_json_config(hw_config_file, "lna_default").toInt()) {
+  if(load_json_config(preference_file, "lna_default").toInt()) {
     lna_state = true;
     gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
   }
@@ -197,11 +195,11 @@ void setup(void) {
   }    
 
   // TODO - bulk read from JSON, move everything out of init files
-  min_vbat = load_json_config(hw_config_file, "v_bat_min_cutoff").toFloat();
-  max_vbat = load_json_config(hw_config_file, "v_bat_max_cutoff").toFloat();
+  min_vbat = load_json_config(preference_file, "v_bat_min_cutoff").toFloat();
+  max_vbat = load_json_config(preference_file, "v_bat_max_cutoff").toFloat();
 
-  qsk_period = load_json_config(hw_config_file, "qsk_delay_ms").toFloat();
-  mon_offset = load_json_config(hw_config_file, "sidetone_level").toFloat();
+  qsk_period = load_json_config(preference_file, "qsk_delay_ms").toFloat();
+  mon_offset = load_json_config(preference_file, "sidetone_level").toFloat();
 
   // initial read of battery voltage
   last_vbat = analog_read(INPUT_VBAT);
@@ -296,14 +294,14 @@ void loop(void) {
   }
 
   // TODO - have some better logic for this, and extract the 1.0v rationality threshold into a settings file
-  if (last_vbat > max_vbat || (last_vbat < min_vbat && last_vbat > 1.0)) {
-    Serial.print("[SAFETY] VBat out of range ");
-    Serial.println(last_vbat);
-    
+  if (last_vbat > max_vbat || (last_vbat < min_vbat && last_vbat > 2.0)) {
     // turn off TX clock and set VDD off
     gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_OFF);
-    my_delay(50);
+    my_delay(100);
     si5351.output_enable(SI5351_CLK2, 0);
+
+    Serial.print("[SAFETY] VBat out of range ");
+    Serial.println(last_vbat);
     
     set_mode(MODE_RX);
     for (int i = 0; i < 10; i++) {
