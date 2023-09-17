@@ -11,6 +11,7 @@ var rpt_count_step_ms = 500;
 var mon_min = -2;
 var mon_max = 2;
 
+var api_base_url = "/api/v1/"
 var sota_url_1 = "https://api2.sota.org.uk/api/spots/";
 var sota_url_2 = "/all/"
 var sotlas_url = "https://sotl.as/summits/"
@@ -44,7 +45,7 @@ function get_utc_time() {
 
 function http_request(type, path, keys, values) {
   // form the string to send
-  var str = "/" + path + "?";
+  var str = api_base_url + path + "?";
   for(var i = 0; i < keys.length; i++) {
     str += keys[i] + "=" + values[i] + "&";
   }
@@ -57,14 +58,6 @@ function http_request(type, path, keys, values) {
     xhr.onreadystatechange = arguments[4]
   }
   xhr.send();
-}
-
-function send_command(param, val) {
-  var xhr = new XMLHttpRequest();
-  xhr.open("GET", "/"+param+"?value="+val, true);
-  xhr.send();
-
-  console.log(param, ': ', val)
 }
 
 function send_ft8() {

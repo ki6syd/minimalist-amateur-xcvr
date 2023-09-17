@@ -71,6 +71,7 @@ enum key_types {
 const char * preference_file = "/preferences.json";
 const char * credential_file = "/credentials.json";
 const char * hardware_file = "/hardware_info.json";
+String api_base_url = "/api/v1/";
 const int led = LED_BUILTIN;
 
 AsyncWebServer server(80);

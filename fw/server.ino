@@ -1,3 +1,9 @@
+#define CONCAT(ONE, TWO)  ONE TWO
+#define API_VERSION   "v1"
+#define API_BASE_URL  "/api/v1/"
+
+#define GIT_VERSION "TEST"
+
 // useful reference for OTA: https://github.com/lbernstone/asyncUpdate/blob/master/AsyncUpdate.ino 
 
 // OTA update function
@@ -75,133 +81,131 @@ void handleUpload(AsyncWebServerRequest *request, String filename, size_t index,
 
 // this is mostly copied from Async FS Browser example
 // Moved to a function to keep the main file simpler
-
-void init_web_server() {
-
-  // todo: put config password into JSON
+void init_web_server() {  
   server.addHandler(new SPIFFSEditor(load_json_config(credential_file, "user_settings"), load_json_config(credential_file, "pass_settings")));
 
   // handlers for FT8 messages
-  server.on("/ft8", HTTP_POST, [](AsyncWebServerRequest *request){
-    print_request_details(request);
+  server.on(CONCAT(API_BASE_URL, "ft8"), HTTP_POST, [](AsyncWebServerRequest *request){
     handle_ft8(HTTP_POST, request);
   });
-  server.on("/ft8", HTTP_DELETE, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "ft8"), HTTP_DELETE, [](AsyncWebServerRequest *request){
     handle_ft8(HTTP_DELETE, request);
   });
 
 
   // handlers for CW messages
-  server.on("/cw", HTTP_POST, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "cw"), HTTP_POST, [](AsyncWebServerRequest *request){
     handle_cw(HTTP_POST, request);
   });
-  server.on("/cw", HTTP_DELETE, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "cw"), HTTP_DELETE, [](AsyncWebServerRequest *request){
     handle_cw(HTTP_DELETE, request);
   });
   
 
   // handler for digital mode messages
-  server.on("/queue", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "queue"), HTTP_GET, [](AsyncWebServerRequest *request){
     handle_queue(HTTP_GET, request);
   });
-  server.on("/queue", HTTP_DELETE, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "queue"), HTTP_DELETE, [](AsyncWebServerRequest *request){
     handle_queue(HTTP_DELETE, request);
   });
 
 
   // handlers for time
-  server.on("/time", HTTP_PUT, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "time"), HTTP_PUT, [](AsyncWebServerRequest *request){
     handle_time(HTTP_PUT, request);
   });
-  server.on("/time", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "time"), HTTP_GET, [](AsyncWebServerRequest *request){
     handle_time(HTTP_GET, request);
   });
 
 
   // handlers for frequency
-  server.on("/frequency", HTTP_PUT, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "frequency"), HTTP_PUT, [](AsyncWebServerRequest *request){
     handle_frequency(HTTP_PUT, request);
   });
-  server.on("/frequency", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "frequency"), HTTP_GET, [](AsyncWebServerRequest *request){
     handle_frequency(HTTP_GET, request);
   });
 
   // handlers for rx bandwidth
-  server.on("/rxBandwidth", HTTP_PUT, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "rxBandwidth"), HTTP_PUT, [](AsyncWebServerRequest *request){
     handle_rx_bandwidth(HTTP_PUT, request);
   });
-  server.on("/rxBandwidth", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "rxBandwidth"), HTTP_GET, [](AsyncWebServerRequest *request){
     handle_rx_bandwidth(HTTP_GET, request);
   });
 
-  server.on("/sMeter", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", String(last_smeter));
-  });
-
-  server.on("/inputVoltage", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "inputVoltage"), HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(200, "text/plain", String(last_vbat));
   });
 
-  server.on("/debug", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", String(0));
-  });
-
   // handlers for volume
-  server.on("/volume", HTTP_PUT, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "volume"), HTTP_PUT, [](AsyncWebServerRequest *request){
     handle_volume(HTTP_PUT, request);
   });
-  server.on("/volume", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "volume"), HTTP_GET, [](AsyncWebServerRequest *request){
     handle_volume(HTTP_GET, request);
   });
 
   // handlers for volume
-  server.on("/sidetone", HTTP_PUT, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "sidetone"), HTTP_PUT, [](AsyncWebServerRequest *request){
     handle_sidetone(HTTP_PUT, request);
   });
-  server.on("/sidetone", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "sidetone"), HTTP_GET, [](AsyncWebServerRequest *request){
     handle_sidetone(HTTP_GET, request);
   });
 
   // handlers for cw speed
-  server.on("/cwSpeed", HTTP_PUT, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "cwSpeed"), HTTP_PUT, [](AsyncWebServerRequest *request){
     handle_cw_speed(HTTP_PUT, request);
   });
-  server.on("/cwSpeed", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "cwSpeed"), HTTP_GET, [](AsyncWebServerRequest *request){
     handle_cw_speed(HTTP_GET, request);
   });
 
   // handlers for antenna
-  server.on("/antenna", HTTP_PUT, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "lna"), HTTP_PUT, [](AsyncWebServerRequest *request){
+    handle_lna(HTTP_PUT, request);
+  });
+  server.on(CONCAT(API_BASE_URL, "lna"), HTTP_GET, [](AsyncWebServerRequest *request){
+    handle_lna(HTTP_GET, request);
+  });
+  // handlers for antenna
+  server.on(CONCAT(API_BASE_URL, "antenna"), HTTP_PUT, [](AsyncWebServerRequest *request){
     handle_antenna(HTTP_PUT, request);
   });
-  server.on("/antenna", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "antenna"), HTTP_GET, [](AsyncWebServerRequest *request){
     handle_antenna(HTTP_GET, request);
   });
 
 
   // handlers for speaker
-  server.on("/speaker", HTTP_PUT, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "speaker"), HTTP_PUT, [](AsyncWebServerRequest *request){
     handle_speaker(HTTP_PUT, request);
   });
-  server.on("/speaker", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "speaker"), HTTP_GET, [](AsyncWebServerRequest *request){
     handle_speaker(HTTP_GET, request);
   });
 
+  server.on(CONCAT(API_BASE_URL, "sMeter"), HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", String(last_smeter));
+  }); 
 
-  // handlers for antenna
-  server.on("/lna", HTTP_PUT, [](AsyncWebServerRequest *request){
-    handle_lna(HTTP_PUT, request);
-  });
-  server.on("/lna", HTTP_GET, [](AsyncWebServerRequest *request){
-    handle_lna(HTTP_GET, request);
+  
+  server.on(CONCAT(API_BASE_URL, "githash"), HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", String(GIT_VERSION));
   });
 
+  server.on("/api", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", String(API_VERSION));
+  });
 
   // handlers for special commands
-  server.on("/debug", HTTP_POST, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "debug"), HTTP_POST, [](AsyncWebServerRequest *request){
     handle_debug(HTTP_POST, request);
   });
-  server.on("/debug", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on(CONCAT(API_BASE_URL, "debug"), HTTP_GET, [](AsyncWebServerRequest *request){
     handle_debug(HTTP_GET, request);
   });
 
@@ -275,7 +279,8 @@ void print_request_details(AsyncWebServerRequest *request) {
     } else if(p->isPost()){
       Serial.printf("_POST[%s]: %s\n", p->name().c_str(), p->value().c_str());
     } else {
-      Serial.printf("_GET[%s]: %s\n", p->name().c_str(), p->value().c_str());
+      // there is no isPut() function
+      Serial.printf("_GET or _PUT [%s]: %s\n", p->name().c_str(), p->value().c_str());
     }
   }
 }
