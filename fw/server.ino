@@ -2,8 +2,6 @@
 #define API_VERSION   "v1"
 #define API_BASE_URL  "/api/v1/"
 
-#define GIT_VERSION "TEST"
-
 // useful reference for OTA: https://github.com/lbernstone/asyncUpdate/blob/master/AsyncUpdate.ino 
 
 // OTA update function

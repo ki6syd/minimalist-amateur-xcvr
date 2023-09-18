@@ -12,7 +12,7 @@
 #include <si5351.h>
 #include <JTEncode.h>
 #include <TimeLib.h>
-#include "src/git-version.h"    // https://github.com/fabianoriccardi/git-describe-arduino/tree/main
+#include "git-version.h"
 
 enum output_pin {
   OUTPUT_RX_MUTE,
