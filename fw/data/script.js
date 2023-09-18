@@ -382,6 +382,25 @@ function get_s_meter() {
   http_request("GET", "sMeter", [], [], func)
 }
 
+function get_githash(number) {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById('githash').value = this.responseText;
+    }
+  };
+  http_request("GET", "githash", [], [], func)
+}
+
+function get_address(number) {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById('address').value = this.responseText;
+    }
+  };
+  http_request("GET", "address", [], [], func)
+}
 
 function debug_action(number) {
 	http_request("POST", "debug", ["command"], [number])
@@ -449,12 +468,10 @@ function watchdog_update() {
   wd_count = wd_count - 1;
 
   if(wd_count <= 0) {
-    document.getElementById('watchdog').value = "DISCONNECTED";
-    document.getElementById('watchdog').className = 'readout_small_alert'
+    document.getElementById('address').className = 'readout_tiny_alert'
   }
   else {
-    document.getElementById('watchdog').value = "CONNECTED";
-    document.getElementById('watchdog').className = 'readout_small'
+    document.getElementById('address').className = 'readout_tiny'
   }
 }
 
@@ -595,6 +612,8 @@ function on_load() {
   // get_debug();
   get_freq();
   get_utc_time();
+  get_address();
+  get_githash();
   set_epoch_ms();
   json_spots_to_table(num_spots, col_names, "spots");
 }

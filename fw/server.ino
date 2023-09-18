@@ -195,6 +195,11 @@ void init_web_server() {
     request->send(200, "text/plain", String(GIT_VERSION));
   });
 
+  server.on(CONCAT(API_BASE_URL, "address"), HTTP_GET, [](AsyncWebServerRequest *request){
+    IPAddress ip = WiFi.localIP();
+    request->send(200, "text/plain", String(ip.toString()));
+  });
+
   server.on("/api", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(200, "text/plain", String(API_VERSION));
   });

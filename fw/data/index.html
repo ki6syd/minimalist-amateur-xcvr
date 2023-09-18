@@ -14,12 +14,16 @@
 
 	<form>
 		<div>
-	      <output name="watchdog" class="readout_small" id="watchdog">DISCONNECTED</output>
-	    </div>
-	    <div>
-	    	<label for="time" class="label_small">UTC </label>
-      		<output name="time" class="readout_small" id="time">00:00</output>
-  		</div>
+    	<label for="time" class="label_tiny">UTC:</label>
+    	<output name="time" class="readout_small" id="time">00:00</output>
+
+      <output name="address" class="readout_tiny_alert" id="address">0.0.0.0</output>
+
+    </div>
+    <div>
+      <label for="time" class="label_tiny">GITHASH </label>
+      <output name="githash" class="readout_tiny" id="githash">githash</output>
+    </div>
 	</form>
 
   <form>
@@ -123,9 +127,9 @@
       <input type="text" class="cw_input" id="freeform" name="freeform" placeholder="TEXT TO CW" value="">
     </div>
     <div>
-      <a href="ft8.html">FT8</a>
-      <a href="sotamat://">SOTAMAT</a>
-      <a href="util.html">UTIL</a>
+
+      <a href="sotamat://"><button type="button" class="button_emoji">&#128205;&#65039;</button></a>
+      <a href="util.html"><button type="button" class="button_emoji">&#128736;&#65039;</button></a>
     </div>
   </form>
 

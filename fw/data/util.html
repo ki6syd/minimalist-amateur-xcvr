@@ -9,7 +9,34 @@
 </head>
 
 <body>
+<h1>FT8 Transmit</h1>
+<div class="table">
+<form>
+<div>
+      <output class="label">FULL FT8 STRING</output>
+      <input type="text" id="ft8String" value="S KI6SYD/7FFU">
+</div>
+</form>
 
+<form>
+<div>
+  <label for="ft8AudioFreq" class="label">Audio Frequency</label>
+  <input type="text" id="ft8AudioFreq" value="1500">
+</div>
+</form>
+
+<form>
+<div>
+      <button type="button" class="button" onclick="send_ft8()">SEND FT8</button>
+      <button type="button" class="button" onclick="stop_ft8()">STOP FT8</button>
+</div>
+</form>
+
+<br>
+<br>
+<br>
+
+<h1>OTA Update</h1>
 <form method='post' action='/ota' enctype='multipart/form-data'>
       <input type='file' name='update'>
       <input type='submit' value='Update'>
@@ -17,12 +44,16 @@
 
 <br>
 <br>
+<br>
 
-<a href="/edit">FILE SYSTEM EDITOR (ACE.JS)</a>
+<h1>File System Editor</h1>
+<a href="/edit">/edit (ACE.JS)</a>
 
 <br>
 <br>
+<br>
 
+<h1>Debug Tools</h1>
 <div class="table">
 <form>
   <div>
