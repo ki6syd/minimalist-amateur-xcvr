@@ -139,7 +139,7 @@ function next_band() {
   var cur_freq = parseFloat(document.getElementById('freq_mhz').value);
   var round_down_freq = Math.round(cur_freq);
 
-  // todo: clean this up.
+  // todo: clean this up. parametrize it
   if(round_down_freq == 7)
     document.getElementById('freq_mhz').value = cur_freq + (14.0-7.0)
   if(round_down_freq == 14)
