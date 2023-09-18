@@ -2,85 +2,13 @@
 #define API_VERSION   "v1"
 #define API_BASE_URL  "/api/v1/"
 
-// useful reference for OTA: https://github.com/lbernstone/asyncUpdate/blob/master/AsyncUpdate.ino 
 
-// OTA update function
-void handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final) {
-  gpio_write(OUTPUT_GREEN_LED, OUTPUT_ON);
-
-  // decide which partition to write. Relies on "spiffs" being in name
-  if (!index){
-    Serial.println("[OTA] Upload Beginning");
-
-    uint32_t free_space = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
-    uint32_t sketch_size = ESP.getSketchSize();
-    content_len = request->contentLength();
-
-    // SPIFFS selected for upload
-    if(filename.indexOf("spiffs") > -1) {
-      // check file size. Fail fast if too large
-      if(content_len > free_space) {
-        Serial.println("[OTA] Cannot OTA.");
-        Serial.print("[OTA] Content length: ");
-        Serial.println(content_len);
-        Serial.print("[OTA] Free space: ");
-        Serial.println(free_space);
-        request->send(400, "text/plain", "Content length is larger than available space");
-        return;
-      }
-
-      // begin update
-      Update.runAsync(true);
-      if (!Update.begin(free_space, U_FS)) {
-        Update.printError(Serial);
-        request->send(400, "text/plain", "Upload failure, see serial log.");
-        return;
-      }
-    }
-    // program upload
-    else {
-      // begin update
-      Update.runAsync(true);
-      if (!Update.begin(content_len, U_FLASH)) {
-        Update.printError(Serial);
-        request->send(400, "text/plain", "Upload failure, see serial log.");
-        return;
-      }
-    }
-  }
-  
-  // receive data, write it to flash, show progress
-  if (Update.write(data, len) != len) {
-    Update.printError(Serial);
-  }
-  // todo: add callback function for webpage display
-  Serial.printf("Progress: %d%%\n", (Update.progress()*100)/Update.size());
-
-
-  // upload complete
-  if (final) {
-    AsyncWebServerResponse *response = request->beginResponse(302, "text/plain", "Please wait while the device reboots");
-    response->addHeader("Refresh", "20");  
-    response->addHeader("Location", "/");
-    
-    request->send(response);
-    if (!Update.end(true)){
-      Update.printError(Serial);
-    } else {
-      Serial.println("[OTA] Update complete.");
-      Serial.flush();
-      ESP.restart();
-    }
-  }
-
-  gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
-}
 
 
 // this is mostly copied from Async FS Browser example
 // Moved to a function to keep the main file simpler
 void init_web_server() {  
-  server.addHandler(new SPIFFSEditor(load_json_config(credential_file, "user_settings"), load_json_config(credential_file, "pass_settings")));
+  server.addHandler(new SPIFFSEditor(load_json_config(wifi_file, "user_settings"), load_json_config(wifi_file, "pass_settings")));
 
   // handlers for FT8 messages
   server.on(CONCAT(API_BASE_URL, "ft8"), HTTP_POST, [](AsyncWebServerRequest *request){

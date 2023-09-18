@@ -70,7 +70,7 @@ enum key_types {
 };
 
 const char * preference_file = "/preferences.json";
-const char * credential_file = "/credentials.json";
+const char * wifi_file = "/wifi_info.json";
 const char * hardware_file = "/hardware_info.json";
 String api_base_url = "/api/v1/";
 const int led = LED_BUILTIN;
@@ -187,7 +187,7 @@ void setup(void) {
   gpio_write(OUTPUT_ANT_SEL, (output_state) ant);
 
   // set lna option
-  if(load_json_config(preference_file, "lna_default").toInt()) {
+  if(load_json_config(preference_file, "lna_default") == "ON") {
     lna_state = true;
     gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
   }
