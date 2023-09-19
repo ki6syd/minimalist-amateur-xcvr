@@ -2,9 +2,6 @@
 #define API_VERSION   "v1"
 #define API_BASE_URL  "/api/v1/"
 
-
-
-
 // this is mostly copied from Async FS Browser example
 // Moved to a function to keep the main file simpler
 void init_web_server() {  
