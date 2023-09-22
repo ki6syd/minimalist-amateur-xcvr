@@ -30,6 +30,10 @@ progress {
   font-size: 16px;
 }
 
+.label_tiny {
+  font-size: 12px;
+}
+
 .vfo_display {
   color: #3389FF;
   font-family: monospace;
@@ -68,7 +72,19 @@ progress {
 .readout_small_alert {
   color: #BA3329;
   font-family: monospace;
-  font-size: 16px;
+  font-size: 14px;
+}
+
+.readout_tiny_alert {
+  color: #BA3329;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.readout_tiny {
+  color: #3389FF;
+  font-family: monospace;
+  font-size: 12px;
 }
 
 .button {

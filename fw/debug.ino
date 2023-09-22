@@ -17,7 +17,9 @@ void handle_debug(WebRequestMethodComposite request_type, AsyncWebServerRequest 
   }
 }
 
-  
+// TODO - break out basic GPIO controls as separtate from cal routines
+// TODO - add some more controls so TX into BPF isn't possible
+// TODO - send curves to web browser
 void special_mode(uint16_t special_mode) {
   switch(special) {
       case 1:
@@ -135,8 +137,8 @@ void special_mode(uint16_t special_mode) {
         Serial.println();
 
         uint64_t f_if_orig = f_if;
-        uint64_t f_if_min = f_if-5000;
-        uint64_t f_if_max = f_if+3000;
+        uint64_t f_if_min = f_if-10000;
+        uint64_t f_if_max = f_if+10000;
         uint16_t step_size = 200;
         uint16_t num_points = (f_if_max-f_if_min)/step_size;
 
@@ -475,6 +477,36 @@ void special_mode(uint16_t special_mode) {
           my_delay(2350);
         }
         
+        break;
+      }
+
+      case 29: {
+        // routine for unsticking relays
+
+        output_pin filter_relays[] = {OUTPUT_LPF_1, OUTPUT_LPF_2, OUTPUT_LPF_3, OUTPUT_BPF_1, OUTPUT_BPF_2, OUTPUT_BPF_3};
+        
+        for(uint16_t i=0; i < 5; i++) {
+          for(uint8_t j=0; j < 6; j++) {
+            gpio_write(OUTPUT_LPF_1, OUTPUT_OFF);
+            gpio_write(OUTPUT_LPF_2, OUTPUT_OFF);
+            gpio_write(OUTPUT_LPF_3, OUTPUT_OFF);
+            gpio_write(OUTPUT_BPF_1, OUTPUT_OFF);
+            gpio_write(OUTPUT_BPF_2, OUTPUT_OFF);
+            gpio_write(OUTPUT_BPF_3, OUTPUT_OFF);  
+            my_delay(5);
+
+            gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
+            for(uint8_t k=0; k < 100; k++) {
+              gpio_write(filter_relays[j], OUTPUT_ON);
+              my_delay(5);
+              gpio_write(filter_relays[j], OUTPUT_OFF);
+              my_delay(5);
+            }
+            gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
+          }
+          my_delay(250);
+        }
+
         break;
       }
     }

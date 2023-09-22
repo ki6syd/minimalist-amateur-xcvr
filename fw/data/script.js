@@ -11,6 +11,7 @@ var rpt_count_step_ms = 500;
 var mon_min = -2;
 var mon_max = 2;
 
+var api_base_url = "/api/v1/"
 var sota_url_1 = "https://api2.sota.org.uk/api/spots/";
 var sota_url_2 = "/all/"
 var sotlas_url = "https://sotl.as/summits/"
@@ -29,9 +30,9 @@ function zeroPad(num, places) {
 function freq_in_band(num) {
   if(num >= 7 && num <= 7.3)
     return true;
-  if(num >= 10.1 && num <= 10.15)
+  if(num >= 14.0 && num <= 14.35)
     return true;
-  if(num >= 14 && num <= 14.35)
+  if(num >= 21 && num <= 21.45)
     return true;
   return false;
 }
@@ -44,7 +45,7 @@ function get_utc_time() {
 
 function http_request(type, path, keys, values) {
   // form the string to send
-  var str = "/" + path + "?";
+  var str = api_base_url + path + "?";
   for(var i = 0; i < keys.length; i++) {
     str += keys[i] + "=" + values[i] + "&";
   }
@@ -59,19 +60,11 @@ function http_request(type, path, keys, values) {
   xhr.send();
 }
 
-function send_command(param, val) {
-  var xhr = new XMLHttpRequest();
-  xhr.open("GET", "/"+param+"?value="+val, true);
-  xhr.send();
-
-  console.log(param, ': ', val)
-}
-
 function send_ft8() {
   var ft8String = document.getElementById('ft8String').value;
   var timeNow = Date.now();
   var rf = 14074000;
-  var af = 1500;
+  var af = parseInt(document.getElementById('ft8AudioFreq').value);
 
   http_request("POST", "ft8", ["messageText", "timeNow", "rfFrequency", "audioFrequency"], [ft8String, timeNow, rf, af])
 }
@@ -146,13 +139,13 @@ function next_band() {
   var cur_freq = parseFloat(document.getElementById('freq_mhz').value);
   var round_down_freq = Math.round(cur_freq);
 
-  // todo: clean this up.
+  // todo: clean this up. parametrize it
   if(round_down_freq == 7)
-    document.getElementById('freq_mhz').value = cur_freq + (10.11-7.06)
-  if(round_down_freq == 10)
-    document.getElementById('freq_mhz').value = cur_freq + (14.06-10.11)
+    document.getElementById('freq_mhz').value = cur_freq + (14.0-7.0)
   if(round_down_freq == 14)
-    document.getElementById('freq_mhz').value = cur_freq + (7.06-14.06)
+    document.getElementById('freq_mhz').value = cur_freq + (21.0-14.0)
+  if(round_down_freq == 21)
+    document.getElementById('freq_mhz').value = cur_freq + (7.0-21.0)
 
   set_freq();
   get_freq();
@@ -336,6 +329,36 @@ function press_ant() {
   get_antenna();
 }
 
+
+function set_speaker() {
+  speaker = document.getElementById('speaker').value;
+  http_request("PUT", "speaker", ["speakerState"], [speaker])
+}
+
+function get_speaker() {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById('speaker').value = this.responseText;
+    }
+  };
+  http_request("GET", "speaker", [], [], func)
+}
+
+function press_speaker() {
+  var speaker = document.getElementById('speaker').value;
+  if(speaker == 'ON')
+    speaker = 'OFF'
+  else
+    speaker = 'ON'
+
+  document.getElementById('speaker').value = speaker;
+
+  set_speaker();
+  get_speaker();
+}
+
+
 function get_input_voltage() {
   // define callback function
   func = function() {
@@ -359,6 +382,25 @@ function get_s_meter() {
   http_request("GET", "sMeter", [], [], func)
 }
 
+function get_githash(number) {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById('githash').value = this.responseText;
+    }
+  };
+  http_request("GET", "githash", [], [], func)
+}
+
+function get_address(number) {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById('address').value = this.responseText;
+    }
+  };
+  http_request("GET", "address", [], [], func)
+}
 
 function debug_action(number) {
 	http_request("POST", "debug", ["command"], [number])
@@ -426,12 +468,10 @@ function watchdog_update() {
   wd_count = wd_count - 1;
 
   if(wd_count <= 0) {
-    document.getElementById('watchdog').value = "DISCONNECTED";
-    document.getElementById('watchdog').className = 'readout_small_alert'
+    document.getElementById('address').className = 'readout_tiny_alert'
   }
   else {
-    document.getElementById('watchdog').value = "CONNECTED";
-    document.getElementById('watchdog').className = 'readout_small'
+    document.getElementById('address').className = 'readout_tiny'
   }
 }
 
@@ -569,9 +609,11 @@ function on_load() {
   get_bw();
   get_lna();
   get_antenna();
-  get_debug();
+  // get_debug();
   get_freq();
   get_utc_time();
+  get_address();
+  get_githash();
   set_epoch_ms();
   json_spots_to_table(num_spots, col_names, "spots");
 }
@@ -612,7 +654,7 @@ setInterval(function() { get_lna();}, 3000);
 setInterval(function() { get_antenna();}, 3000); 
 setInterval(function() { get_sidetone();}, 3000); 
 setInterval(function() { get_queue_len();}, 2000); 
-setInterval(function() { get_debug();}, 500);
+// setInterval(function() { get_debug();}, 500);
 setInterval(function() { get_utc_time();}, 5000) 
 setInterval(function() { set_epoch_ms();}, 60000)
 // watchdog update runs slightly slower than s-meter

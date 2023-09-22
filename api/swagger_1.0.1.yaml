@@ -1,0 +1,613 @@
+---
+openapi: 3.0.0
+info:
+  title: MAX-3B
+  description: API for MAX-3B radio
+  contact:
+    email: ki6syd@gmail.com
+  version: 1.0.1
+servers:
+- url: http://radio.local/api/v1
+  description: SwaggerHub API Auto Mocking
+tags:
+- name: DigitalModes
+  description: Communication DigitalModes
+- name: RadioInfo
+  description: Basic information about radio
+paths:
+  /ft8:
+    post:
+      tags:
+      - DigitalModes
+      summary: Send a FT8 free text message
+      parameters:
+      - name: messageText
+        in: query
+        description: 13 character free-text FT8 message to send
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: timeNow
+        in: query
+        description: "Caller's current time [epoch ms]. If provided, radio will update its current time to match timeNow. If not provided, radio will use its best estimate of current time."
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: integer
+      - name: rfFrequency
+        in: query
+        description: "Dial frequency for FT8 [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use standard digital mode frequency in the current current band, a pre-set configured frequency for sending all FT8 messages, etc."
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: integer
+      - name: audioFrequency
+        in: query
+        description: "Audio frequency (USB) relative to RF dial frequency [Hz]. Radio will pick an audio frequency if nothing provided. May be randomized, fixed 1500 Hz, configured in settings file, etc."
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: integer
+      responses:
+        "201":
+          description: Message added to queue
+        "400":
+          description: Invalid / not understood
+        "409":
+          description: Unable to accept message into queue
+    delete:
+      tags:
+      - DigitalModes
+      summary: Stop sending any FT8 messages and clear FT8 messages from queue
+      responses:
+        "204":
+          description: Stopped and deleted FT8.
+        "404":
+          description: Nothing to delete.
+  /cw:
+    post:
+      tags:
+      - DigitalModes
+      summary: Send a CW message
+      parameters:
+      - name: messageText
+        in: query
+        description: String to send
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: speed
+        in: query
+        description: "Keyer speed while sending CW message [wpm]"
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: integer
+      - name: rfFrequency
+        in: query
+        description: "Dial frequency for sending [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use the existing dial frequency, beacon frequency, etc."
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: integer
+      responses:
+        "201":
+          description: Message added to queue
+        "400":
+          description: Invalid / not understood
+        "409":
+          description: Unable to accept message into queue
+    delete:
+      tags:
+      - DigitalModes
+      summary: Stop sending any CW messages and clear CW messages from queue
+      responses:
+        "204":
+          description: Stopped and deleted CW messages.
+        "404":
+          description: Nothing to delete.
+  /queue:
+    get:
+      tags:
+      - DigitalModes
+      summary: Length of the radio's queue of digital messages
+      responses:
+        "200":
+          description: Number of total messages in radio's queue of digital modes messages
+          content:
+            text/plain:
+              schema:
+                type: integer
+    delete:
+      tags:
+      - DigitalModes
+      summary: "Stop sending any queued messages, and delete all messages."
+      responses:
+        "204":
+          description: Stopped and deleted messages.
+        "404":
+          description: Nothing to delete.
+  /sotamat:
+    post:
+      tags:
+      - DigitalModes
+      summary: DO NOT USE. For testing only. Sends SOTAmat spot as soon as message is received.
+      parameters:
+      - name: call
+        in: query
+        description: Operator's callsign
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: suffix
+        in: query
+        description: SOTAMAT
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+      responses:
+        "201":
+          description: Message sending
+        "400":
+          description: Invalid / not understood
+  /time:
+    get:
+      tags:
+      - RadioInfo
+      summary: Gets the radio's current time
+      responses:
+        "200":
+          description: "Current time [epoch ms]"
+        "404":
+          description: Time has never been set.
+          content:
+            text/plain:
+              schema:
+                type: integer
+    put:
+      tags:
+      - RadioInfo
+      summary: Set the radio's time
+      parameters:
+      - name: timeNow
+        in: query
+        description: "Current time [epoch ms]."
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: integer
+      responses:
+        "201":
+          description: Time accepted
+        "400":
+          description: Invalid / not understood
+  /frequency:
+    get:
+      tags:
+      - RadioInfo
+      summary: Gets the radio's current frequency
+      responses:
+        "200":
+          description: "Current dial frequency [Hz]"
+          content:
+            text/plain:
+              schema:
+                type: integer
+    put:
+      tags:
+      - RadioInfo
+      summary: Set the radio's dial frequency
+      parameters:
+      - name: frequency
+        in: query
+        description: "New frequency [Hz]"
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: integer
+      responses:
+        "201":
+          description: Frequency accepted
+        "400":
+          description: Invalid / not understood
+  /volume:
+    get:
+      tags:
+      - RadioInfo
+      summary: Gets the radio's current audio volume
+      responses:
+        "200":
+          description: "Current sidetone level [arbitrary units]"
+          content:
+            text/plain:
+              schema:
+                type: integer
+    put:
+      tags:
+      - RadioInfo
+      summary: Set the radio's volume
+      parameters:
+      - name: audioLevel
+        in: query
+        description: "Audio volume while receiving [arbitrary units]"
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: integer
+      responses:
+        "201":
+          description: Volume accepted
+        "400":
+          description: Out of range / invalid / not understood
+  /sidetone:
+    get:
+      tags:
+      - RadioInfo
+      summary: Gets the radio's current sidetone level offset
+      responses:
+        "200":
+          description: "Current sidetone level offset [arbitrary units]"
+          content:
+            text/plain:
+              schema:
+                type: integer
+    put:
+      tags:
+      - RadioInfo
+      summary: "Set the radio's sidetone level OFFSET, relative to audio level"
+      parameters:
+      - name: sidetoneLevelOffset
+        in: query
+        description: "Sidetone volume OFFSET while receiving, relative to audio level [arbitrary units]"
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: integer
+      responses:
+        "201":
+          description: Sidetone level accepted
+        "400":
+          description: Out of range / invalid / not understood
+  /cwSpeed:
+    get:
+      tags:
+      - RadioInfo
+      summary: Gets the keyer's speed
+      responses:
+        "200":
+          description: "Current keyer speed [wpm]"
+          content:
+            text/plain:
+              schema:
+                type: integer
+    put:
+      tags:
+      - RadioInfo
+      summary: Set the keyer's speed
+      parameters:
+      - name: speed
+        in: query
+        description: "Keyer speed [wpm]"
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: integer
+      responses:
+        "201":
+          description: Speed accepted
+        "400":
+          description: Out of range / invalid / not understood
+  /rxBandwidth:
+    get:
+      tags:
+      - RadioInfo
+      summary: Gets the radio's rx bandwidth
+      responses:
+        "200":
+          description: Current rx bandwith
+          content:
+            text/plain:
+              schema:
+                type: string
+                enum:
+                - CW
+                - SSB
+    put:
+      tags:
+      - RadioInfo
+      summary: Set the radio's rx bandwidth
+      parameters:
+      - name: bw
+        in: query
+        description: Audio filter bandwidth
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+          enum:
+          - CW
+          - SSB
+      responses:
+        "201":
+          description: Bandwidth accepted
+        "400":
+          description: Out of range / invalid / not understood
+  /lna:
+    get:
+      tags:
+      - RadioInfo
+      summary: Gets the radio's LNA state
+      responses:
+        "200":
+          description: Current LNA state
+          content:
+            text/plain:
+              schema:
+                type: string
+                enum:
+                - "true"
+                - "false"
+    put:
+      tags:
+      - RadioInfo
+      summary: Set the radio's LNA on or off
+      parameters:
+      - name: lnaState
+        in: query
+        description: LNA state
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+          enum:
+          - "true"
+          - "false"
+      responses:
+        "201":
+          description: LNA setting accepted
+        "400":
+          description: Out of range / invalid / not understood
+  /antenna:
+    get:
+      tags:
+      - RadioInfo
+      summary: Gets the radio's antenna path
+      responses:
+        "200":
+          description: Current antenna state
+          content:
+            text/plain:
+              schema:
+                type: string
+                enum:
+                - DIRECT
+                - EFHW
+    put:
+      tags:
+      - RadioInfo
+      summary: Set the radio's antenna connection
+      parameters:
+      - name: antennaPath
+        in: query
+        description: Requested RF pathway to connect to antenna
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+          enum:
+          - DIRECT
+          - EFHW
+      responses:
+        "201":
+          description: Antenna setting accepted
+        "400":
+          description: Out of range / invalid / not understood
+  /speaker:
+    get:
+      tags:
+      - RadioInfo
+      summary: Gets the radio's speaker state
+      responses:
+        "200":
+          description: Current speaker state
+          content:
+            text/plain:
+              schema:
+                type: string
+                enum:
+                - "true"
+                - "false"
+    put:
+      tags:
+      - RadioInfo
+      summary: Set the internal speaker
+      parameters:
+      - name: speakerState
+        in: query
+        description: LNA state
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+          enum:
+          - "true"
+          - "false"
+      responses:
+        "201":
+          description: Speaker setting accepted
+        "400":
+          description: Out of range / invalid / not understood
+  /inputVoltage:
+    get:
+      tags:
+      - RadioInfo
+      summary: Gets the radio's measured input voltage
+      responses:
+        "200":
+          description: "Current time [epoch ms]"
+          content:
+            text/plain:
+              schema:
+                type: integer
+  /sMeter:
+    get:
+      tags:
+      - RadioInfo
+      summary: Gets the radio's S-Meter reading
+      responses:
+        "200":
+          description: "Current signal strength [S-units]"
+          content:
+            text/plain:
+              schema:
+                type: integer
+  /temperature:
+    get:
+      tags:
+      - RadioInfo
+      summary: Gets the radio's temperature
+      responses:
+        "200":
+          description: "Current temperature. Radio implementation decides which temperature to report, if multiple available."
+          content:
+            text/plain:
+              schema:
+                type: integer
+  /rxTxStatus:
+    get:
+      tags:
+      - RadioInfo
+      summary: Gets the radio's receive or transmit status
+      responses:
+        "200":
+          description: Current status
+          content:
+            text/plain:
+              schema:
+                type: string
+                enum:
+                - RX
+                - TX
+  /githash:
+    get:
+      tags:
+      - RadioInfo
+      summary: Gets the githash of the current firmware
+      responses:
+        "200":
+          description: githash
+          content:
+            text/plain:
+              schema:
+                type: string
+  /address:
+    get:
+      tags:
+      - RadioInfo
+      summary: Gets the IP and/or MAC address of the radio
+      responses:
+        "200":
+          description: ip address
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api:
+    get:
+      tags:
+      - RadioInfo
+      summary: "Gets the API versions supported by the radio. Note, there is no base URL for this action"
+      responses:
+        "200":
+          description: Current status
+          content:
+            text/plain:
+              schema:
+                type: string
+  /debug:
+    get:
+      tags:
+      - RadioInfo
+      summary: Gets the radio's debug variable
+      responses:
+        "200":
+          description: Current debug variable. Radio may respond with any relevant value.
+          content:
+            text/plain:
+              schema:
+                type: integer
+    post:
+      tags:
+      - RadioInfo
+      summary: Run special code intended only for debug
+      parameters:
+      - name: command
+        in: query
+        description: Special command number
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: integer
+      - name: value
+        in: query
+        description: Data corresponding to command
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      responses:
+        "201":
+          description: Accepted
+        "400":
+          description: Out of range / invalid / not understood
+  /ota:
+    post:
+      tags:
+      - RadioInfo
+      summary: "Over the air firmware update. Note, there is no base URL for this action"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ota_body'
+      responses:
+        "201":
+          description: Accepted
+        "400":
+          description: Out of range / invalid / not understood
+components:
+  schemas:
+    ota_body:
+      type: object
+      properties:
+        orderId:
+          type: integer
+        userId:
+          type: integer
+        fileName:
+          type: string
+          format: binary

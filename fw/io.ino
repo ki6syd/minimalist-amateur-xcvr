@@ -1,6 +1,8 @@
 #define ADC_SCALING_VBAT      0.0349
 #define ADC_SCALING_AUDIO     0.00976
 
+// relay operating time
+#define RELAY_DELAY 5
 
 void handle_antenna(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) {
   if(request_type == HTTP_PUT) {
@@ -83,18 +85,21 @@ void init_gpio() {
   pinMode(14, OUTPUT);
   pinMode(16, OUTPUT);
 
+  // figure out which hardware version we are running
+  hardware_rev = load_json_config(hardware_file, "hardware_rev");
+
   // set up the relay driver IO expander
-  if(!pcf8574_relays.begin() && !pcf8574_audio.begin())
+  if(!pcf8574_20.begin() && !pcf8574_21.begin())
     Serial.println("[PCF8574] Couldn't initialize");
   else {
     for(int i=0; i < 8; i++) {
-      pcf8574_audio.write(i, LOW);
-      pcf8574_relays.write(i, LOW);
+      pcf8574_21.write(i, LOW);
+      pcf8574_20.write(i, LOW);
     }
     Serial.print("[PCF8574] Connected?: ");
-    Serial.print(pcf8574_audio.isConnected());
+    Serial.print(pcf8574_21.isConnected());
     Serial.print(",");
-    Serial.println(pcf8574_relays.isConnected());
+    Serial.println(pcf8574_20.isConnected());
     Serial.println("[PCF8574] Initialized and set OUTPUT_OFF");
   }
 
@@ -107,16 +112,13 @@ void init_gpio() {
   pinMode(13, INPUT_PULLUP);
   attach_paddle_isr(true, true);
 
-
-  analogWriteFreq(load_json_config(hw_config_file, "sidetone_pitch_hz").toInt());
-  // set sidetone pin low
-  //analogWrite(D4, 0);
+  analogWriteFreq(load_json_config(preference_file, "sidetone_pitch_hz").toInt());
 
   // select audio filter routing
   gpio_write(OUTPUT_BW_SEL, (output_state) rx_bw);
 
   // load audio default value
-  vol = (uint16_t) load_json_config(hw_config_file, "af_gain_default").toFloat();
+  vol = (uint16_t) load_json_config(preference_file, "af_gain_default").toFloat();
 }
 
 
@@ -154,7 +156,7 @@ ICACHE_RAM_ATTR void paddle_isr() {
 }
 
 
-// TODO: accept a gpio number that doesn't necessarily map to ESP12. This would allow an IO expander to work with this function
+// relay related commands add a 5ms delay so function doesn't return until it should have toggled
 void gpio_write(output_pin pin, output_state state) {
   switch(pin) {
     case OUTPUT_RX_MUTE:
@@ -194,71 +196,116 @@ void gpio_write(output_pin pin, output_state state) {
       
     case OUTPUT_LPF_1:
       if(state == OUTPUT_ON)
-        pcf8574_relays.write(0, HIGH);
+        pcf8574_20.write(0, HIGH);
       if(state == OUTPUT_OFF)
-        pcf8574_relays.write(0, LOW);
+        pcf8574_20.write(0, LOW);
+      my_delay(RELAY_DELAY);
       break;
       
     case OUTPUT_BPF_1:
       if(state == OUTPUT_ON)
-        pcf8574_relays.write(5, HIGH);
+        pcf8574_20.write(5, HIGH);
       if(state == OUTPUT_OFF)
-        pcf8574_relays.write(5, LOW);
+        pcf8574_20.write(5, LOW);
+      my_delay(RELAY_DELAY);
       break;
 
     case OUTPUT_LPF_2:
       if(state == OUTPUT_ON)
-        pcf8574_relays.write(1, HIGH);
+        pcf8574_20.write(1, HIGH);
       if(state == OUTPUT_OFF)
-        pcf8574_relays.write(1, LOW);
+        pcf8574_20.write(1, LOW);
+      my_delay(RELAY_DELAY);
       break;
 
     case OUTPUT_BPF_2:
       if(state == OUTPUT_ON)
-        pcf8574_relays.write(4, HIGH);
+        pcf8574_20.write(4, HIGH);
       if(state == OUTPUT_OFF)
-        pcf8574_relays.write(4, LOW);
+        pcf8574_20.write(4, LOW);
+      my_delay(RELAY_DELAY);
       break;
 
     case OUTPUT_LPF_3:
       if(state == OUTPUT_ON)
-        pcf8574_relays.write(2, HIGH);
+        pcf8574_20.write(2, HIGH);
       if(state == OUTPUT_OFF)
-        pcf8574_relays.write(2, LOW);
+        pcf8574_20.write(2, LOW);
+      my_delay(RELAY_DELAY);
       break;
 
     case OUTPUT_BPF_3:
       if(state == OUTPUT_ON)
-        pcf8574_relays.write(3, HIGH);
+        pcf8574_20.write(3, HIGH);
       if(state == OUTPUT_OFF)
-        pcf8574_relays.write(3, LOW);
+        pcf8574_20.write(3, LOW);
+      my_delay(RELAY_DELAY);
       break;
 
     case OUTPUT_BW_SEL:
-      if(state == OUTPUT_SEL_CW)
-        pcf8574_audio.write(4, HIGH);
-      if(state == OUTPUT_SEL_SSB)
-        pcf8574_audio.write(4, LOW);
+      if(hardware_rev == "max-3b_v1") {
+        if(state == OUTPUT_SEL_CW)
+          pcf8574_21.write(4, HIGH);
+        if(state == OUTPUT_SEL_SSB)
+          pcf8574_21.write(4, LOW);
+      }
+      if(hardware_rev == "max-3b_v2") {
+        if(state == OUTPUT_SEL_CW)
+          pcf8574_21.write(6, HIGH);
+        if(state == OUTPUT_SEL_SSB)
+          pcf8574_21.write(6, LOW);
+      }
       break;
 
     case OUTPUT_LNA_SEL:
-      if(state == OUTPUT_ON) {
-        pcf8574_relays.write(6, HIGH);
+      if(hardware_rev == "max-3b_v1") {
+        if(state == OUTPUT_ON) {
+          pcf8574_20.write(6, HIGH);
+        }
+        if(state == OUTPUT_OFF) {
+          pcf8574_20.write(6, LOW);
+        }
       }
-      if(state == OUTPUT_OFF) {
-        pcf8574_relays.write(6, LOW);
+      if(hardware_rev == "max-3b_v2") {
+        if(state == OUTPUT_ON) {
+          pcf8574_20.write(7, HIGH);
+        }
+        if(state == OUTPUT_OFF) {
+          pcf8574_20.write(7, LOW);
+        }
       }
       break;
 
     case OUTPUT_ANT_SEL:
-      if(state == OUTPUT_ANT_DIRECT) {
-        pcf8574_relays.write(7, LOW);
+      if(hardware_rev == "max-3b_v1") {
+        if(state == OUTPUT_ANT_DIRECT) {
+          pcf8574_20.write(7, LOW);
+        }
+        if(state == OUTPUT_ANT_XFMR) {
+          pcf8574_20.write(7, HIGH);
+        }
       }
-      if(state == OUTPUT_ANT_XFMR) {
-        pcf8574_relays.write(7, HIGH);
+      if(hardware_rev == "max-3b_v2") {
+        if(state == OUTPUT_ANT_DIRECT) {
+          pcf8574_21.write(0, LOW);
+        }
+        if(state == OUTPUT_ANT_XFMR) {
+          pcf8574_21.write(0, HIGH);
+        }
       }
       break;
 
+    case OUTPUT_SPKR_EN:
+      // not supported in hardware v1
+      if(hardware_rev == "max-3b_v2") {
+        if(state == OUTPUT_ON) {
+          pcf8574_20.write(6, HIGH);
+        }
+        if(state == OUTPUT_OFF) {
+          pcf8574_20.write(6, LOW);
+        }
+      }
+      break;
   }
 }
 
@@ -336,41 +383,95 @@ void update_smeter () {
 // TODO: implement a maximum volume control based on JSON file
 // TODO: add min/max valid inputs
 void update_volume(uint16_t volume) {
-  uint8_t vol_1 = 0;
-  uint8_t vol_2 = 1;
-  uint8_t vol_3 = 2;
-  uint8_t vol_4 = 3;
-
-  // TODO: speed this up by only doing a single i2c write.
-  switch(volume) {
-    case 1:
-      pcf8574_audio.write(vol_1, LOW);
-      pcf8574_audio.write(vol_2, LOW);
-      pcf8574_audio.write(vol_3, LOW);
-      pcf8574_audio.write(vol_4, LOW);
-      break;
-    case 2:
-      pcf8574_audio.write(vol_1, LOW);
-      pcf8574_audio.write(vol_2, LOW);
-      pcf8574_audio.write(vol_3, LOW);
-      pcf8574_audio.write(vol_4, HIGH);
-      break;
-    case 3:
-      pcf8574_audio.write(vol_1, LOW);
-      pcf8574_audio.write(vol_2, LOW);
-      pcf8574_audio.write(vol_3, HIGH);
-      pcf8574_audio.write(vol_4, LOW);
-      break;
-    case 4:
-      pcf8574_audio.write(vol_1, LOW);
-      pcf8574_audio.write(vol_2, HIGH);
-      pcf8574_audio.write(vol_3, LOW);
-      pcf8574_audio.write(vol_4, LOW);
-      break;
-    case 5:
-      pcf8574_audio.write(vol_1, HIGH);
-      pcf8574_audio.write(vol_2, LOW);
-      pcf8574_audio.write(vol_3, LOW);
-      pcf8574_audio.write(vol_4, LOW);
+  if(hardware_rev == "max-3b_v1") {
+    uint8_t vol_1 = 0;
+    uint8_t vol_2 = 1;
+    uint8_t vol_3 = 2;
+    uint8_t vol_4 = 3;
+  
+    // TODO: speed this up by only doing a single i2c write.
+    switch(volume) {
+      case 1:
+        pcf8574_21.write(vol_1, LOW);
+        pcf8574_21.write(vol_2, LOW);
+        pcf8574_21.write(vol_3, LOW);
+        pcf8574_21.write(vol_4, LOW);
+        break;
+      case 2:
+        pcf8574_21.write(vol_1, LOW);
+        pcf8574_21.write(vol_2, LOW);
+        pcf8574_21.write(vol_3, LOW);
+        pcf8574_21.write(vol_4, HIGH);
+        break;
+      case 3:
+        pcf8574_21.write(vol_1, LOW);
+        pcf8574_21.write(vol_2, LOW);
+        pcf8574_21.write(vol_3, HIGH);
+        pcf8574_21.write(vol_4, LOW);
+        break;
+      case 4:
+        pcf8574_21.write(vol_1, LOW);
+        pcf8574_21.write(vol_2, HIGH);
+        pcf8574_21.write(vol_3, LOW);
+        pcf8574_21.write(vol_4, LOW);
+        break;
+      case 5:
+        pcf8574_21.write(vol_1, HIGH);
+        pcf8574_21.write(vol_2, LOW);
+        pcf8574_21.write(vol_3, LOW);
+        pcf8574_21.write(vol_4, LOW);
+    }
+  }
+  if(hardware_rev == "max-3b_v2") {
+    uint8_t vol_1 = 2;
+    uint8_t vol_2 = 5;
+    uint8_t vol_3 = 1;
+    uint8_t vol_4 = 3;
+    uint8_t vol_5 = 4;
+  
+    // TODO: speed this up by only doing a single i2c write.
+    switch(volume) {
+      case 1:
+        pcf8574_21.write(vol_1, LOW);
+        pcf8574_21.write(vol_2, LOW);
+        pcf8574_21.write(vol_3, LOW);
+        pcf8574_21.write(vol_4, LOW);
+        pcf8574_21.write(vol_5, LOW);
+        break;
+      case 2:
+        pcf8574_21.write(vol_1, LOW);
+        pcf8574_21.write(vol_2, LOW);
+        pcf8574_21.write(vol_3, LOW);
+        pcf8574_21.write(vol_4, LOW);
+        pcf8574_21.write(vol_5, HIGH);
+        break;
+      case 3:
+        pcf8574_21.write(vol_1, LOW);
+        pcf8574_21.write(vol_2, LOW);
+        pcf8574_21.write(vol_3, LOW);
+        pcf8574_21.write(vol_4, HIGH);
+        pcf8574_21.write(vol_5, LOW);
+        break;
+      case 4:
+        pcf8574_21.write(vol_1, LOW);
+        pcf8574_21.write(vol_2, LOW);
+        pcf8574_21.write(vol_3, HIGH);
+        pcf8574_21.write(vol_4, LOW);
+        pcf8574_21.write(vol_5, LOW);
+        break;
+      case 5:
+        pcf8574_21.write(vol_1, LOW);
+        pcf8574_21.write(vol_2, HIGH);
+        pcf8574_21.write(vol_3, LOW);
+        pcf8574_21.write(vol_4, LOW);
+        pcf8574_21.write(vol_5, LOW);
+        break;
+      case 6:
+        pcf8574_21.write(vol_1, HIGH);
+        pcf8574_21.write(vol_2, LOW);
+        pcf8574_21.write(vol_3, LOW);
+        pcf8574_21.write(vol_4, LOW);
+        pcf8574_21.write(vol_5, LOW);
+    }
   }
 }

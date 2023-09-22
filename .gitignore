@@ -3,3 +3,4 @@ fw/data/credentials.json
 *.log
 *.net
 *.raw
+fw/data/wifi_info.json

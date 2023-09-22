@@ -1,0 +1,2729 @@
+{
+	"info": {
+		"_postman_id": "a9020c5c-67b3-492f-97d7-765afcbbc9ba",
+		"name": "MAX-3B",
+		"description": "API for MAX-3B radio\n\nContact Support:\n Email: ki6syd@gmail.com",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "28715925"
+	},
+	"item": [
+		{
+			"name": "ft8",
+			"item": [
+				{
+					"name": "Send a FT8 free text message",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/ft8?messageText=<string>&timeNow=<integer>&rfFrequency=<integer>&audioFrequency=<integer>",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ft8"
+							],
+							"query": [
+								{
+									"key": "messageText",
+									"value": "<string>",
+									"description": "(Required) 13 character free-text FT8 message to send"
+								},
+								{
+									"key": "timeNow",
+									"value": "<integer>",
+									"description": "Caller's current time [epoch ms]. If provided, radio will update its current time to match timeNow. If not provided, radio will use its best estimate of current time."
+								},
+								{
+									"key": "rfFrequency",
+									"value": "<integer>",
+									"description": "Dial frequency for FT8 [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use standard digital mode frequency in the current current band, a pre-set configured frequency for sending all FT8 messages, etc."
+								},
+								{
+									"key": "audioFrequency",
+									"value": "<integer>",
+									"description": "Audio frequency (USB) relative to RF dial frequency [Hz]. Radio will pick an audio frequency if nothing provided. May be randomized, fixed 1500 Hz, configured in settings file, etc."
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Message added to queue",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/ft8?messageText=<string>&timeNow=<integer>&rfFrequency=<integer>&audioFrequency=<integer>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"ft8"
+									],
+									"query": [
+										{
+											"key": "messageText",
+											"value": "<string>",
+											"description": "(Required) 13 character free-text FT8 message to send"
+										},
+										{
+											"key": "timeNow",
+											"value": "<integer>",
+											"description": "Caller's current time [epoch ms]. If provided, radio will update its current time to match timeNow. If not provided, radio will use its best estimate of current time."
+										},
+										{
+											"key": "rfFrequency",
+											"value": "<integer>",
+											"description": "Dial frequency for FT8 [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use standard digital mode frequency in the current current band, a pre-set configured frequency for sending all FT8 messages, etc."
+										},
+										{
+											"key": "audioFrequency",
+											"value": "<integer>",
+											"description": "Audio frequency (USB) relative to RF dial frequency [Hz]. Radio will pick an audio frequency if nothing provided. May be randomized, fixed 1500 Hz, configured in settings file, etc."
+										}
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Invalid / not understood",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/ft8?messageText=<string>&timeNow=<integer>&rfFrequency=<integer>&audioFrequency=<integer>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"ft8"
+									],
+									"query": [
+										{
+											"key": "messageText",
+											"value": "<string>",
+											"description": "(Required) 13 character free-text FT8 message to send"
+										},
+										{
+											"key": "timeNow",
+											"value": "<integer>",
+											"description": "Caller's current time [epoch ms]. If provided, radio will update its current time to match timeNow. If not provided, radio will use its best estimate of current time."
+										},
+										{
+											"key": "rfFrequency",
+											"value": "<integer>",
+											"description": "Dial frequency for FT8 [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use standard digital mode frequency in the current current band, a pre-set configured frequency for sending all FT8 messages, etc."
+										},
+										{
+											"key": "audioFrequency",
+											"value": "<integer>",
+											"description": "Audio frequency (USB) relative to RF dial frequency [Hz]. Radio will pick an audio frequency if nothing provided. May be randomized, fixed 1500 Hz, configured in settings file, etc."
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Unable to accept message into queue",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/ft8?messageText=<string>&timeNow=<integer>&rfFrequency=<integer>&audioFrequency=<integer>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"ft8"
+									],
+									"query": [
+										{
+											"key": "messageText",
+											"value": "<string>",
+											"description": "(Required) 13 character free-text FT8 message to send"
+										},
+										{
+											"key": "timeNow",
+											"value": "<integer>",
+											"description": "Caller's current time [epoch ms]. If provided, radio will update its current time to match timeNow. If not provided, radio will use its best estimate of current time."
+										},
+										{
+											"key": "rfFrequency",
+											"value": "<integer>",
+											"description": "Dial frequency for FT8 [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use standard digital mode frequency in the current current band, a pre-set configured frequency for sending all FT8 messages, etc."
+										},
+										{
+											"key": "audioFrequency",
+											"value": "<integer>",
+											"description": "Audio frequency (USB) relative to RF dial frequency [Hz]. Radio will pick an audio frequency if nothing provided. May be randomized, fixed 1500 Hz, configured in settings file, etc."
+										}
+									]
+								}
+							},
+							"status": "Conflict",
+							"code": 409,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				},
+				{
+					"name": "Stop sending any FT8 messages and clear FT8 messages from queue",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/ft8",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ft8"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Stopped and deleted FT8.",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/ft8",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"ft8"
+									]
+								}
+							},
+							"status": "No Content",
+							"code": 204,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Nothing to delete.",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/ft8",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"ft8"
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "cw",
+			"item": [
+				{
+					"name": "Send a CW message",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cw?messageText=<string>&speed=<integer>&rfFrequency=<integer>",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cw"
+							],
+							"query": [
+								{
+									"key": "messageText",
+									"value": "<string>",
+									"description": "(Required) String to send"
+								},
+								{
+									"key": "speed",
+									"value": "<integer>",
+									"description": "Keyer speed while sending CW message [wpm]"
+								},
+								{
+									"key": "rfFrequency",
+									"value": "<integer>",
+									"description": "Dial frequency for sending [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use the existing dial frequency, beacon frequency, etc."
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Message added to queue",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/cw?messageText=<string>&speed=<integer>&rfFrequency=<integer>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"cw"
+									],
+									"query": [
+										{
+											"key": "messageText",
+											"value": "<string>",
+											"description": "(Required) String to send"
+										},
+										{
+											"key": "speed",
+											"value": "<integer>",
+											"description": "Keyer speed while sending CW message [wpm]"
+										},
+										{
+											"key": "rfFrequency",
+											"value": "<integer>",
+											"description": "Dial frequency for sending [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use the existing dial frequency, beacon frequency, etc."
+										}
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Invalid / not understood",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/cw?messageText=<string>&speed=<integer>&rfFrequency=<integer>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"cw"
+									],
+									"query": [
+										{
+											"key": "messageText",
+											"value": "<string>",
+											"description": "(Required) String to send"
+										},
+										{
+											"key": "speed",
+											"value": "<integer>",
+											"description": "Keyer speed while sending CW message [wpm]"
+										},
+										{
+											"key": "rfFrequency",
+											"value": "<integer>",
+											"description": "Dial frequency for sending [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use the existing dial frequency, beacon frequency, etc."
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Unable to accept message into queue",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/cw?messageText=<string>&speed=<integer>&rfFrequency=<integer>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"cw"
+									],
+									"query": [
+										{
+											"key": "messageText",
+											"value": "<string>",
+											"description": "(Required) String to send"
+										},
+										{
+											"key": "speed",
+											"value": "<integer>",
+											"description": "Keyer speed while sending CW message [wpm]"
+										},
+										{
+											"key": "rfFrequency",
+											"value": "<integer>",
+											"description": "Dial frequency for sending [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use the existing dial frequency, beacon frequency, etc."
+										}
+									]
+								}
+							},
+							"status": "Conflict",
+							"code": 409,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				},
+				{
+					"name": "Stop sending any CW messages and clear CW messages from queue",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cw",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cw"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Stopped and deleted CW messages.",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/cw",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"cw"
+									]
+								}
+							},
+							"status": "No Content",
+							"code": 204,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Nothing to delete.",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/cw",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"cw"
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "queue",
+			"item": [
+				{
+					"name": "Length of the radio's queue of digital messages",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/queue",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"queue"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Number of total messages in radio's queue of digital modes messages",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/queue",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"queue"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "<integer>"
+						}
+					]
+				},
+				{
+					"name": "Stop sending any queued messages, and delete all messages.",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/queue",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"queue"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Stopped and deleted messages.",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/queue",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"queue"
+									]
+								}
+							},
+							"status": "No Content",
+							"code": 204,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Nothing to delete.",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/queue",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"queue"
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "sotamat",
+			"item": [
+				{
+					"name": "DO NOT USE. For testing only. Sends SOTAmat spot as soon as message is received.",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/sotamat?call=<string>&suffix=<string>",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sotamat"
+							],
+							"query": [
+								{
+									"key": "call",
+									"value": "<string>",
+									"description": "(Required) Operator's callsign"
+								},
+								{
+									"key": "suffix",
+									"value": "<string>",
+									"description": "(Required) SOTAMAT"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Message sending",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/sotamat?call=<string>&suffix=<string>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"sotamat"
+									],
+									"query": [
+										{
+											"key": "call",
+											"value": "<string>",
+											"description": "(Required) Operator's callsign"
+										},
+										{
+											"key": "suffix",
+											"value": "<string>",
+											"description": "(Required) SOTAMAT"
+										}
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Invalid / not understood",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/sotamat?call=<string>&suffix=<string>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"sotamat"
+									],
+									"query": [
+										{
+											"key": "call",
+											"value": "<string>",
+											"description": "(Required) Operator's callsign"
+										},
+										{
+											"key": "suffix",
+											"value": "<string>",
+											"description": "(Required) SOTAMAT"
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "time",
+			"item": [
+				{
+					"name": "Gets the radio's current time",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/time",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"time"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Current time [epoch ms]",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/time",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"time"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Time has never been set.",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/time",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"time"
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "<integer>"
+						}
+					]
+				},
+				{
+					"name": "Set the radio's time",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/time?timeNow=<integer>",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"time"
+							],
+							"query": [
+								{
+									"key": "timeNow",
+									"value": "<integer>",
+									"description": "(Required) Current time [epoch ms]."
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Time accepted",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/time?timeNow=<integer>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"time"
+									],
+									"query": [
+										{
+											"key": "timeNow",
+											"value": "<integer>",
+											"description": "(Required) Current time [epoch ms]."
+										}
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Invalid / not understood",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/time?timeNow=<integer>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"time"
+									],
+									"query": [
+										{
+											"key": "timeNow",
+											"value": "<integer>",
+											"description": "(Required) Current time [epoch ms]."
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "frequency",
+			"item": [
+				{
+					"name": "Gets the radio's current frequency",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/frequency",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"frequency"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Current dial frequency [Hz]",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/frequency",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"frequency"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "<integer>"
+						}
+					]
+				},
+				{
+					"name": "Set the radio's dial frequency",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/frequency?frequency=<integer>",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"frequency"
+							],
+							"query": [
+								{
+									"key": "frequency",
+									"value": "<integer>",
+									"description": "(Required) New frequency [Hz]"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Frequency accepted",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/frequency?frequency=<integer>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"frequency"
+									],
+									"query": [
+										{
+											"key": "frequency",
+											"value": "<integer>",
+											"description": "(Required) New frequency [Hz]"
+										}
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Invalid / not understood",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/frequency?frequency=<integer>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"frequency"
+									],
+									"query": [
+										{
+											"key": "frequency",
+											"value": "<integer>",
+											"description": "(Required) New frequency [Hz]"
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "volume",
+			"item": [
+				{
+					"name": "Gets the radio's current audio volume",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/volume",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"volume"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Current sidetone level [arbitrary units]",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/volume",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"volume"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "<integer>"
+						}
+					]
+				},
+				{
+					"name": "Set the radio's volume",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/volume?audioLevel=<integer>",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"volume"
+							],
+							"query": [
+								{
+									"key": "audioLevel",
+									"value": "<integer>",
+									"description": "(Required) Audio volume while receiving [arbitrary units]"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Volume accepted",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/volume?audioLevel=<integer>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"volume"
+									],
+									"query": [
+										{
+											"key": "audioLevel",
+											"value": "<integer>",
+											"description": "(Required) Audio volume while receiving [arbitrary units]"
+										}
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Out of range / invalid / not understood",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/volume?audioLevel=<integer>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"volume"
+									],
+									"query": [
+										{
+											"key": "audioLevel",
+											"value": "<integer>",
+											"description": "(Required) Audio volume while receiving [arbitrary units]"
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "sidetone",
+			"item": [
+				{
+					"name": "Gets the radio's current sidetone level offset",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/sidetone",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sidetone"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Current sidetone level offset [arbitrary units]",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/sidetone",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"sidetone"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "<integer>"
+						}
+					]
+				},
+				{
+					"name": "Set the radio's sidetone level OFFSET, relative to audio level",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/sidetone?sidetoneLevelOffset=<integer>",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sidetone"
+							],
+							"query": [
+								{
+									"key": "sidetoneLevelOffset",
+									"value": "<integer>",
+									"description": "(Required) Sidetone volume OFFSET while receiving, relative to audio level [arbitrary units]"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Sidetone level accepted",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/sidetone?sidetoneLevelOffset=<integer>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"sidetone"
+									],
+									"query": [
+										{
+											"key": "sidetoneLevelOffset",
+											"value": "<integer>",
+											"description": "(Required) Sidetone volume OFFSET while receiving, relative to audio level [arbitrary units]"
+										}
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Out of range / invalid / not understood",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/sidetone?sidetoneLevelOffset=<integer>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"sidetone"
+									],
+									"query": [
+										{
+											"key": "sidetoneLevelOffset",
+											"value": "<integer>",
+											"description": "(Required) Sidetone volume OFFSET while receiving, relative to audio level [arbitrary units]"
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "cwSpeed",
+			"item": [
+				{
+					"name": "Gets the keyer's speed",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/cwSpeed",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cwSpeed"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Current keyer speed [wpm]",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/cwSpeed",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"cwSpeed"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "<integer>"
+						}
+					]
+				},
+				{
+					"name": "Set the keyer's speed",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cwSpeed?speed=<integer>",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cwSpeed"
+							],
+							"query": [
+								{
+									"key": "speed",
+									"value": "<integer>",
+									"description": "(Required) Keyer speed [wpm]"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Speed accepted",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/cwSpeed?speed=<integer>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"cwSpeed"
+									],
+									"query": [
+										{
+											"key": "speed",
+											"value": "<integer>",
+											"description": "(Required) Keyer speed [wpm]"
+										}
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Out of range / invalid / not understood",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/cwSpeed?speed=<integer>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"cwSpeed"
+									],
+									"query": [
+										{
+											"key": "speed",
+											"value": "<integer>",
+											"description": "(Required) Keyer speed [wpm]"
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "rxBandwidth",
+			"item": [
+				{
+					"name": "Gets the radio's rx bandwidth",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/rxBandwidth",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rxBandwidth"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Current rx bandwith",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/rxBandwidth",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"rxBandwidth"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "CW"
+						}
+					]
+				},
+				{
+					"name": "Set the radio's rx bandwidth",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/rxBandwidth?bw=CW",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rxBandwidth"
+							],
+							"query": [
+								{
+									"key": "bw",
+									"value": "CW",
+									"description": "(Required) Audio filter bandwidth"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Bandwidth accepted",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/rxBandwidth?bw=CW",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"rxBandwidth"
+									],
+									"query": [
+										{
+											"key": "bw",
+											"value": "CW",
+											"description": "(Required) Audio filter bandwidth"
+										}
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Out of range / invalid / not understood",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/rxBandwidth?bw=CW",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"rxBandwidth"
+									],
+									"query": [
+										{
+											"key": "bw",
+											"value": "CW",
+											"description": "(Required) Audio filter bandwidth"
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "lna",
+			"item": [
+				{
+					"name": "Gets the radio's LNA state",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/lna",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"lna"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Current LNA state",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/lna",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"lna"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "false"
+						}
+					]
+				},
+				{
+					"name": "Set the radio's LNA on or off",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/lna?lnaState=false",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"lna"
+							],
+							"query": [
+								{
+									"key": "lnaState",
+									"value": "false",
+									"description": "(Required) LNA state"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "LNA setting accepted",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/lna?lnaState=false",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"lna"
+									],
+									"query": [
+										{
+											"key": "lnaState",
+											"value": "false",
+											"description": "(Required) LNA state"
+										}
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Out of range / invalid / not understood",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/lna?lnaState=false",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"lna"
+									],
+									"query": [
+										{
+											"key": "lnaState",
+											"value": "false",
+											"description": "(Required) LNA state"
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "antenna",
+			"item": [
+				{
+					"name": "Gets the radio's antenna path",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/antenna",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"antenna"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Current antenna state",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/antenna",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"antenna"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "DIRECT"
+						}
+					]
+				},
+				{
+					"name": "Set the radio's antenna connection",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/antenna?antennaPath=DIRECT",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"antenna"
+							],
+							"query": [
+								{
+									"key": "antennaPath",
+									"value": "DIRECT",
+									"description": "(Required) Requested RF pathway to connect to antenna"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Antenna setting accepted",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/antenna?antennaPath=DIRECT",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"antenna"
+									],
+									"query": [
+										{
+											"key": "antennaPath",
+											"value": "DIRECT",
+											"description": "(Required) Requested RF pathway to connect to antenna"
+										}
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Out of range / invalid / not understood",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/antenna?antennaPath=DIRECT",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"antenna"
+									],
+									"query": [
+										{
+											"key": "antennaPath",
+											"value": "DIRECT",
+											"description": "(Required) Requested RF pathway to connect to antenna"
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "speaker",
+			"item": [
+				{
+					"name": "Gets the radio's speaker state",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/speaker",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"speaker"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Current speaker state",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/speaker",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"speaker"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "false"
+						}
+					]
+				},
+				{
+					"name": "Set the internal speaker",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/speaker?speakerState=false",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"speaker"
+							],
+							"query": [
+								{
+									"key": "speakerState",
+									"value": "false",
+									"description": "(Required) LNA state"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Speaker setting accepted",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/speaker?speakerState=false",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"speaker"
+									],
+									"query": [
+										{
+											"key": "speakerState",
+											"value": "false",
+											"description": "(Required) LNA state"
+										}
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Out of range / invalid / not understood",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/speaker?speakerState=false",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"speaker"
+									],
+									"query": [
+										{
+											"key": "speakerState",
+											"value": "false",
+											"description": "(Required) LNA state"
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "inputVoltage",
+			"item": [
+				{
+					"name": "Gets the radio's measured input voltage",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/inputVoltage",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"inputVoltage"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Current time [epoch ms]",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/inputVoltage",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"inputVoltage"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "<integer>"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "sMeter",
+			"item": [
+				{
+					"name": "Gets the radio's S-Meter reading",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/sMeter",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"sMeter"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Current signal strength [S-units]",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/sMeter",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"sMeter"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "<integer>"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "temperature",
+			"item": [
+				{
+					"name": "Gets the radio's temperature",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/temperature",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"temperature"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Current temperature. Radio implementation decides which temperature to report, if multiple available.",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/temperature",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"temperature"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "<integer>"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "rxTxStatus",
+			"item": [
+				{
+					"name": "Gets the radio's receive or transmit status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/rxTxStatus",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rxTxStatus"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Current status",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/rxTxStatus",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"rxTxStatus"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "TX"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "githash",
+			"item": [
+				{
+					"name": "Gets the githash of the current firmware",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/githash",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"githash"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "githash",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/githash",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"githash"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "<string>"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "address",
+			"item": [
+				{
+					"name": "Gets the IP and/or MAC address of the radio",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/address",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"address"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "ip address",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/address",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"address"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "<string>"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "api",
+			"item": [
+				{
+					"name": "Gets the API versions supported by the radio. Note, there is no base URL for this action",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Current status",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "<string>"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "debug",
+			"item": [
+				{
+					"name": "Gets the radio's debug variable",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/debug",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"debug"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Current debug variable. Radio may respond with any relevant value.",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/debug",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"debug"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "<integer>"
+						}
+					]
+				},
+				{
+					"name": "Run special code intended only for debug",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/debug?command=<integer>&value=<string>",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"debug"
+							],
+							"query": [
+								{
+									"key": "command",
+									"value": "<integer>",
+									"description": "(Required) Special command number"
+								},
+								{
+									"key": "value",
+									"value": "<string>",
+									"description": "Data corresponding to command"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Accepted",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/debug?command=<integer>&value=<string>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"debug"
+									],
+									"query": [
+										{
+											"key": "command",
+											"value": "<integer>",
+											"description": "(Required) Special command number"
+										},
+										{
+											"key": "value",
+											"value": "<string>",
+											"description": "Data corresponding to command"
+										}
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Out of range / invalid / not understood",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/debug?command=<integer>&value=<string>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"debug"
+									],
+									"query": [
+										{
+											"key": "command",
+											"value": "<integer>",
+											"description": "(Required) Special command number"
+										},
+										{
+											"key": "value",
+											"value": "<string>",
+											"description": "Data corresponding to command"
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "ota",
+			"item": [
+				{
+					"name": "Over the air firmware update. Note, there is no base URL for this action",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "multipart/form-data"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "orderId",
+									"value": "<integer>",
+									"type": "text"
+								},
+								{
+									"key": "userId",
+									"value": "<integer>",
+									"type": "text"
+								},
+								{
+									"key": "fileName",
+									"value": "<string>",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/ota",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ota"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Accepted",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "multipart/form-data"
+									}
+								],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "orderId",
+											"value": "<integer>",
+											"type": "text"
+										},
+										{
+											"key": "userId",
+											"value": "<integer>",
+											"type": "text"
+										},
+										{
+											"key": "fileName",
+											"value": "<string>",
+											"type": "text"
+										}
+									]
+								},
+								"url": {
+									"raw": "{{baseUrl}}/ota",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"ota"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Out of range / invalid / not understood",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "multipart/form-data"
+									}
+								],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "orderId",
+											"value": "<integer>",
+											"type": "text"
+										},
+										{
+											"key": "userId",
+											"value": "<integer>",
+											"type": "text"
+										},
+										{
+											"key": "fileName",
+											"value": "<string>",
+											"type": "text"
+										}
+									]
+								},
+								"url": {
+									"raw": "{{baseUrl}}/ota",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"ota"
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://radio.local/api/v1"
+		}
+	]
+}

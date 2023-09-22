@@ -5,14 +5,14 @@ String load_json_config(String file_name, String param_name) {
   File configFile = SPIFFS.open(file_name, "r");
 
   if (!configFile) {
-    Serial.println("- failed to open config file for writing");
-    return "ERROR";
+    Serial.println("Config file not found");
+    recovery();
   }
 
   size_t sz = configFile.size();
   if (sz > 1024) {
     Serial.println("Config file size is too large");
-    return "ERROR";
+    recovery();
   }
 
   StaticJsonDocument<1024> doc;
@@ -21,11 +21,16 @@ String load_json_config(String file_name, String param_name) {
   configFile.close();
 
   if(error) {
-    Serial.println("Failed to parse config file");
-    return "ERROR";
+    Serial.print("Failed to parse config file while trying to read: ");
+    Serial.print(file_name);
+    Serial.print(": ");
+    Serial.println(param_name);
+    recovery();
   }
 
   const char* tmp = doc[param_name];
+
+  // todo: look for cases where param_name does not exist
 
   Serial.print("[JSON READ] ");
   Serial.print(param_name);

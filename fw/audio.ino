@@ -19,9 +19,6 @@ void handle_rx_bandwidth(WebRequestMethodComposite request_type, AsyncWebServerR
       request->send(400, "text/plain", "Requested bandwidth not possible");
     }
 
-    Serial.print("[AUDIO] bw: ");
-    Serial.println(rx_bw);
-
     // indicate that relays need an update
     flag_freq = true;
 
@@ -92,4 +89,51 @@ void handle_sidetone(WebRequestMethodComposite request_type, AsyncWebServerReque
   if(request_type == HTTP_GET) {    
     request->send(200, "text/plain", String(mon_offset));
   }
+}
+
+
+void handle_speaker(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) {
+  if(request_type == HTTP_PUT) {
+    // look for required parameters in the message
+    if(!request->hasParam("speakerState")) {
+      Serial.println("[IO] speakerState not received");
+      request->send(400, "text/plain", "speakerState not found");
+      return;
+    }
+
+    String speaker = request->getParam("speakerState")->value();
+
+    if(speaker == "ON")
+      speaker_state = true;
+    else if(speaker = "OFF")
+      speaker_state = false;
+    else {
+      request->send(400, "text/plain", "Requested speaker state not possible");
+      return;
+    }
+
+    // hardware update will happen through main loop
+    flag_freq = true;
+    request->send(200, "text/plain", "OK");
+  }
+  else if(request_type == HTTP_GET) {
+    String speaker = "";
+    if(speaker_state)
+      speaker = "ON";
+    else
+      speaker = "OFF";
+    
+    request->send(200, "text/plain", speaker);
+  }
+}
+
+void init_audio() {
+  vol_min = load_json_config(preference_file, "vol_min").toInt();
+  vol_max = load_json_config(preference_file, "vol_max").toInt();
+
+  // turn off speaker at startup
+  gpio_write(OUTPUT_SPKR_EN, OUTPUT_OFF);
+
+  // set volume to minimum at startup
+  update_volume(vol_min);
 }

@@ -1,7 +1,10 @@
+// useful for flash use debug: "C:\Program Files (x86)\Arduino\hardware\tools\avr\bin\avr-nm.exe" --size-sort -C -r fw.ino.elf
+
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
 #include <ESP8266mDNS.h>
 #include <ESPAsyncWebServer.h>
+#include <Updater.h>
 #include <SPIFFSEditor.h>
 #include <ArduinoJson.h>
 #include <Wire.h>
@@ -9,6 +12,7 @@
 #include <si5351.h>
 #include <JTEncode.h>
 #include <TimeLib.h>
+#include "git-version.h"
 
 enum output_pin {
   OUTPUT_RX_MUTE,
@@ -28,7 +32,8 @@ enum output_pin {
   OUTPUT_AF_SEL_4,
   OUTPUT_BW_SEL,
   OUTPUT_LNA_SEL,
-  OUTPUT_ANT_SEL
+  OUTPUT_ANT_SEL,
+  OUTPUT_SPKR_EN
 };
 
 enum input_pin {
@@ -49,7 +54,7 @@ enum output_state {
   OUTPUT_MUTED,
   OUTPUT_UNMUTED,
   OUTPUT_ANT_DIRECT,
-  OUTPUT_ANT_XFMR
+  OUTPUT_ANT_XFMR,
 };
 
 enum mode_type {
@@ -64,15 +69,17 @@ enum key_types {
   KEY_PADDLE
 };
 
-const char * hw_config_file = "/hardware_config.json";
-const char * credential_file = "/credentials.json";
+const char * preference_file = "/preferences.json";
+const char * wifi_file = "/wifi_info.json";
+const char * hardware_file = "/hardware_info.json";
+String api_base_url = "/api/v1/";
 const int led = LED_BUILTIN;
 
 AsyncWebServer server(80);
 Si5351 si5351;
 JTEncode jtencode;
-PCF8574 pcf8574_relays(0x20);
-PCF8574 pcf8574_audio(0x21);
+PCF8574 pcf8574_20(0x20);
+PCF8574 pcf8574_21(0x21);
 
 
 // ------------------------------ FT8 variables ------------------------------
@@ -95,9 +102,12 @@ bool dit_flag = false, dah_flag = false;
 mode_type tx_rx_mode = MODE_QSK_COUNTDOWN;
 int64_t qsk_counter = 0;
 
+// used in OTA
+size_t content_len;
 
 
-
+// used in io
+String hardware_rev = "";
 
 
 // TODO: a few of these shouldn't be uint16_t's, figure out better enum strategy
@@ -111,6 +121,7 @@ uint16_t special = 0;
 String tx_queue = "";
 // TODO: turn this into an enum
 bool lna_state = false;
+bool speaker_state = false;
 key_types key_type = KEY_PADDLE;
 output_pin lpf_relay = OUTPUT_LPF_1, bpf_relay = OUTPUT_BPF_1;
 
@@ -132,17 +143,15 @@ uint64_t f_rf_max_band2 = 0;
 uint64_t f_rf_min_band3 = 0;
 uint64_t f_rf_max_band3 = 0;
 
-// TODO: load these from JSON
-uint16_t keyer_min = 5;
-uint16_t keyer_max = 30;
-uint16_t vol_min = 1;
-uint16_t vol_max = 5;
+uint16_t keyer_min = 0;
+uint16_t keyer_max = 0;
+uint16_t vol_min = 0;
+uint16_t vol_max = 0;
 
 // TODO - restructure init functions so there's one batch read from JSON before configuring hardware
-
 void setup(void) {
   // short delay to make sure serial monitor catches everything
-  my_delay(2000);
+  // my_delay(2000);
 
   Serial.begin(115200);
   SPIFFS.begin();
@@ -151,6 +160,7 @@ void setup(void) {
   // Serial.setDebugOutput(true);
 
   init_gpio();
+  init_audio();
   gpio_write(OUTPUT_GREEN_LED, OUTPUT_ON);
 
   // start up wifi and MDNS
@@ -169,18 +179,15 @@ void setup(void) {
   // turn off TX power
   gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_OFF);
 
-  // set volume to default value
-  update_volume(vol);
-
   // set antenna impedance relay
-  if(load_json_config(hw_config_file, "ant_default") == "OUTPUT_ANT_DIRECT")
+  if(load_json_config(preference_file, "ant_default") == "OUTPUT_ANT_DIRECT")
     ant = OUTPUT_ANT_DIRECT;
-  if(load_json_config(hw_config_file, "ant_default") == "OUTPUT_ANT_XFMR")
+  if(load_json_config(preference_file, "ant_default") == "OUTPUT_ANT_XFMR")
     ant = OUTPUT_ANT_XFMR;
   gpio_write(OUTPUT_ANT_SEL, (output_state) ant);
 
   // set lna option
-  if(load_json_config(hw_config_file, "lna_default").toInt()) {
+  if(load_json_config(preference_file, "lna_default") == "ON") {
     lna_state = true;
     gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
   }
@@ -190,11 +197,11 @@ void setup(void) {
   }    
 
   // TODO - bulk read from JSON, move everything out of init files
-  min_vbat = load_json_config(hw_config_file, "v_bat_min_cutoff").toFloat();
-  max_vbat = load_json_config(hw_config_file, "v_bat_max_cutoff").toFloat();
+  min_vbat = load_json_config(preference_file, "v_bat_min_cutoff").toFloat();
+  max_vbat = load_json_config(preference_file, "v_bat_max_cutoff").toFloat();
 
-  qsk_period = load_json_config(hw_config_file, "qsk_delay_ms").toFloat();
-  mon_offset = load_json_config(hw_config_file, "sidetone_level").toFloat();
+  qsk_period = load_json_config(preference_file, "qsk_delay_ms").toFloat();
+  mon_offset = load_json_config(preference_file, "sidetone_level").toFloat();
 
   // initial read of battery voltage
   last_vbat = analog_read(INPUT_VBAT);
@@ -224,6 +231,12 @@ void loop(void) {
         gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
       else
         gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
+
+      // set speaker
+      if(speaker_state)
+        gpio_write(OUTPUT_SPKR_EN, OUTPUT_ON);
+      else
+        gpio_write(OUTPUT_SPKR_EN, OUTPUT_OFF);
       
       // TODO: this logic might make more sense elsewhere. Also should consider the concept of USB/LSB, dial freq, and mode rather than this mess of if statements.
       if(rx_bw == OUTPUT_SEL_CW)
@@ -259,7 +272,6 @@ void loop(void) {
   // todo - queues 
   if(flag_ft8) {
     send_ft8();
-    
   }
 
   // handle key inputs
@@ -284,14 +296,14 @@ void loop(void) {
   }
 
   // TODO - have some better logic for this, and extract the 1.0v rationality threshold into a settings file
-  if (last_vbat > max_vbat || (last_vbat < min_vbat && last_vbat > 1.0)) {
-    Serial.print("[SAFETY] VBat out of range ");
-    Serial.println(last_vbat);
-    
+  if (last_vbat > max_vbat || (last_vbat < min_vbat && last_vbat > 2.0)) {
     // turn off TX clock and set VDD off
     gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_OFF);
-    my_delay(50);
+    my_delay(100);
     si5351.output_enable(SI5351_CLK2, 0);
+
+    Serial.print("[SAFETY] VBat out of range ");
+    Serial.println(last_vbat);
     
     set_mode(MODE_RX);
     for (int i = 0; i < 10; i++) {

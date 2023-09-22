@@ -6,10 +6,11 @@
 #define MORSE_INTERWORD_LEN       7
 
 void init_keyer() {
-  keyer_speed = load_json_config(hw_config_file, "keyer_speed_default_wpm").toInt();
+  keyer_speed = load_json_config(preference_file, "keyer_speed_default_wpm").toInt();
+  keyer_min = load_json_config(preference_file, "keyer_speed_min_wpm").toInt();
+  keyer_max = load_json_config(preference_file, "keyer_speed_max_wpm").toInt();
 
-  // detect key type
-//  if(digitalRead(D6) == LOW) {
+  // detect key type at startup. straight key will have one pin shorted.
   if(digitalRead(12) == LOW) {
     Serial.println("[KEYER] Straight key detected");
     key_type = KEY_STRAIGHT;

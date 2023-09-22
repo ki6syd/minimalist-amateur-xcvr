@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>RADIO</title>
+<head>
+<link rel="stylesheet" type="text/css" href="./style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body>
+<h1>FT8 Transmit</h1>
+<div class="table">
+<form>
+<div>
+      <output class="label">FULL FT8 STRING</output>
+      <input type="text" id="ft8String" value="S KI6SYD/7FFU">
+</div>
+</form>
+
+<form>
+<div>
+  <label for="ft8AudioFreq" class="label">Audio Frequency</label>
+  <input type="text" id="ft8AudioFreq" value="1500">
+</div>
+</form>
+
+<form>
+<div>
+      <button type="button" class="button" onclick="send_ft8()">SEND FT8</button>
+      <button type="button" class="button" onclick="stop_ft8()">STOP FT8</button>
+</div>
+</form>
+
+<br>
+<br>
+<br>
+
+<h1>OTA Update</h1>
+<form method='post' action='/ota' enctype='multipart/form-data'>
+      <input type='file' name='update'>
+      <input type='submit' value='Update'>
+</form>
+
+<br>
+<br>
+<br>
+
+<h1>File System Editor</h1>
+<a href="/edit">/edit (ACE.JS)</a>
+
+<br>
+<br>
+<br>
+
+<h1>Debug Tools</h1>
+<div class="table">
+<form>
+  <div>
+      <button type="button" class="button" onclick="debug_action(1)">CLK2 ON</button>
+      <button type="button" class="button" onclick="debug_action(2)">CLK2 OFF</button>
+      <button type="button" class="button" onclick="debug_action(3)">LPF 1</button>
+      <button type="button" class="button" onclick="debug_action(4)">BPF 1</button>
+      <button type="button" class="button" onclick="debug_action(5)">LPF 2</button>
+      <button type="button" class="button" onclick="debug_action(6)">BPF 2</button>
+      <button type="button" class="button" onclick="debug_action(7)">LPF 3</button>
+      <button type="button" class="button" onclick="debug_action(8)">BPF 3</button>
+      <button type="button" class="button" onclick="debug_action(9)">RLY OFF</button>
+      <button type="button" class="button" onclick="debug_action(10)">VDD ON</button>
+      <button type="button" class="button" onclick="debug_action(11)">VDD OFF</button>
+      <button type="button" class="button" onclick="debug_action(12)">RX AUDIO UNMUTED</button>
+      <button type="button" class="button" onclick="debug_action(13)">RX AUDIO MUTED</button>
+      <button type="button" class="button" onclick="debug_action(14)">TX Pulse</button>
+      <button type="button" class="button" onclick="debug_action(15)">Tune ON</button>
+      <button type="button" class="button" onclick="debug_action(16)">Tune OFF</button>
+      <button type="button" class="button" onclick="debug_action(17)">CLK2 FREQ</button>
+      <button type="button" class="button" onclick="debug_action(18)">XTAL SHAPE</button>
+      <button type="button" class="button" onclick="debug_action(19)">BPF SHAPE</button>
+      <button type="button" class="button" onclick="debug_action(20)">AF SHAPE</button>
+      <button type="button" class="button" onclick="debug_action(21)">SUPPR TEST</button>
+      <button type="button" class="button" onclick="debug_action(22)">REBOOT</button>
+      <button type="button" class="button" onclick="debug_action(23)">LNA ON</button>
+      <button type="button" class="button" onclick="debug_action(24)">LNA OFF</button>
+      <button type="button" class="button" onclick="debug_action(25)">ANT DIRECT</button>
+      <button type="button" class="button" onclick="debug_action(26)">ANT XFMR</button>
+      <button type="button" class="button" onclick="debug_action(27)">NOISE</button>
+      <button type="button" class="button" onclick="debug_action(28)">FSK  TEST</button>
+      <button type="button" class="button" onclick="debug_action(29)">RELAY CYCLING</button>
+      <button type="button" class="button" onclick="http_test()">HTTP TEST</button>
+    </div>
+</form>
+
+
+<script src="./script.js"></script>
+</body>
+</html>

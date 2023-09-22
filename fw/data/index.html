@@ -14,17 +14,21 @@
 
 	<form>
 		<div>
-	      <output name="watchdog" class="readout_small" id="watchdog">DISCONNECTED</output>
-	    </div>
-	    <div>
-	    	<label for="time" class="label_small">UTC </label>
-      		<output name="time" class="readout_small" id="time">00:00</output>
-  		</div>
+    	<label for="time" class="label_tiny">UTC:</label>
+    	<output name="time" class="readout_small" id="time">00:00</output>
+
+      <output name="address" class="readout_tiny_alert" id="address">0.0.0.0</output>
+
+    </div>
+    <div>
+      <label for="time" class="label_tiny">GITHASH </label>
+      <output name="githash" class="readout_tiny" id="githash">githash</output>
+    </div>
 	</form>
 
   <form>
     <div>
-      <input type="number" step="0.0005" pattern="[0-9]*" inputmode="decimal" id="freq_mhz" name="freq_mhz" value="7.06" class="vfo_display">
+      <input type="number" step="0.0005" pattern="[0-9]*" inputmode="decimal" id="freq_mhz" name="freq_mhz" value="14.06" class="vfo_display">
     </div>
 
     <div class="middle-div">      
@@ -65,8 +69,8 @@
       <label for="keyer_speed" class="label">WPM</label>
       <output name="keyer_speed" class="readout" id="keyer_speed">15</output>
       <br>
-      <label for="dbg" class="label">DEBUG</label>
-      <output name="dbg" class="readout" id="dbg">0.0</output>
+      <label for="speaker" class="label">SPKR</label>
+      <output name="speaker" class="readout" id="speaker">OFF</output>
     </div>
   </form>
 
@@ -110,8 +114,8 @@
     </div>
 
     <div>
-      <button type="button" class="button_emoji" onclick="press_mon()">	&#128066;</button>
-      <button type="button" class="button_emoji" onclick="memory(1)">&#129504;</button>
+      <button type="button" class="button_emoji" onclick="press_mon()">&#127898;&#65039;</button>
+      <button type="button" class="button_emoji" onclick="press_speaker()">&#128226;</button>
     </div> 
   </form>
 
@@ -123,10 +127,9 @@
       <input type="text" class="cw_input" id="freeform" name="freeform" placeholder="TEXT TO CW" value="">
     </div>
     <div>
-      <a href="/edit">SETUP</a>
-      <a href="debug.html">DBG</a>
-      <a href="ft8.html">FT8</a>
-      <a href="sotamat://">SOTAMAT</a>
+
+      <a href="sotamat://"><button type="button" class="button_emoji">&#128205;&#65039;</button></a>
+      <a href="util.html"><button type="button" class="button_emoji">&#128736;&#65039;</button></a>
     </div>
   </form>
 
