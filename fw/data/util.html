@@ -5,6 +5,8 @@
 <title>RADIO</title>
 <head>
 <link rel="stylesheet" type="text/css" href="./style.css">
+<script src="./script.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 
@@ -53,7 +55,7 @@
 <br>
 <br>
 
-<h1>Debug Tools</h1>
+<h1>Hardware Controls</h1>
 <div class="table">
 <form>
   <div>
@@ -89,8 +91,25 @@
       <button type="button" class="button" onclick="http_test()">HTTP TEST</button>
     </div>
 </form>
+</div>
 
+<br>
+<br> 
+<br> 
 
-<script src="./script.js"></script>
+<h1>Self-Test Tools</h1>
+<div class="table">
+<form>
+  <div>
+    <button type="button" class="button" onclick="self_test('BPF')">BPF FILTER</button>
+    <button type="button" class="button" onclick="self_test('XTAL')">XTAL FILTER</button>
+    <button type="button" class="button" onclick="self_test('AUDIO')">AUDIO FILTER</button>
+    <button type="button" class="button" onclick="self_test('SUPPR')">SIDEBAND SUPPR</button>
+  </div>
+</form>
+</div>
+
+<canvas id="my_chart" style="width:100%;max-width:700px"></canvas>
+
 </body>
 </html>

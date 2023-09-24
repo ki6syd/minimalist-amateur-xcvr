@@ -17,7 +17,8 @@
 <form>
   <div>
     <button type="button" class="button" onclick="self_test('BPF')">BPF SHAPE</button>
-    <button type="button" class="button" onclick="a('BPF')">BPF SHAPE</button>
+    <button type="button" class="button" onclick="self_test('XTAL')">XTAL SHAPE</button>
+    <button type="button" class="button" onclick="self_test('AUDIO')">AUDIO SHAPE</button>
   </div>
 </form>
 </div>
@@ -25,6 +26,7 @@
 <canvas id="my_chart" style="width:100%;max-width:700px"></canvas>
 
 <script>
+
 var xyValues = [
   {x:50, y:7},
   {x:60, y:8},
@@ -44,11 +46,11 @@ console.log(xyValues);
 var xyJSON = {
   "data": [
     {
-      "x": 2,
+      "x": 9994,
       "y": 3
     },
     {
-      "x": 5,
+      "x": 1004,
       "y": 5
     }
   ]
@@ -73,10 +75,21 @@ new Chart("my_chart", {
     }]
   },
   options: {
-    legend: {display: false},
+    legend: {
+      display: false
+    },
     scales: {
-      xAxes: [{ticks: {min: x_min, max: x_max}}],
-      yAxes: [{ticks: {min: y_min, max: y_max}}],
+      x: {
+        min: x_min,
+        max: x_max
+      },
+      y: {
+        min: y_min,
+        max: y_max
+      },
+      yAxes: [{
+        type: 'logarithmic'
+      }]
     }
   }
 });

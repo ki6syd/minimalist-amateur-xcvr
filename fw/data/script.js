@@ -407,18 +407,21 @@ function get_address() {
   http_request("GET", "address", [], [], func)
 }
 
+function debug_action(number) {
+  http_request("POST", "debug", ["command"], [number])
+}
+
 function self_test(test_name) {
   // define callback function
   func = function() {
     if (this.readyState == 4 && this.status == 201) {
       var json_response = JSON.parse(this.responseText);
-
       console.log(json_response)
 
       plot_dataset(json_response["data"], "my_chart")
     }
   };
-	http_request("POST", "selfTest", ["value"], [test_name], func)
+	http_request("POST", "selfTest", ["testName"], [test_name], func)
 }
 
 
@@ -479,7 +482,6 @@ function plot_dataset(json_data, chart_name) {
   var x_max = max_from_json_data(json_data, 'x') * 1.1
   var y_max = max_from_json_data(json_data, 'y') * 1.1
 
-
   new Chart("my_chart", {
     type: "scatter",
     data: {
@@ -490,11 +492,23 @@ function plot_dataset(json_data, chart_name) {
       }]
     },
     options: {
-      legend: {display: false},
+      legend: {
+        display: false
+      },
       scales: {
-        xAxes: [{ticks: {min: x_min, max: x_max}}],
-        yAxes: [{ticks: {min: y_min, max: y_max}}],
-      }
+        x: {
+          min: x_min,
+          max: x_max
+        },
+        y: {
+          min: y_min,
+          max: y_max
+        },
+        yAxes: [{
+          type: 'logarithmic'
+        }]
+      },
+      events: []
     }
   });
 }
