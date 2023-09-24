@@ -10,4 +10,4 @@ Software in this project is licensed under the GPLv3 License. https://www.gnu.or
 
 Hardware in this project is licensed under the TAPR Open Hardware License. https://tapr.org/the-tapr-open-hardware-license/
 
-This project uses Ace.js, Copyright (c) 2010, Ajax.org B.V.
+This project redistributes Ace.js, Copyright (c) 2010, Ajax.org B.V.

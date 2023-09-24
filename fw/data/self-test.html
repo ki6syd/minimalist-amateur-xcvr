@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>RADIO</title>
+<head>
+<link rel="stylesheet" type="text/css" href="./style.css">
+<script src="./script.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+</head>
+
+<body>
+
+
+<h1>Self Tests</h1>
+<div class="table">
+<form>
+  <div>
+    <button type="button" class="button" onclick="self_test('BPF')">BPF SHAPE</button>
+    <button type="button" class="button" onclick="a('BPF')">BPF SHAPE</button>
+  </div>
+</form>
+</div>
+
+<canvas id="my_chart" style="width:100%;max-width:700px"></canvas>
+
+<script>
+var xyValues = [
+  {x:50, y:7},
+  {x:60, y:8},
+  {x:70, y:8},
+  {x:80, y:9},
+  {x:90, y:9},
+  {x:100, y:9},
+  {x:110, y:10},
+  {x:120, y:11},
+  {x:130, y:14},
+  {x:140, y:14},
+  {x:150, y:15}
+];
+
+console.log(xyValues);
+
+var xyJSON = {
+  "data": [
+    {
+      "x": 2,
+      "y": 3
+    },
+    {
+      "x": 5,
+      "y": 5
+    }
+  ]
+}
+
+console.log(xyJSON)
+
+
+var x_min = min_from_json_data(xyJSON['data'], 'x')/1.1
+var y_min = min_from_json_data(xyJSON['data'], 'y')/1.1
+var x_max = max_from_json_data(xyJSON['data'], 'x')* 1.1
+var y_max = max_from_json_data(xyJSON['data'], 'y')* 1.1
+
+
+new Chart("my_chart", {
+  type: "scatter",
+  data: {
+    datasets: [{
+      pointRadius: 4,
+      pointBackgroundColor: "rgb(0,0,255)",
+      data: xyJSON["data"]
+    }]
+  },
+  options: {
+    legend: {display: false},
+    scales: {
+      xAxes: [{ticks: {min: x_min, max: x_max}}],
+      yAxes: [{ticks: {min: y_min, max: y_max}}],
+    }
+  }
+});
+
+</script>
+
+
+</body>
+</html>

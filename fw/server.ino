@@ -129,6 +129,10 @@ void init_web_server() {
     request->send(200, "text/plain", String(API_VERSION));
   });
 
+  server.on(CONCAT(API_BASE_URL, "selfTest"), HTTP_POST, [](AsyncWebServerRequest *request){
+    handle_selftest(HTTP_POST, request);
+  });
+
   // handlers for special commands
   server.on(CONCAT(API_BASE_URL, "debug"), HTTP_POST, [](AsyncWebServerRequest *request){
     handle_debug(HTTP_POST, request);
