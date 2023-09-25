@@ -115,7 +115,6 @@ void init_web_server() {
     request->send(200, "text/plain", String(last_smeter));
   }); 
 
-  
   server.on(CONCAT(API_BASE_URL, "githash"), HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(200, "text/plain", String(GIT_VERSION));
   });
@@ -125,12 +124,28 @@ void init_web_server() {
     request->send(200, "text/plain", String(ip.toString()));
   });
 
+  server.on(CONCAT(API_BASE_URL, "hwRevision"), HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", hardware_rev);
+  });
+
+  server.on(CONCAT(API_BASE_URL, "unitSerial"), HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", unit_serial);
+  });
+
+  // register callbacks for api with or without path
+  server.on(CONCAT(API_BASE_URL, "api"), HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", String(API_VERSION));
+  });
   server.on("/api", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(200, "text/plain", String(API_VERSION));
   });
 
   server.on(CONCAT(API_BASE_URL, "selfTest"), HTTP_POST, [](AsyncWebServerRequest *request){
     handle_selftest(HTTP_POST, request);
+  });
+
+  server.on(CONCAT(API_BASE_URL, "rawSamples"), HTTP_POST, [](AsyncWebServerRequest *request){
+    handle_raw_samples(HTTP_POST, request);
   });
 
   // handlers for special commands

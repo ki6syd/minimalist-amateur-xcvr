@@ -88,7 +88,7 @@
       <button type="button" class="button" onclick="debug_action(27)">NOISE</button>
       <button type="button" class="button" onclick="debug_action(28)">FSK  TEST</button>
       <button type="button" class="button" onclick="debug_action(29)">RELAY CYCLING</button>
-      <button type="button" class="button" onclick="http_test()">HTTP TEST</button>
+      <button type="button" class="button" onclick="sample()">SAMPLE</button>
     </div>
 </form>
 </div>
@@ -101,10 +101,11 @@
 <div class="table">
 <form>
   <div>
-    <button type="button" class="button" onclick="self_test('BPF')">BPF FILTER</button>
-    <button type="button" class="button" onclick="self_test('XTAL')">XTAL FILTER</button>
-    <button type="button" class="button" onclick="self_test('AUDIO')">AUDIO FILTER</button>
-    <button type="button" class="button" onclick="self_test('SUPPR')">SIDEBAND SUPPR</button>
+    <!-- not working: <button type="button" class="button" onclick="self_test('BPF')">BPF FILTER</button>-->
+    <button type="button" class="button" onclick="self_test('XTAL')">XTAL</button>
+    <button type="button" class="button" onclick="self_test('AUDIO')">AUDIO</button>
+    <button type="button" class="button" onclick="self_test('SUPPR')">SIDEBAND</button>
+    <button type="button" class="button" onclick="self_test('XMIT')">TRANSMIT (10 SECONDS)</button>
   </div>
 </form>
 </div>

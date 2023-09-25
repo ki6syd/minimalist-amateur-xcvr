@@ -418,11 +418,25 @@ function self_test(test_name) {
       var json_response = JSON.parse(this.responseText);
       console.log(json_response)
 
-      plot_dataset(json_response["data"], "my_chart")
+      plot_dataset(json_response["data"], "my_chart", 'linear')
     }
   };
 	http_request("POST", "selfTest", ["testName"], [test_name], func)
 }
+
+function sample() {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 201) {
+      var json_response = JSON.parse(this.responseText);
+      console.log(json_response)
+
+      plot_dataset(json_response["data"], "my_chart", 'linear')
+    }
+  };
+  http_request("POST", "rawSamples", [], [], func)
+}
+
 
 
 function get_debug() {
@@ -475,7 +489,7 @@ function max_from_json_data(json_data, key_name) {
 }
 
 
-function plot_dataset(json_data, chart_name) {
+function plot_dataset(json_data, chart_name, y_axis_type) {
 
   var x_min = min_from_json_data(json_data, 'x') / 1.1
   var y_min = min_from_json_data(json_data, 'y') / 1.1
@@ -483,7 +497,7 @@ function plot_dataset(json_data, chart_name) {
   var y_max = max_from_json_data(json_data, 'y') * 1.1
 
   new Chart("my_chart", {
-    type: "scatter",
+    type: 'scatter',
     data: {
       datasets: [{
         pointRadius: 4,
@@ -505,7 +519,7 @@ function plot_dataset(json_data, chart_name) {
           max: y_max
         },
         yAxes: [{
-          type: 'logarithmic'
+          type: y_axis_type
         }]
       },
       events: []

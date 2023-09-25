@@ -108,6 +108,7 @@ size_t content_len;
 
 // used in io
 String hardware_rev = "";
+String unit_serial = "";
 
 
 // TODO: a few of these shouldn't be uint16_t's, figure out better enum strategy
@@ -205,10 +206,14 @@ void setup(void) {
 
   // initial read of battery voltage
   last_vbat = analog_read(INPUT_VBAT);
+
+  // load serial number
+  unit_serial = load_json_config(hardware_file, "serial_number");
 }
 
 
 void loop(void) {
+  uint8_t i = 0;
   MDNS.update();
 
   // reconfig clocks if frequency has changed
@@ -286,16 +291,19 @@ void loop(void) {
   // decrement QSK timer if needed
   update_qsk_timer();
 
-
   // do analog read once per loop. vbat during tx, smeter during rx. 
   // noise comes from toggling adc mux, so reading both types doesn't work well
   if(tx_rx_mode == MODE_TX || tx_rx_mode == MODE_QSK_COUNTDOWN)
     last_vbat = analog_read(INPUT_VBAT);
   else {
-    update_smeter();
+    // do this every 10th loop. Frequent ADC reads disrupt wifi
+    /*
+    if(i % 10 == 0)
+      update_smeter();
+      */
   }
 
-  // TODO - have some better logic for this, and extract the 1.0v rationality threshold into a settings file
+  // TODO - have some better logic for this, and extract the 2.0v rationality threshold into a settings file
   if (last_vbat > max_vbat || (last_vbat < min_vbat && last_vbat > 2.0)) {
     // turn off TX clock and set VDD off
     gpio_write(OUTPUT_TX_VDD_EN, OUTPUT_OFF);
@@ -307,13 +315,16 @@ void loop(void) {
     
     set_mode(MODE_RX);
     for (int i = 0; i < 10; i++) {
-      gpio_write(OUTPUT_GREEN_LED, OUTPUT_ON);
+      gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
       my_delay(50);
-      gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
+      gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
       my_delay(50);
     }
 
     // force another ADC read so we don't get stuck in an undervoltage state. Only samples during TX normally.
     last_vbat = analog_read(INPUT_VBAT);
   }
+
+  my_delay(5);
+  i++;
 }

@@ -1,5 +1,6 @@
 #define ADC_SCALING_VBAT      0.0349
-#define ADC_SCALING_AUDIO     0.00976
+// ADC_SCALING_AUDIO converts ADC counts to volts at the processor pin
+#define ADC_SCALING_AUDIO     0.000976
 
 // relay operating time
 #define RELAY_DELAY 5
@@ -340,16 +341,26 @@ float analog_read(input_pin pin) {
 
 // take "n" samples and compute amplitude/sum/average
 void update_smeter () {
-  uint8_t num_samples = 50;
-  float sum = 0, avg = 0, rms = 0;
+  uint8_t num_samples = 100;
+  uint16_t sample_interval = 200;
+  uint64_t last_sample_time = micros();
+  float sum = 0, avg = 0, rms = 0, min_val = 0, max_val = 0;
   float readings[num_samples];
 
   // pick audio input for ADC
   gpio_write(OUTPUT_ADC_SEL, OUTPUT_SEL_AUDIO);
+  // delay to let ADC input settle
+  my_delay(10);
 
   // sampling loop
   for(uint8_t i=0; i<num_samples; i++) {
+    // delay to get correct sample rate (roughly)
+    while(micros() - last_sample_time < sample_interval);
+    
+    // sample
     readings[i] = ADC_SCALING_AUDIO * analogRead(A0);
+    // update time
+    last_sample_time = micros();
   }
 
   // averaging loop
@@ -363,21 +374,7 @@ void update_smeter () {
     rms += readings[i] * readings[i];
   }
   rms = sqrt(rms/num_samples);
-
-
-  // TODO - make a flag for printing this out
-  /*
-  Serial.print("[S-METER]\tAvg: ");
-  Serial.print(avg);
-  Serial.print("\tSum: ");
-  Serial.print(sum);
-  Serial.print("\tRMS: ");
-  Serial.println(rms);
-  */
-
   last_smeter = rms;
-
-  my_delay(10);
 }
 
 // TODO: implement a maximum volume control based on JSON file

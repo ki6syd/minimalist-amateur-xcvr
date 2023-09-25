@@ -63,8 +63,10 @@ void print_uint64_t(uint64_t num) {
 void my_delay(uint64_t dly) {
   uint64_t start_time = millis();
 
-  while(millis() - start_time < dly)
+  while(millis() - start_time < dly) {
     delay(1);
+    ESP.wdtFeed();
+  }
 }
 
 // programmatic reset
