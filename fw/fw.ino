@@ -92,7 +92,6 @@ uint64_t ft8_freq = 14070000;
 uint64_t time_offset = 0;
 
 
-
 // flag_freq indicates whether frequency OR rx bandwidth need to change
 bool flag_freq = false, flag_vol = true, flag_special = false, flag_ft8 = false;
 bool dit_flag = false, dah_flag = false;
@@ -105,11 +104,9 @@ int64_t qsk_counter = 0;
 // used in OTA
 size_t content_len;
 
-
 // used in io
 String hardware_rev = "";
 String unit_serial = "";
-
 
 // TODO: a few of these shouldn't be uint16_t's, figure out better enum strategy
 uint16_t rx_bw = OUTPUT_SEL_CW;
@@ -214,6 +211,7 @@ void setup(void) {
 
 void loop(void) {
   uint8_t i = 0;
+
   MDNS.update();
 
   // reconfig clocks if frequency has changed
@@ -297,10 +295,8 @@ void loop(void) {
     last_vbat = analog_read(INPUT_VBAT);
   else {
     // do this every 10th loop. Frequent ADC reads disrupt wifi
-    /*
     if(i % 10 == 0)
       update_smeter();
-      */
   }
 
   // TODO - have some better logic for this, and extract the 2.0v rationality threshold into a settings file
@@ -325,6 +321,6 @@ void loop(void) {
     last_vbat = analog_read(INPUT_VBAT);
   }
 
-  my_delay(5);
+  // my_delay(5);
   i++;
 }
