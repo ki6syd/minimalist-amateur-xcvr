@@ -5,10 +5,10 @@ info:
   description: API for MAX-3B radio
   contact:
     email: ki6syd@gmail.com
-  version: 1.0.1
+  version: 1.0.2
 servers:
 - url: http://radio.local/api/v1
-  description: SwaggerHub API Auto Mocking
+  description: Base URL
 tags:
 - name: DigitalModes
   description: Communication DigitalModes
@@ -534,6 +534,30 @@ paths:
             text/plain:
               schema:
                 type: string
+  /hwRevision:
+    get:
+      tags:
+      - RadioInfo
+      summary: Information about radio hardware
+      responses:
+        "200":
+          description: Information about radio hardware
+          content:
+            text/plain:
+              schema:
+                type: string
+  /unitSerial:
+    get:
+      tags:
+      - RadioInfo
+      summary: Hardware serial number
+      responses:
+        "200":
+          description: Radio's serial number
+          content:
+            text/plain:
+              schema:
+                type: string
   /api:
     get:
       tags:
@@ -546,6 +570,42 @@ paths:
             text/plain:
               schema:
                 type: string
+  /selfTest:
+    post:
+      tags:
+      - RadioInfo
+      summary: Routines for characterization. All return an array of XY points
+      parameters:
+      - name: testName
+        in: query
+        description: Type of self-test to run
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+          enum:
+          - BPF
+          - XTAL
+          - AUDIO
+          - XMIT
+          - NOISE
+      responses:
+        "201":
+          description: Data collected
+          content:
+            application/json:
+              schema:
+                type: array
+                example:
+                - x: 1
+                  "y": 2
+                - x: 2
+                  "y": 3
+                items:
+                  type: object
+        "400":
+          description: Unable to complete routine
   /debug:
     get:
       tags:

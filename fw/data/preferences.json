@@ -17,6 +17,6 @@
 	"af_gain_default": "1",
 	"vol_min": "1",
 	"vol_max": "6",
-	"v_bat_min_cutoff": "7.0",
+	"v_bat_min_cutoff": "5.5",
 	"v_bat_max_cutoff": "16.0"
 }

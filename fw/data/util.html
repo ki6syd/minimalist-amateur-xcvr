@@ -5,6 +5,8 @@
 <title>RADIO</title>
 <head>
 <link rel="stylesheet" type="text/css" href="./style.css">
+<script src="./script.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 
@@ -53,7 +55,7 @@
 <br>
 <br>
 
-<h1>Debug Tools</h1>
+<h1>Hardware Controls</h1>
 <div class="table">
 <form>
   <div>
@@ -73,11 +75,11 @@
       <button type="button" class="button" onclick="debug_action(14)">TX Pulse</button>
       <button type="button" class="button" onclick="debug_action(15)">Tune ON</button>
       <button type="button" class="button" onclick="debug_action(16)">Tune OFF</button>
-      <button type="button" class="button" onclick="debug_action(17)">CLK2 FREQ</button>
+      <!--<button type="button" class="button" onclick="debug_action(17)">CLK2 FREQ</button>
       <button type="button" class="button" onclick="debug_action(18)">XTAL SHAPE</button>
       <button type="button" class="button" onclick="debug_action(19)">BPF SHAPE</button>
       <button type="button" class="button" onclick="debug_action(20)">AF SHAPE</button>
-      <button type="button" class="button" onclick="debug_action(21)">SUPPR TEST</button>
+      <button type="button" class="button" onclick="debug_action(21)">SUPPR TEST</button>-->
       <button type="button" class="button" onclick="debug_action(22)">REBOOT</button>
       <button type="button" class="button" onclick="debug_action(23)">LNA ON</button>
       <button type="button" class="button" onclick="debug_action(24)">LNA OFF</button>
@@ -86,11 +88,30 @@
       <button type="button" class="button" onclick="debug_action(27)">NOISE</button>
       <button type="button" class="button" onclick="debug_action(28)">FSK  TEST</button>
       <button type="button" class="button" onclick="debug_action(29)">RELAY CYCLING</button>
-      <button type="button" class="button" onclick="http_test()">HTTP TEST</button>
+      <button type="button" class="button" onclick="sample()">SAMPLE</button>
     </div>
 </form>
+</div>
 
+<br>
+<br> 
+<br> 
 
-<script src="./script.js"></script>
+<h1>Self-Test Tools</h1>
+<div class="table">
+<form>
+  <div>
+    <!-- not working: <button type="button" class="button" onclick="self_test('BPF')">BPF FILTER</button>-->
+    <button type="button" class="button" onclick="self_test('XTAL')">XTAL</button>
+    <button type="button" class="button" onclick="self_test('AUDIO')">AUDIO</button>
+    <button type="button" class="button" onclick="self_test('SUPPR')">SIDEBAND</button>
+    <button type="button" class="button" onclick="self_test('XMIT')">TRANSMIT (10 SECONDS)</button>
+    <button type="button" class="button" onclick="self_test('NOISE')">NOISE</button>
+  </div>
+</form>
+</div>
+
+<canvas id="my_chart" style="width:100%;max-width:700px"></canvas>
+
 </body>
 </html>

@@ -57,6 +57,11 @@ function http_request(type, path, keys, values) {
   if(type == "GET") {
     xhr.onreadystatechange = arguments[4]
   }
+  else {
+    // add a callback to PUT/POST if we passed one
+    if(arguments.length == 5)
+      xhr.onreadystatechange = arguments[4]
+  }
   xhr.send();
 }
 
@@ -382,7 +387,7 @@ function get_s_meter() {
   http_request("GET", "sMeter", [], [], func)
 }
 
-function get_githash(number) {
+function get_githash() {
   // define callback function
   func = function() {
     if (this.readyState == 4 && this.status == 200) {
@@ -392,7 +397,7 @@ function get_githash(number) {
   http_request("GET", "githash", [], [], func)
 }
 
-function get_address(number) {
+function get_address() {
   // define callback function
   func = function() {
     if (this.readyState == 4 && this.status == 200) {
@@ -403,8 +408,36 @@ function get_address(number) {
 }
 
 function debug_action(number) {
-	http_request("POST", "debug", ["command"], [number])
+  http_request("POST", "debug", ["command"], [number])
 }
+
+function self_test(test_name) {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 201) {
+      var json_response = JSON.parse(this.responseText);
+      console.log(json_response)
+
+      plot_dataset(json_response["data"], "my_chart", 'linear')
+    }
+  };
+	http_request("POST", "selfTest", ["testName"], [test_name], func)
+}
+
+function sample() {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 201) {
+      var json_response = JSON.parse(this.responseText);
+      console.log(json_response)
+
+      plot_dataset(json_response["data"], "my_chart", 'linear')
+    }
+  };
+  http_request("POST", "rawSamples", [], [], func)
+}
+
+
 
 function get_debug() {
   // define callback function
@@ -419,6 +452,80 @@ function get_debug() {
   http_request("GET", "debug", [], [], func)
 }
 
+
+// looks for the minimum value for the given key name
+function min_from_json_data(json_data, key_name) {
+  // set minimum to first value
+  var first_obj = json_data[0]
+  var min = first_obj[key_name]
+
+  // iterate
+  for(var i = 0; i < json_data.length; i++) {
+    var obj = json_data[i];
+    if(obj[key_name] < min)
+      min = obj[key_name]
+  }
+
+  console.log(min)
+
+  return min;
+}
+
+function max_from_json_data(json_data, key_name) {
+  // set minimum to first value
+  var first_obj = json_data[0]
+  var max = first_obj[key_name]
+
+  // iterate
+  for(var i = 0; i < json_data.length; i++) {
+    var obj = json_data[i];
+    if(obj[key_name] > max)
+      max = obj[key_name]
+  }
+
+  console.log(max)
+
+  return max;
+}
+
+
+function plot_dataset(json_data, chart_name, y_axis_type) {
+
+  var x_min = min_from_json_data(json_data, 'x') / 1.1
+  var y_min = min_from_json_data(json_data, 'y') / 1.1
+  var x_max = max_from_json_data(json_data, 'x') * 1.1
+  var y_max = max_from_json_data(json_data, 'y') * 1.1
+
+  new Chart("my_chart", {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        pointRadius: 4,
+        pointBackgroundColor: "rgb(0,0,255)",
+        data: json_data
+      }]
+    },
+    options: {
+      legend: {
+        display: false
+      },
+      scales: {
+        x: {
+          min: x_min,
+          max: x_max
+        },
+        y: {
+          min: y_min,
+          max: y_max
+        },
+        yAxes: [{
+          type: y_axis_type
+        }]
+      },
+      events: []
+    }
+  });
+}
 
 // TODO - remove concept of multiple memories, keep CQ separate. This function will cancel repeat on CQ if you press mem.
 function memory(num) {
