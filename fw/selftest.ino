@@ -9,6 +9,8 @@
 #define AUDIO_SWEEP_NUM_PTS 100
 #define SUPPR_SWEEP_SPREAD  4000
 #define SUPPR_SWEEP_NUM_PTS 3
+#define NOISE_SWEEP_SPREAD  300000
+#define NOISE_SWEEP_NUM_PTS 50
 
 void handle_selftest(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) { 
   if(request_type == HTTP_POST) {
@@ -32,6 +34,8 @@ void handle_selftest(WebRequestMethodComposite request_type, AsyncWebServerReque
       response = suppr_sweep();
     if(test_type == "XMIT")
       response = xmit_test();
+    if(test_type == "NOISE")
+      response = noise_sweep();
     
     request->send(201, "application/json", response);
   }
@@ -86,7 +90,6 @@ void handle_raw_samples(WebRequestMethodComposite request_type, AsyncWebServerRe
     Serial.print("RMS: ");
     Serial.print(rms*1000);
     Serial.println("mV");
-
 
     // package and send data
     for(uint8_t i=0; i<num_samples; i++) {
@@ -359,4 +362,74 @@ String xmit_test() {
   key_off();
 
   return "";
+}
+
+// similar to BPF sweep, but does NOT start the tx clock. 
+String noise_sweep() {
+  DynamicJsonDocument doc(JSON_DOC_SIZE);
+  JsonArray data = doc.createNestedArray("data");
+  String response;
+  float meter_readings[NOISE_SWEEP_NUM_PTS];
+
+  // set up hardware for a sweep
+  if(tx_rx_mode != MODE_RX)
+    return "";
+  gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB); 
+  gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
+  // special volume setting for this test
+  update_volume(5);
+
+
+  // define sweep start/stop
+  uint64_t f_rf_orig = f_rf;
+  uint64_t f_rf_min = f_rf - NOISE_SWEEP_SPREAD/2;
+  uint64_t f_rf_max = f_rf + NOISE_SWEEP_SPREAD/2;
+  uint64_t step_size = NOISE_SWEEP_SPREAD / NOISE_SWEEP_NUM_PTS;
+  uint16_t i = 0;
+
+  // sweep and measure. hold BFO and audio frequency fixed
+  for(f_rf=f_rf_min; f_rf < f_rf_max; f_rf += step_size) {
+    f_vfo = update_vfo(f_rf, f_bfo, f_audio);
+    set_clocks(f_bfo, f_vfo, f_rf);     
+    // delay for settling, also blink light
+    gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
+    my_delay(SWEEP_SETTLING_TIME);
+    
+    float sum = 0;
+    for(uint8_t j=0; j < 1; j++) {
+      update_smeter();
+      sum += last_smeter;
+    }
+    Serial.println(sum);
+    
+    gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
+    my_delay(SWEEP_SETTLING_TIME);
+
+    Serial.print("RF: ");
+    print_uint64_t(f_rf);
+    Serial.print("VFO: ");
+    print_uint64_t(f_vfo);
+    Serial.print("BFO: ");
+    print_uint64_t(f_bfo);
+    Serial.println();
+
+    JsonObject data_0 = data.createNestedObject();
+    data_0["x"] = f_rf/1000;
+    data_0["y"] = sum / 1;
+    i++;
+    
+    // watchdog may not get fed in this long function
+    ESP.wdtFeed();
+  }
+
+  // return clocks to original value
+  f_rf = f_rf_orig;
+  f_vfo = update_vfo(f_rf, f_bfo, f_audio);
+  set_clocks(f_bfo, f_vfo, f_rf);
+  
+  gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
+  Serial.println("Done sweeping noise");
+
+  serializeJson(doc, response);
+  return response;
 }
