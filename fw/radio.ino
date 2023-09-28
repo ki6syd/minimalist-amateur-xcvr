@@ -189,6 +189,52 @@ void set_mode(mode_type new_mode) {
   gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
 }
 
+// called when frequency flag is set
+// only do this if we are in RX mode, to avoid changing relays while transmitting
+void change_freq() {
+  if (tx_rx_mode == MODE_RX) {
+    flag_freq = false;
+
+    gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
+    update_relays(f_rf);
+    gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
+
+    gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
+
+    // update antenna connection
+    gpio_write(OUTPUT_ANT_SEL, (output_state) ant);
+
+    // set LNA hardware
+    if(lna_state)
+      gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
+    else
+      gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
+
+    // set speaker
+    if(speaker_state)
+      gpio_write(OUTPUT_SPKR_EN, OUTPUT_ON);
+    else
+      gpio_write(OUTPUT_SPKR_EN, OUTPUT_OFF);
+    
+    // TODO: this logic might make more sense elsewhere. Also should consider the concept of USB/LSB, dial freq, and mode rather than this mess of if statements.
+    if(rx_bw == OUTPUT_SEL_CW)
+      set_clocks(f_bfo, f_vfo, f_rf);
+    else {
+      if(f_rf < 10e6)
+        set_clocks(f_bfo, f_vfo, f_rf - f_audio);
+      else
+        set_clocks(f_bfo, f_vfo, f_rf + f_audio);
+    }
+    gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
+  }
+  else
+    Serial.println("[SAFETY] Did not update frequency because radio was transmitting.");
+
+  // update AF filter routing, regardless of whether tx_rx_mode changed
+  // TODO - add a flag for this?
+  gpio_write(OUTPUT_BW_SEL, (output_state) rx_bw);
+}
+
 // TODO: pull out the magic 10ms delay
 void key_on() {  
   // change over relays and sidetone

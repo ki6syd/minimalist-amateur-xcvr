@@ -11,17 +11,11 @@ void init_web_server() {
   server.on(CONCAT(API_BASE_URL, "ft8"), HTTP_POST, [](AsyncWebServerRequest *request){
     handle_ft8(HTTP_POST, request);
   });
-  server.on(CONCAT(API_BASE_URL, "ft8"), HTTP_DELETE, [](AsyncWebServerRequest *request){
-    handle_ft8(HTTP_DELETE, request);
-  });
 
 
   // handlers for CW messages
   server.on(CONCAT(API_BASE_URL, "cw"), HTTP_POST, [](AsyncWebServerRequest *request){
     handle_cw(HTTP_POST, request);
-  });
-  server.on(CONCAT(API_BASE_URL, "cw"), HTTP_DELETE, [](AsyncWebServerRequest *request){
-    handle_cw(HTTP_DELETE, request);
   });
   
 

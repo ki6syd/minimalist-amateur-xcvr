@@ -13,6 +13,7 @@
 #include <JTEncode.h>
 #include <TimeLib.h>
 #include "git-version.h"
+#include "Queue.h"
 
 enum output_pin {
   OUTPUT_RX_MUTE,
@@ -64,9 +65,15 @@ enum mode_type {
 };
 
 
-enum key_types {
+enum key_type {
   KEY_STRAIGHT,
   KEY_PADDLE
+};
+
+enum digital_message_type {
+  MODE_CW,
+  MODE_FT8,
+  MODE_WSPR
 };
 
 const char * preference_file = "/preferences.json";
@@ -81,19 +88,24 @@ JTEncode jtencode;
 PCF8574 pcf8574_20(0x20);
 PCF8574 pcf8574_21(0x21);
 
-
-// ------------------------------ FT8 variables ------------------------------
-uint8_t ft8_buffer[255];
-bool ft8_busy = false;
-uint64_t ft8_freq = 14070000;
-
-
 // ------------------------------ time variables ------------------------------
 uint64_t time_offset = 0;
 
+// ------------------------------ queue variables -----------------------------
+bool keyer_abort = false;
+// todo: use a more reasonable buffer length
+struct DigitalMessage {
+  digital_message_type type;
+  uint64_t freq;
+  uint8_t buf[255];
+};
+
+#define DIGITAL_QUEUE_LEN   32
+Queue<DigitalMessage> digital_queue(DIGITAL_QUEUE_LEN);
+
 
 // flag_freq indicates whether frequency OR rx bandwidth need to change
-bool flag_freq = false, flag_vol = true, flag_special = false, flag_ft8 = false;
+bool flag_freq = false, flag_vol = true, flag_special = false;
 bool dit_flag = false, dah_flag = false;
 
 
@@ -116,11 +128,10 @@ uint16_t keyer_speed = 0;
 uint16_t vol = 0;
 int16_t mon_offset = 0;
 uint16_t special = 0;
-String tx_queue = "";
 // TODO: turn this into an enum
 bool lna_state = false;
 bool speaker_state = false;
-key_types key_type = KEY_PADDLE;
+key_type key = KEY_PADDLE;
 output_pin lpf_relay = OUTPUT_LPF_1, bpf_relay = OUTPUT_BPF_1;
 
 float last_vbat = 0, last_smeter = 0;
@@ -211,53 +222,22 @@ void setup(void) {
 
 void loop(void) {
   uint8_t i = 0;
-
-  MDNS.update();
+  
+  // handle key inputs
+  // continue after dit or dah to skip other checks. Minimizes delay if there's another key press immediately
+  if (dit_flag) {
+    dit();
+    return;
+  }
+  if (dah_flag) {
+    dah();
+    return;
+  }
 
   // reconfig clocks if frequency has changed
+  // don't update frequency if we are still in TX mode - derisks hardware damage
   if (flag_freq) {
-    // don't update frequency if we are still in TX mode - derisks hardware damage
-    if (tx_rx_mode == MODE_RX) {
-      flag_freq = false;
-
-      gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
-      update_relays(f_rf);
-      gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
-
-      gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
-
-      // update antenna connection
-      gpio_write(OUTPUT_ANT_SEL, (output_state) ant);
-
-      // set LNA hardware
-      if(lna_state)
-        gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
-      else
-        gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
-
-      // set speaker
-      if(speaker_state)
-        gpio_write(OUTPUT_SPKR_EN, OUTPUT_ON);
-      else
-        gpio_write(OUTPUT_SPKR_EN, OUTPUT_OFF);
-      
-      // TODO: this logic might make more sense elsewhere. Also should consider the concept of USB/LSB, dial freq, and mode rather than this mess of if statements.
-      if(rx_bw == OUTPUT_SEL_CW)
-        set_clocks(f_bfo, f_vfo, f_rf);
-      else {
-        if(f_rf < 10e6)
-          set_clocks(f_bfo, f_vfo, f_rf - f_audio);
-        else
-          set_clocks(f_bfo, f_vfo, f_rf + f_audio);
-      }
-      gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
-    }
-    else
-      Serial.println("[SAFETY] Did not update frequency because radio was transmitting.");
-
-    // update AF filter routing, regardless of whether tx_rx_mode changed
-    // TODO - add a flag for this?
-    gpio_write(OUTPUT_BW_SEL, (output_state) rx_bw);
+    change_freq();
   }
 
   // perform volume update if change detected
@@ -266,25 +246,18 @@ void loop(void) {
     update_volume(vol);
   }
 
-  // take action based on special functions
+  // take action based on special debug functions
   if (flag_special) {
     flag_special = false;
     special_mode(special);
   }
 
-  // todo - queues 
-  if(flag_ft8) {
-    send_ft8();
+  // todo - queues   
+  if(digital_queue.count() > 0) {
+    service_digital_queue();
   }
-
-  // handle key inputs
-  if (dit_flag)
-    dit();
-  if (dah_flag)
-    dah();
-
-  // send a letter from the queue if there is anything
-  update_keyer_queue();
+  
+  
 
   // decrement QSK timer if needed
   update_qsk_timer();
@@ -321,6 +294,6 @@ void loop(void) {
     last_vbat = analog_read(INPUT_VBAT);
   }
 
-  // my_delay(5);
+  MDNS.update();
   i++;
 }

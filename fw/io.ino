@@ -152,8 +152,8 @@ ICACHE_RAM_ATTR void paddle_isr() {
     dah_flag = true;
   }
 
-  // empty the keyer queue so touching the paddle stops any ongoing messages
-  tx_queue = "";
+  // empty the queue so touching the paddle stops any ongoing messages
+  empty_digital_queue();
 }
 
 
