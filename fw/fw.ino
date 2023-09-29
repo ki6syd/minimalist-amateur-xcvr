@@ -296,4 +296,6 @@ void loop(void) {
 
   MDNS.update();
   i++;
+
+  my_delay(10);
 }

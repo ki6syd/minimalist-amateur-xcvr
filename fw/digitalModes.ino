@@ -124,24 +124,6 @@ void handle_ft8(WebRequestMethodComposite request_type, AsyncWebServerRequest *r
   }
 }
 
-// delete me. this clears the queue
-void print_ft8_queue() {
-  for(uint8_t i = 0; i < digital_queue.count(); i++) {
-    DigitalMessage tmp = digital_queue.pop();
-
-    Serial.print("Type: ");
-    Serial.print(tmp.type);
-    Serial.print("\t");
-    Serial.print("Freq: ");
-    Serial.println(tmp.freq);
-    for(uint8_t i=0; i<255; i++) {
-      Serial.print(tmp.buf[i]);
-      Serial.print(" ");
-    }
-    Serial.println();
-  }
-}
-
 void handle_queue(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) {
   uint8_t total_queue_len = digital_queue.count();
   
@@ -166,7 +148,7 @@ void service_digital_queue() {
   if(tx_rx_mode == MODE_TX)
     return;
 
-  // save the original frequency so we can return to it
+  // save the original frequency so we can return to it after sending
   uint64_t f_rf_orig = f_rf;
   
   DigitalMessage to_send = digital_queue.peek();
@@ -187,15 +169,18 @@ void service_digital_queue() {
   f_rf = f_rf_orig;
   f_vfo = update_vfo(f_rf, f_bfo, f_audio);
   set_clocks(f_bfo, f_vfo, f_rf);
-
   
   // clear this flag
   keyer_abort = false;
 }
 
+// clears out the whole queue, of all data types
 void empty_digital_queue() {
   while(digital_queue.count() > 0)
       digital_queue.pop();
+
+  // set the flag in case queue is empty but something is sending currently
+  keyer_abort = true;
 }
 
 // function returns when time rolls past the first 15 second interval since calling
@@ -238,7 +223,11 @@ void send_ft8_from_queue() {
 
   // change to correct frequency before keying up
   f_rf = to_send.freq + to_send.buf[0];
+  f_vfo = update_vfo(f_rf, f_bfo, f_audio);
   set_clocks(f_bfo, f_vfo, f_rf);
+
+  // SSB for listening
+  gpio_write(OUTPUT_BW_SEL, (output_state) OUTPUT_SEL_SSB);
 
   // wait for the next window to begin
   wait_ft8_window();
@@ -254,10 +243,19 @@ void send_ft8_from_queue() {
     f_rf = to_send.freq + ((uint64_t) (to_send.buf[i] * 6.25));
     set_clocks(f_bfo, f_vfo, f_rf);
 
+    // allow volume updates. convenience feature to avoid 15 seconds of painfully loud noise
+    if (flag_vol) {
+      flag_vol = false;
+      update_volume(vol);
+    }
+
     // todo: calibrate this properly, don't use a magic number
     my_delay(145);    
   }
   key_off();
+
+  // restore BW
+  gpio_write(OUTPUT_BW_SEL, (output_state) rx_bw);
 
   Serial.println("[FT8] Done sending FT8");
 }

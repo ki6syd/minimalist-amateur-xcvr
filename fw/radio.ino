@@ -38,22 +38,27 @@ void handle_frequency(WebRequestMethodComposite request_type, AsyncWebServerRequ
   }
 }
 
-
 void set_dial_freq(String freq) {
+  uint64_t tmp = freq.toFloat() * 1000000;
+  set_dial_freq(tmp);
+}
+
+void set_dial_freq(uint64_t freq) {
   Serial.print("[FREQ UPDATE] ");
   Serial.print(freq);
   Serial.print("\t");
   
-  uint64_t tmp = freq.toFloat() * 1000000;
-
   // check frequency bounds before doing anything else
-  if((tmp < f_rf_min_band1 && tmp > f_rf_max_band1) && (tmp < f_rf_min_band2 && tmp > f_rf_max_band2) && (tmp < f_rf_min_band3 && tmp > f_rf_max_band3))
+  // todo: turn this into a function based on capability
+  if((freq < f_rf_min_band1 && freq > f_rf_max_band1) && (freq < f_rf_min_band2 && freq > f_rf_max_band2) && (freq < f_rf_min_band3 && freq > f_rf_max_band3))
     return;
 
-  flag_freq = true;
-  f_rf = tmp;
+  // force relay updates, audio path updates, etc if needed
+  f_rf = freq;
   // TODO: make sure we don't get negative numbers
   f_vfo = update_vfo(f_rf, f_bfo, f_audio);
+
+  change_freq();
 
   Serial.print("RF: ");
   print_uint64_t(f_rf);
@@ -209,12 +214,6 @@ void change_freq() {
       gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
     else
       gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
-
-    // set speaker
-    if(speaker_state)
-      gpio_write(OUTPUT_SPKR_EN, OUTPUT_ON);
-    else
-      gpio_write(OUTPUT_SPKR_EN, OUTPUT_OFF);
     
     // TODO: this logic might make more sense elsewhere. Also should consider the concept of USB/LSB, dial freq, and mode rather than this mess of if statements.
     if(rx_bw == OUTPUT_SEL_CW)
@@ -235,7 +234,7 @@ void change_freq() {
   gpio_write(OUTPUT_BW_SEL, (output_state) rx_bw);
 }
 
-// TODO: pull out the magic 10ms delay
+// TODO: pull out the magic 2ms delay
 void key_on() {  
   // change over relays and sidetone
   set_mode(MODE_TX);

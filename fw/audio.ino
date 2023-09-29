@@ -113,7 +113,7 @@ void handle_speaker(WebRequestMethodComposite request_type, AsyncWebServerReques
     }
 
     // hardware update will happen through main loop
-    flag_freq = true;
+    flag_vol = true;
     request->send(200, "text/plain", "OK");
   }
   else if(request_type == HTTP_GET) {

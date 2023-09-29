@@ -470,5 +470,11 @@ void update_volume(uint16_t volume) {
         pcf8574_21.write(vol_4, LOW);
         pcf8574_21.write(vol_5, LOW);
     }
+
+    // set speaker
+    if(speaker_state)
+      gpio_write(OUTPUT_SPKR_EN, OUTPUT_ON);
+    else
+      gpio_write(OUTPUT_SPKR_EN, OUTPUT_OFF);
   }
 }
