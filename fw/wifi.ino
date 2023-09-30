@@ -59,7 +59,8 @@ void init_wifi_mdns() {
   }
 
   Serial.print("[WIFI] IP address: ");
-  Serial.println(ip);
+  ip_address = ip.toString();
+  Serial.println(ip_address);
 
   Serial.print("[WIFI] Connection status: ");
   Serial.println(WiFi.status());

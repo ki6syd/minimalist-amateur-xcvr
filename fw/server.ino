@@ -118,8 +118,7 @@ void init_web_server() {
   });
 
   server.on(CONCAT(API_BASE_URL, "address"), HTTP_GET, [](AsyncWebServerRequest *request){
-    IPAddress ip = WiFi.localIP();
-    request->send(200, "text/plain", String(ip.toString()));
+    request->send(200, "text/plain", ip_address);
   });
 
   server.on(CONCAT(API_BASE_URL, "hwRevision"), HTTP_GET, [](AsyncWebServerRequest *request){

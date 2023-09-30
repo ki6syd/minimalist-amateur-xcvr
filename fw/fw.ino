@@ -108,7 +108,7 @@ Queue<DigitalMessage> digital_queue(DIGITAL_QUEUE_LEN);
 bool flag_freq = false, flag_vol = true, flag_special = false;
 bool dit_flag = false, dah_flag = false;
 
-
+String ip_address = "No IP";
 
 mode_type tx_rx_mode = MODE_QSK_COUNTDOWN;
 int64_t qsk_counter = 0;
