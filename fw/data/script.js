@@ -74,9 +74,17 @@ function send_ft8() {
   http_request("POST", "ft8", ["messageText", "timeNow", "rfFrequency", "audioFrequency"], [ft8String, timeNow, rf, af])
 }
 
-function stop_ft8() {
-  http_request("DELETE", "ft8", [], [])
+function send_wspr() {
+  var call = document.getElementById('wsprCall').value;
+  var timeNow = Date.now();
+  var rf = 14095600;
+  var af = parseInt(document.getElementById('wsprFreq').value);
+  var grid = document.getElementById('wsprGrid').value;
+  var power = parseInt(document.getElementById('wsprPower').value);
+
+  http_request("POST", "wspr", ["callSign", "timeNow", "rfFrequency", "audioFrequency", "gridSquare", "power"], [call, timeNow, rf, af, grid, power])
 }
+
 
 function send_cw() {
   var cur_char = document.getElementById('freeform').value

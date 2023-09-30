@@ -12,6 +12,10 @@ void init_web_server() {
     handle_ft8(HTTP_POST, request);
   });
 
+  // handlers for WSPR messages
+  server.on(CONCAT(API_BASE_URL, "wspr"), HTTP_POST, [](AsyncWebServerRequest *request){
+    handle_wspr(HTTP_POST, request);
+  });
 
   // handlers for CW messages
   server.on(CONCAT(API_BASE_URL, "cw"), HTTP_POST, [](AsyncWebServerRequest *request){

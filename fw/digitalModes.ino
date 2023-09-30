@@ -1,9 +1,11 @@
 // Mode defines
 #define FT8_TONE_SPACING        625          // ~6.25 Hz
 #define FT8_DELAY               159          // Delay value for FT8
-#define FT8_DEFAULT_FREQ        14075000UL
 #define FT8_MSG_LEN             13
 #define FT8_WINDOW_START        15           // FT8 begins at 15 second windows
+
+#define WSPR_TONE_SPACING       146          // ~1.46 Hz
+#define WSPR_DELAY              683          // Delay value for WSPR
 
 void handle_cw(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) { 
   if(request_type == HTTP_POST) {
@@ -124,6 +126,78 @@ void handle_ft8(WebRequestMethodComposite request_type, AsyncWebServerRequest *r
   }
 }
 
+
+void handle_wspr(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) { 
+  // delete me
+  print_request_details(request);
+  
+  if(request_type == HTTP_POST) {
+    // struct that we will enqueue at the end of the function
+    DigitalMessage tmp;
+    tmp.type = MODE_WSPR;
+
+    // reject the message if FT8 is already busy
+    if(digital_queue.count() >= DIGITAL_QUEUE_LEN) {
+      Serial.println("[WSPR] Queue is full");
+      request->send(409, "text/plain", "WSPR queue is full.");
+      return;
+    }
+    
+    // look for required parameters in the message
+    if(!request->hasParam("callSign")) {
+      request->send(400, "text/plain", "callSign not found");
+      return;
+    }
+    String call_sign = request->getParam("callSign")->value();
+
+    // check message length
+    if(call_sign.length() > 6) {
+      Serial.println("[WSPR] Callsign too long");
+      request->send(400, "text/plain", "Callsign incorrect length");
+      return;
+    }
+
+    // todo: put defualt into JSON
+    String grid_square = "CM87";
+    if(!request->hasParam("gridSquare")) {
+      grid_square = request->getParam("gridSquare")->value();
+    }
+
+    // todo: put defualt into JSON
+    String power = "35";
+    if(!request->hasParam("power")) {
+      grid_square = request->getParam("power")->value();
+    }
+
+
+    // update WSPR frequency if one is given
+    if(request->hasParam("rfFrequency") && request->hasParam("audioFrequency")) {
+      float rf_request = request->getParam("rfFrequency")->value().toFloat();
+      float af_request = request->getParam("audioFrequency")->value().toFloat();
+      // TODO - put some rationality checks on this.
+      tmp.freq = (uint64_t) (rf_request + af_request);
+    }
+    else {
+      // TODO - add more sophistocated logic than this default frequency
+      tmp.freq = 14095600;
+    }
+    
+    // NEXT STEP: pass the right char * variables into encode.
+    // jtencode.wspr_encode(message, tmp.buf);
+
+    Serial.println("[WSPR] Calculated buffer: ");
+    for(uint8_t i=0; i<255; i++) {
+      Serial.print(tmp.buf[i]);
+      Serial.print(" ");
+    }
+    Serial.println();
+    
+    digital_queue.push(tmp);
+
+    request->send(200, "text/plain", "OK");
+  }
+}
+
 void handle_queue(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) {
   uint8_t total_queue_len = digital_queue.count();
   
@@ -164,6 +238,8 @@ void service_digital_queue() {
     send_cw_from_queue();
   else if(to_send.type == MODE_FT8)
     send_ft8_from_queue();
+  else if(to_send.type == MODE_WSPR)
+    send_wspr_from_queue();
 
   // todo: should this use some form of set_dial_freq()?
   f_rf = f_rf_orig;
@@ -258,4 +334,9 @@ void send_ft8_from_queue() {
   gpio_write(OUTPUT_BW_SEL, (output_state) rx_bw);
 
   Serial.println("[FT8] Done sending FT8");
+}
+
+
+void send_wspr_from_queue() {
+  
 }

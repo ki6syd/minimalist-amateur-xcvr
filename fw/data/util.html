@@ -33,10 +33,54 @@
       <button type="button" class="button" onclick="stop_ft8()">STOP FT8</button>
 </div>
 </form>
+</div>
 
 <br>
 <br>
 <br>
+
+<h1>WSPR Transmit</h1>
+<div class="table">
+<form>
+<div>
+  <label for="wsprCall" class="label">CALL</output>
+  <input type="text" id="wsprCall" value="KI6SYD">
+</div>
+</form>
+
+<form>
+<div>
+  <label for="wsprFreq" class="label">Audio Frequency</label>
+  <input type="text" id="wsprFreq" value="1500">
+</div>
+</form>
+
+<form>
+<div>
+  <label for="wsprGrid" class="label">Grid Square</label>
+  <input type="text" id="wsprGrid" value="CM86">
+</div>
+</form>
+
+<form>
+<div>
+  <label for="wsprPower" class="label">Power Level</label>
+  <input type="text" id="wsprPower" value="35">
+</div>
+</form>
+
+<form>
+<div>
+      <button type="button" class="button" onclick="send_wspr()">SEND WSPR</button>
+      <button type="button" class="button" onclick="stop_ft8()">STOP WSPR</button>
+</div>
+</form>
+</div>
+
+<br>
+<br>
+<br>
+
 
 <h1>OTA Update</h1>
 <form method='post' action='/ota' enctype='multipart/form-data'>
