@@ -1,8 +1,8 @@
 // Mode defines
-#define FT8_TONE_SPACING        6.25          // ~6.25 Hz
+#define FT8_TONE_SPACING        625          // ~6.25 Hz
 #define FT8_DELAY               159          // Delay value for FT8
 #define FT8_MSG_LEN             13
-#define FT8_TIME_CORR_MS        14
+#define FT8_TIME_CORR_MS        8
 
 #define WSPR_TONE_SPACING       146.48       // ~1.46 Hz
 #define WSPR_DELAY              683          // Delay value for WSPR
@@ -361,17 +361,19 @@ void send_ft8_from_queue() {
 
   // send FT8
   key_on();
-  Serial.println(millis());
+  uint16_t start_time = millis();
   for(uint8_t i = 0; i < FT8_SYMBOL_COUNT; i++)
   {
     // abort sending if a callback has said that FT8 is no longer busy
     if(keyer_abort)
       continue;
-    
+
+    /*
     f_rf = to_send.freq + ((uint64_t) (to_send.buf[i] * FT8_TONE_SPACING));
     set_clocks(f_bfo, f_vfo, f_rf);
+    */
 
-    // set_clk2_fine((to_send.freq * 100) + ((uint64_t) to_send.buf[i] * WSPR_TONE_SPACING));
+    set_clk2_fine((to_send.freq * 100) + ((uint64_t) to_send.buf[i] * FT8_TONE_SPACING));
 
     // allow volume updates. convenience feature to avoid 15 seconds of painfully loud noise
     if (flag_vol) {
@@ -382,13 +384,16 @@ void send_ft8_from_queue() {
     // todo: calibrate this properly, don't use a magic number
     my_delay(FT8_DELAY - FT8_TIME_CORR_MS);    
   }
-  Serial.println(millis());
+  uint16_t end_time = millis();
   key_off();
 
   // restore BW
   gpio_write(OUTPUT_BW_SEL, (output_state) rx_bw);
 
   Serial.println("[FT8] Done sending FT8");
+  Serial.print("[FT8] Took: ");
+  Serial.print(end_time - start_time);
+  Serial.println("ms");
 }
 
 
@@ -410,6 +415,7 @@ void send_wspr_from_queue() {
 
   // send WSPR
   key_on();
+  uint16_t start_time = millis();
   for(uint8_t i = 0; i < WSPR_SYMBOL_COUNT; i++)
   {
     // abort sending if a callback has said that FT8 is no longer busy
@@ -427,10 +433,14 @@ void send_wspr_from_queue() {
     // todo: calibrate this properly, don't use a magic number
     my_delay(WSPR_DELAY - WSPR_TIME_CORR_MS);    
   }
+  uint16_t end_time = millis();
   key_off();
 
   // restore BW
   gpio_write(OUTPUT_BW_SEL, (output_state) rx_bw);
 
   Serial.println("[WSPR] Done sending WSPR");
+  Serial.print("[WSPR] Took: ");
+  Serial.print(end_time - start_time);
+  Serial.println("ms");
 }
