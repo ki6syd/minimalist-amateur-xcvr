@@ -105,6 +105,10 @@ function get_queue_len() {
   http_request("GET", "queue", [], [], func)
 }
 
+function clear_queue() {
+  http_request("DELETE", "queue", [], [])
+}
+
 function set_epoch_ms() {
   const time_now = Date.now();
   http_request("PUT", "time", ["timeNow"], [time_now])

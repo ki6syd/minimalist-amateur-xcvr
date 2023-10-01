@@ -1,11 +1,14 @@
 // Mode defines
-#define FT8_TONE_SPACING        625          // ~6.25 Hz
+#define FT8_TONE_SPACING        6.25          // ~6.25 Hz
 #define FT8_DELAY               159          // Delay value for FT8
 #define FT8_MSG_LEN             13
-#define FT8_WINDOW_START        15           // FT8 begins at 15 second windows
+#define FT8_TIME_CORR_MS        14
 
-#define WSPR_TONE_SPACING       146          // ~1.46 Hz
+#define WSPR_TONE_SPACING       1.46          // ~1.46 Hz
 #define WSPR_DELAY              683          // Delay value for WSPR
+#define WSPR_TIME_CORR_MS       4
+
+
 
 void handle_cw(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) { 
   if(request_type == HTTP_POST) {
@@ -114,7 +117,7 @@ void handle_ft8(WebRequestMethodComposite request_type, AsyncWebServerRequest *r
     jtencode.ft8_encode(message, tmp.buf);
 
     Serial.println("[FT8] Calculated buffer: ");
-    for(uint8_t i=0; i<255; i++) {
+    for(uint8_t i=0; i<FT8_SYMBOL_COUNT; i++) {
       Serial.print(tmp.buf[i]);
       Serial.print(" ");
     }
@@ -159,14 +162,14 @@ void handle_wspr(WebRequestMethodComposite request_type, AsyncWebServerRequest *
 
     // todo: put defualt into JSON
     String grid_square = "CM87";
-    if(!request->hasParam("gridSquare")) {
+    if(request->hasParam("gridSquare")) {
       grid_square = request->getParam("gridSquare")->value();
     }
 
     // todo: put defualt into JSON
     String power = "35";
-    if(!request->hasParam("power")) {
-      grid_square = request->getParam("power")->value();
+    if(request->hasParam("power")) {
+      power = request->getParam("power")->value();
     }
 
 
@@ -181,14 +184,27 @@ void handle_wspr(WebRequestMethodComposite request_type, AsyncWebServerRequest *
       // TODO - add more sophistocated logic than this default frequency
       tmp.freq = 14095600;
     }
-    
-    // NEXT STEP: pass the right char * variables into encode.
-    // jtencode.wspr_encode(message, tmp.buf);
+
+    // create arrays for encoding, copy data into them
+    // one extra character in length for null terminator
+    char call[7];
+    call_sign.toCharArray(call, 7);
+    char loc[5];
+    grid_square.toCharArray(loc, 5);
+    uint8_t dbm = power.toInt();
+
+    Serial.print("[WSPR] Call: ");
+    Serial.println(call);
+    Serial.print("[WSPR] Grid: ");
+    Serial.println(loc);
+    Serial.print("[WSPR] Power: ");
+    Serial.println(dbm);
+    jtencode.wspr_encode(call, loc, dbm, tmp.buf);
 
     Serial.println("[WSPR] Calculated buffer: ");
-    for(uint8_t i=0; i<255; i++) {
+    for(uint8_t i=0; i<WSPR_SYMBOL_COUNT; i++) {
       Serial.print(tmp.buf[i]);
-      Serial.print(" ");
+      Serial.print(",");
     }
     Serial.println();
     
@@ -211,6 +227,8 @@ void handle_queue(WebRequestMethodComposite request_type, AsyncWebServerRequest 
     // FT8 sending loop watches this variable. Will abort when it sees ft8_busy==false
     keyer_abort = true;
     empty_digital_queue();
+
+    Serial.println("[QUEUE] Deleting all entries in queue");
     
     request->send(204, "text/plain", "Stopped sending digital modes.");
   }
@@ -266,11 +284,45 @@ void wait_ft8_window() {
   Serial.println(second());
 
   // wait for a 15 second increment
-  while(second() % 15 != 0) {
+  while(true) {
+    if(second()%15 == 0)
+      return;
+
+    if(keyer_abort)
+      return;
+
     my_delay(1);
   }
 
   Serial.println("[FT8] Window open");
+  
+  return;
+}
+
+// function returns when time rolls to the next WSPR window
+void wait_wspr_window() {
+  Serial.println("[WSPR] Waiting for window to begin");
+  Serial.print("[WSPR] Current minute() value is: ");
+  Serial.println(minute());
+  Serial.print("[WSPR] Current second() value is: ");
+  Serial.println(second());
+
+  // wait for a 2 minute increment
+  while(true) {
+    if((minute()%2 == 0) && (second() == 0))
+      return;
+
+    if(keyer_abort)
+      return;
+
+    my_delay(1);
+  }
+
+  Serial.println("[WSPR] Window open");
+  Serial.print("[WSPR] Current minute() value is: ");
+  Serial.println(minute());
+  Serial.print("[WSPR] Current second() value is: ");
+  Serial.println(second());
   
   return;
 }
@@ -309,13 +361,13 @@ void send_ft8_from_queue() {
 
   // send FT8
   key_on();
-  for(uint8_t i = 0; i < 79; i++)
+  for(uint8_t i = 0; i < FT8_SYMBOL_COUNT; i++)
   {
     // abort sending if a callback has said that FT8 is no longer busy
     if(keyer_abort)
       continue;
     
-    f_rf = to_send.freq + ((uint64_t) (to_send.buf[i] * 6.25));
+    f_rf = to_send.freq + ((uint64_t) (to_send.buf[i] * FT8_TONE_SPACING));
     set_clocks(f_bfo, f_vfo, f_rf);
 
     // allow volume updates. convenience feature to avoid 15 seconds of painfully loud noise
@@ -325,7 +377,7 @@ void send_ft8_from_queue() {
     }
 
     // todo: calibrate this properly, don't use a magic number
-    my_delay(145);    
+    my_delay(FT8_DELAY - FT8_TIME_CORR_MS);    
   }
   key_off();
 
@@ -337,5 +389,52 @@ void send_ft8_from_queue() {
 
 
 void send_wspr_from_queue() {
-  
+  Serial.println("[WSPR] Starting to send WSPR");
+
+  DigitalMessage to_send = digital_queue.pop();
+
+  // change to correct frequency before keying up
+  f_vfo = update_vfo(f_rf, f_bfo, f_audio);
+  set_clocks(f_bfo, f_vfo, f_rf);
+  set_clk2_fine((to_send.freq * 100) + ((uint64_t) to_send.buf[0] * 146));
+
+  // SSB for listening
+  gpio_write(OUTPUT_BW_SEL, (output_state) OUTPUT_SEL_SSB);
+
+  // wait for the next window to begin
+  wait_wspr_window();
+
+  // send WSPR
+  key_on();
+  for(uint8_t i = 0; i < WSPR_SYMBOL_COUNT; i++)
+  {
+    // abort sending if a callback has said that FT8 is no longer busy
+    if(keyer_abort)
+      continue;
+    
+    /*
+    f_rf = to_send.freq + ((uint64_t) (to_send.buf[i] * WSPR_TONE_SPACING));
+    set_clocks(f_bfo, f_vfo, f_rf);
+    */
+    Serial.print(i);
+    Serial.print(" ");
+    Serial.print(to_send.buf[i]);
+    Serial.print(" ");
+    set_clk2_fine((to_send.freq * 100) + ((uint64_t) to_send.buf[i] * 146.48));
+
+    // allow volume updates. convenience feature to avoid 120 seconds of painfully loud noise
+    if (flag_vol) {
+      flag_vol = false;
+      update_volume(vol);
+    }
+
+    // todo: calibrate this properly, don't use a magic number
+    my_delay(WSPR_DELAY - WSPR_TIME_CORR_MS);    
+  }
+  key_off();
+
+  // restore BW
+  gpio_write(OUTPUT_BW_SEL, (output_state) rx_bw);
+
+  Serial.println("[WSPR] Done sending WSPR");
 }
