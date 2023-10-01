@@ -1,7 +1,7 @@
 {
 	"sidetone_level": "1",
 	"sidetone_pitch_hz": "700",
-	"ant_default": "OUTPUT_ANT_DIRECT",
+	"ant_default": "OUTPUT_ANT_XFMR",
 	"lna_default": "OFF",
 	"f_rf_min_hz_band1": "7000000",
 	"f_rf_max_hz_band1": "7300000",

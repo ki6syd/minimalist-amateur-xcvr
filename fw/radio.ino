@@ -49,8 +49,7 @@ void set_dial_freq(uint64_t freq) {
   Serial.print("\t");
   
   // check frequency bounds before doing anything else
-  // todo: turn this into a function based on capability
-  if((freq < f_rf_min_band1 && freq > f_rf_max_band1) && (freq < f_rf_min_band2 && freq > f_rf_max_band2) && (freq < f_rf_min_band3 && freq > f_rf_max_band3))
+  if(!freq_valid(freq))
     return;
 
   // force relay updates, audio path updates, etc if needed
@@ -67,6 +66,18 @@ void set_dial_freq(uint64_t freq) {
   Serial.print("\tBFO: ");
   print_uint64_t(f_bfo);
   Serial.println();
+}
+
+// todo: support arbitrary num bands
+bool freq_valid(uint64_t freq) {
+  if(freq > f_rf_min_band1 && freq < f_rf_max_band1)
+    return true;
+  if(freq > f_rf_min_band2 && freq < f_rf_max_band2)
+    return true;
+  if(freq > f_rf_min_band3 && freq < f_rf_max_band3)
+    return true;
+
+  return false;
 }
 
 // updates the relay references
@@ -119,6 +130,10 @@ void set_mode(mode_type new_mode) {
   gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
 
   if(new_mode == MODE_TX) {
+    // do not proceed for out of band frequencies
+    if(!freq_valid(f_rf))
+      return;
+    
     // mute and set volume to lowest setting before using sidetone
     gpio_write(OUTPUT_RX_MUTE, OUTPUT_MUTED);
     
@@ -236,6 +251,10 @@ void change_freq() {
 
 // TODO: pull out the magic 2ms delay
 void key_on() {  
+  // do not proceed for out of band frequencies
+  if(!freq_valid(f_rf))
+    return;
+  
   // change over relays and sidetone
   set_mode(MODE_TX);
 

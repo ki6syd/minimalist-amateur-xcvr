@@ -285,10 +285,9 @@ void send_cw_from_queue() {
     if(keyer_abort)
       continue;
 
-    Serial.print(String((char) to_send.buf[i]));
+    Serial.println(String((char) to_send.buf[i]));
     morse_letter(String((char) to_send.buf[i++]));
   }
-  Serial.println();
 }
 
 // TODO - get rid of magic delays
