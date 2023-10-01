@@ -4,7 +4,7 @@
 #define FT8_MSG_LEN             13
 #define FT8_TIME_CORR_MS        14
 
-#define WSPR_TONE_SPACING       1.46          // ~1.46 Hz
+#define WSPR_TONE_SPACING       146.48       // ~1.46 Hz
 #define WSPR_DELAY              683          // Delay value for WSPR
 #define WSPR_TIME_CORR_MS       4
 
@@ -361,6 +361,7 @@ void send_ft8_from_queue() {
 
   // send FT8
   key_on();
+  Serial.println(millis());
   for(uint8_t i = 0; i < FT8_SYMBOL_COUNT; i++)
   {
     // abort sending if a callback has said that FT8 is no longer busy
@@ -369,6 +370,8 @@ void send_ft8_from_queue() {
     
     f_rf = to_send.freq + ((uint64_t) (to_send.buf[i] * FT8_TONE_SPACING));
     set_clocks(f_bfo, f_vfo, f_rf);
+
+    // set_clk2_fine((to_send.freq * 100) + ((uint64_t) to_send.buf[i] * WSPR_TONE_SPACING));
 
     // allow volume updates. convenience feature to avoid 15 seconds of painfully loud noise
     if (flag_vol) {
@@ -379,6 +382,7 @@ void send_ft8_from_queue() {
     // todo: calibrate this properly, don't use a magic number
     my_delay(FT8_DELAY - FT8_TIME_CORR_MS);    
   }
+  Serial.println(millis());
   key_off();
 
   // restore BW
@@ -412,15 +416,7 @@ void send_wspr_from_queue() {
     if(keyer_abort)
       continue;
     
-    /*
-    f_rf = to_send.freq + ((uint64_t) (to_send.buf[i] * WSPR_TONE_SPACING));
-    set_clocks(f_bfo, f_vfo, f_rf);
-    */
-    Serial.print(i);
-    Serial.print(" ");
-    Serial.print(to_send.buf[i]);
-    Serial.print(" ");
-    set_clk2_fine((to_send.freq * 100) + ((uint64_t) to_send.buf[i] * 146.48));
+    set_clk2_fine((to_send.freq * 100) + ((uint64_t) to_send.buf[i] * WSPR_TONE_SPACING));
 
     // allow volume updates. convenience feature to avoid 120 seconds of painfully loud noise
     if (flag_vol) {
