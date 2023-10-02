@@ -117,6 +117,10 @@ void init_web_server() {
     request->send(200, "text/plain", String(GIT_VERSION));
   });
 
+  server.on(CONCAT(API_BASE_URL, "heap"), HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", String(ESP.getFreeHeap()));
+  });
+
   server.on(CONCAT(API_BASE_URL, "address"), HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(200, "text/plain", ip_address);
   });
@@ -152,6 +156,8 @@ void init_web_server() {
   server.on(CONCAT(API_BASE_URL, "debug"), HTTP_GET, [](AsyncWebServerRequest *request){
     handle_debug(HTTP_GET, request);
   });
+
+  
 
   server.on("/ota", HTTP_POST, [](AsyncWebServerRequest *request) {
         request->send(200);

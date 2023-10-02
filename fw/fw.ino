@@ -254,6 +254,8 @@ void loop(void) {
 
   // todo - queues   
   if(digital_queue.count() > 0) {
+    Serial.print("entering digital queue with f_rf: ");
+    Serial.println(f_rf);
     service_digital_queue();
   }
   
@@ -268,8 +270,11 @@ void loop(void) {
     last_vbat = analog_read(INPUT_VBAT);
   else {
     // do this every 10th loop. Frequent ADC reads disrupt wifi
-    if(i % 10 == 0)
+    if(i % 100 == 0) {
       update_smeter();
+      // Serial.print("[HEAP] ");
+      // Serial.println(ESP.getFreeHeap());
+    }
   }
 
   // TODO - have some better logic for this, and extract the 2.0v rationality threshold into a settings file

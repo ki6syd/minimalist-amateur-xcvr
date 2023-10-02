@@ -9,7 +9,7 @@
 	"f_rf_max_hz_band2": "14300000",
 	"f_rf_min_hz_band3": "21000000",
 	"f_rf_max_hz_band3": "21450000",
-	"qsk_delay_ms": "500",
+	"qsk_delay_ms": "300",
 	"f_rf_default_mhz": "14.060",
 	"keyer_speed_default_wpm": "15",
 	"keyer_speed_min_wpm": "5",

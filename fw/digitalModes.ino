@@ -242,6 +242,8 @@ void service_digital_queue() {
 
   // save the original frequency so we can return to it after sending
   uint64_t f_rf_orig = f_rf;
+  uint64_t f_bfo_orig = f_bfo;
+  uint64_t f_vfo_orig = f_vfo;
   
   DigitalMessage to_send = digital_queue.peek();
   
@@ -260,9 +262,11 @@ void service_digital_queue() {
     send_wspr_from_queue();
 
   // todo: should this use some form of set_dial_freq()?
+  // forces an update to clocks, including logic for CW vs SSB and USB vs LSB
   f_rf = f_rf_orig;
-  f_vfo = update_vfo(f_rf, f_bfo, f_audio);
-  set_clocks(f_bfo, f_vfo, f_rf);
+  f_vfo = f_vfo_orig;
+  f_bfo = f_bfo_orig;
+  change_freq();
   
   // clear this flag
   keyer_abort = false;
@@ -367,11 +371,6 @@ void send_ft8_from_queue() {
     // abort sending if a callback has said that FT8 is no longer busy
     if(keyer_abort)
       continue;
-
-    /*
-    f_rf = to_send.freq + ((uint64_t) (to_send.buf[i] * FT8_TONE_SPACING));
-    set_clocks(f_bfo, f_vfo, f_rf);
-    */
 
     set_clk2_fine((to_send.freq * 100) + ((uint64_t) to_send.buf[i] * FT8_TONE_SPACING));
 

@@ -211,7 +211,7 @@ void set_mode(mode_type new_mode) {
 
 // called when frequency flag is set
 // only do this if we are in RX mode, to avoid changing relays while transmitting
-void change_freq() {
+void change_freq() {  
   if (tx_rx_mode == MODE_RX) {
     flag_freq = false;
 
