@@ -141,19 +141,23 @@
 <br> 
 <br> 
 
-<h1>Self-Test Tools</h1>
+<h1>Self-Test Tools (Work in Progress)</h1>
 <div class="table">
 <form>
   <div>
-    <!-- not working: <button type="button" class="button" onclick="self_test('BPF')">BPF FILTER</button>-->
-    <button type="button" class="button" onclick="self_test('XTAL')">XTAL</button>
+    <button type="button" class="button" onclick="self_test('BPF')">BPF FILTER ***</button>
+    <button type="button" class="button" onclick="self_test('XTAL')">XTAL **</button>
     <button type="button" class="button" onclick="self_test('AUDIO')">AUDIO</button>
     <button type="button" class="button" onclick="self_test('SUPPR')">SIDEBAND</button>
-    <button type="button" class="button" onclick="self_test('XMIT')">TRANSMIT (10 SECONDS)</button>
-    <button type="button" class="button" onclick="self_test('NOISE')">NOISE</button>
+    <button type="button" class="button" onclick="self_test('XMIT')">TRANSMIT (10 SECONDS) *</button>
+    <button type="button" class="button" onclick="self_test('NOISE')">NOISE **</button>
   </div>
 </form>
 </div>
+
+<p>*** = not complete</p>
+<p>** = unreliable results</p>
+<p>* = crashes occasionally</p>
 
 <canvas id="my_chart" style="width:100%;max-width:700px"></canvas>
 

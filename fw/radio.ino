@@ -115,7 +115,7 @@ void update_relays(uint64_t f_rf) {
 
 // handles relay switching and mute
 // TODO: figure out what to do with the random delay
-void set_mode(mode_type new_mode) {
+void set_mode(qsk_state_type new_mode) {
   
   // for re-setting the mode to TX, reset the QSK counter
   if(new_mode == MODE_TX);
@@ -250,7 +250,7 @@ void change_freq() {
 }
 
 // TODO: pull out the magic 2ms delay
-void key_on() {  
+void key_on() {    
   // do not proceed for out of band frequencies
   if(!freq_valid(f_rf))
     return;

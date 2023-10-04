@@ -60,15 +60,67 @@ paths:
           description: Invalid / not understood
         "409":
           description: Unable to accept message into queue
-    delete:
+  /wspr:
+    post:
       tags:
       - DigitalModes
-      summary: Stop sending any FT8 messages and clear FT8 messages from queue
+      summary: Send a WSPR message
+      parameters:
+      - name: callSign
+        in: query
+        description: Callsign (6 characters maximum)
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: timeNow
+        in: query
+        description: "Caller's current time [epoch ms]. If provided, radio will update its current time to match timeNow. If not provided, radio will use its best estimate of current time."
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: integer
+      - name: rfFrequency
+        in: query
+        description: "Dial frequency for WSPR [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use standard digital mode frequency in the current current band, a pre-set configured frequency for sending all FT8 messages, etc."
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: integer
+      - name: audioFrequency
+        in: query
+        description: "Audio frequency (USB) relative to RF dial frequency [Hz]. Radio will pick an audio frequency if nothing provided. May be randomized, fixed 1500 Hz, configured in settings file, etc."
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: integer
+      - name: gridSquare
+        in: query
+        description: Grid square used for WSPR transmission
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: power
+        in: query
+        description: Power level used for WSPR transmission
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: integer
       responses:
-        "204":
-          description: Stopped and deleted FT8.
-        "404":
-          description: Nothing to delete.
+        "201":
+          description: Message added to queue
+        "400":
+          description: Invalid / not understood
+        "409":
+          description: Unable to accept message into queue
   /cw:
     post:
       tags:
@@ -83,14 +135,6 @@ paths:
         explode: true
         schema:
           type: string
-      - name: speed
-        in: query
-        description: "Keyer speed while sending CW message [wpm]"
-        required: false
-        style: form
-        explode: true
-        schema:
-          type: integer
       - name: rfFrequency
         in: query
         description: "Dial frequency for sending [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use the existing dial frequency, beacon frequency, etc."
@@ -106,15 +150,6 @@ paths:
           description: Invalid / not understood
         "409":
           description: Unable to accept message into queue
-    delete:
-      tags:
-      - DigitalModes
-      summary: Stop sending any CW messages and clear CW messages from queue
-      responses:
-        "204":
-          description: Stopped and deleted CW messages.
-        "404":
-          description: Nothing to delete.
   /queue:
     get:
       tags:
@@ -136,33 +171,6 @@ paths:
           description: Stopped and deleted messages.
         "404":
           description: Nothing to delete.
-  /sotamat:
-    post:
-      tags:
-      - DigitalModes
-      summary: DO NOT USE. For testing only. Sends SOTAmat spot as soon as message is received.
-      parameters:
-      - name: call
-        in: query
-        description: Operator's callsign
-        required: true
-        style: form
-        explode: true
-        schema:
-          type: string
-      - name: suffix
-        in: query
-        description: SOTAMAT
-        required: true
-        style: form
-        explode: true
-        schema:
-          type: string
-      responses:
-        "201":
-          description: Message sending
-        "400":
-          description: Invalid / not understood
   /time:
     get:
       tags:
@@ -522,6 +530,18 @@ paths:
             text/plain:
               schema:
                 type: string
+  /heap:
+    get:
+      tags:
+      - RadioInfo
+      summary: Gets the radio's available heap space
+      responses:
+        "200":
+          description: Free heap space in bytes
+          content:
+            text/plain:
+              schema:
+                type: integer
   /address:
     get:
       tags:

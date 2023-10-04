@@ -195,13 +195,11 @@
   <div class="method-summary"></div>
   <h4><a href="#DigitalModes">DigitalModes</a></h4>
   <ul>
-  <li><a href="#cwDelete"><code><span class="http-method">delete</span> /cw</code></a></li>
   <li><a href="#cwPost"><code><span class="http-method">post</span> /cw</code></a></li>
-  <li><a href="#ft8Delete"><code><span class="http-method">delete</span> /ft8</code></a></li>
   <li><a href="#ft8Post"><code><span class="http-method">post</span> /ft8</code></a></li>
   <li><a href="#queueDelete"><code><span class="http-method">delete</span> /queue</code></a></li>
   <li><a href="#queueGet"><code><span class="http-method">get</span> /queue</code></a></li>
-  <li><a href="#sotamatPost"><code><span class="http-method">post</span> /sotamat</code></a></li>
+  <li><a href="#wsprPost"><code><span class="http-method">post</span> /wspr</code></a></li>
   </ul>
   <h4><a href="#RadioInfo">RadioInfo</a></h4>
   <ul>
@@ -216,6 +214,7 @@
   <li><a href="#frequencyGet"><code><span class="http-method">get</span> /frequency</code></a></li>
   <li><a href="#frequencyPut"><code><span class="http-method">put</span> /frequency</code></a></li>
   <li><a href="#githashGet"><code><span class="http-method">get</span> /githash</code></a></li>
+  <li><a href="#heapGet"><code><span class="http-method">get</span> /heap</code></a></li>
   <li><a href="#hwRevisionGet"><code><span class="http-method">get</span> /hwRevision</code></a></li>
   <li><a href="#inputVoltageGet"><code><span class="http-method">get</span> /inputVoltage</code></a></li>
   <li><a href="#lnaGet"><code><span class="http-method">get</span> /lna</code></a></li>
@@ -239,33 +238,6 @@
   </ul>
 
   <h1><a name="DigitalModes">DigitalModes</a></h1>
-  <div class="method"><a name="cwDelete"></a>
-    <div class="method-path">
-    <a class="up" href="#__Methods">Up</a>
-    <pre class="delete"><code class="huge"><span class="http-method">delete</span> /cw</code></pre></div>
-    <div class="method-summary">Stop sending any CW messages and clear CW messages from queue (<span class="nickname">cwDelete</span>)</div>
-    <div class="method-notes"></div>
-
-
-
-
-
-
-
-
-    <!--Todo: process Response Object and its headers, schema, examples -->
-
-
-
-    <h3 class="field-label">Responses</h3>
-    <h4 class="field-label">204</h4>
-    Stopped and deleted CW messages.
-        <a href="#"></a>
-    <h4 class="field-label">404</h4>
-    Nothing to delete.
-        <a href="#"></a>
-  </div> <!-- method -->
-  <hr/>
   <div class="method"><a name="cwPost"></a>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
@@ -281,9 +253,7 @@
     <div class="field-items">
       <div class="param">messageText (required)</div>
       
-            <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash; String to send </div>      <div class="param">speed (optional)</div>
-      
-            <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash; Keyer speed while sending CW message [wpm] </div>      <div class="param">rfFrequency (optional)</div>
+            <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash; String to send </div>      <div class="param">rfFrequency (optional)</div>
       
             <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash; Dial frequency for sending [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use the existing dial frequency, beacon frequency, etc. </div>    </div>  <!-- field-items -->
 
@@ -302,33 +272,6 @@
         <a href="#"></a>
     <h4 class="field-label">409</h4>
     Unable to accept message into queue
-        <a href="#"></a>
-  </div> <!-- method -->
-  <hr/>
-  <div class="method"><a name="ft8Delete"></a>
-    <div class="method-path">
-    <a class="up" href="#__Methods">Up</a>
-    <pre class="delete"><code class="huge"><span class="http-method">delete</span> /ft8</code></pre></div>
-    <div class="method-summary">Stop sending any FT8 messages and clear FT8 messages from queue (<span class="nickname">ft8Delete</span>)</div>
-    <div class="method-notes"></div>
-
-
-
-
-
-
-
-
-    <!--Todo: process Response Object and its headers, schema, examples -->
-
-
-
-    <h3 class="field-label">Responses</h3>
-    <h4 class="field-label">204</h4>
-    Stopped and deleted FT8.
-        <a href="#"></a>
-    <h4 class="field-label">404</h4>
-    Nothing to delete.
         <a href="#"></a>
   </div> <!-- method -->
   <hr/>
@@ -438,11 +381,11 @@
         <a href="#Integer">Integer</a>
   </div> <!-- method -->
   <hr/>
-  <div class="method"><a name="sotamatPost"></a>
+  <div class="method"><a name="wsprPost"></a>
     <div class="method-path">
     <a class="up" href="#__Methods">Up</a>
-    <pre class="post"><code class="huge"><span class="http-method">post</span> /sotamat</code></pre></div>
-    <div class="method-summary">DO NOT USE. For testing only. Sends SOTAmat spot as soon as message is received. (<span class="nickname">sotamatPost</span>)</div>
+    <pre class="post"><code class="huge"><span class="http-method">post</span> /wspr</code></pre></div>
+    <div class="method-summary">Send a WSPR message (<span class="nickname">wsprPost</span>)</div>
     <div class="method-notes"></div>
 
 
@@ -451,11 +394,19 @@
 
     <h3 class="field-label">Query parameters</h3>
     <div class="field-items">
-      <div class="param">call (required)</div>
+      <div class="param">callSign (required)</div>
       
-            <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash; Operator&#x27;s callsign </div>      <div class="param">suffix (required)</div>
+            <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash; Callsign (6 characters maximum) </div>      <div class="param">timeNow (optional)</div>
       
-            <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash; SOTAMAT </div>    </div>  <!-- field-items -->
+            <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash; Caller&#x27;s current time [epoch ms]. If provided, radio will update its current time to match timeNow. If not provided, radio will use its best estimate of current time. </div>      <div class="param">rfFrequency (optional)</div>
+      
+            <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash; Dial frequency for WSPR [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use standard digital mode frequency in the current current band, a pre-set configured frequency for sending all FT8 messages, etc. </div>      <div class="param">audioFrequency (optional)</div>
+      
+            <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash; Audio frequency (USB) relative to RF dial frequency [Hz]. Radio will pick an audio frequency if nothing provided. May be randomized, fixed 1500 Hz, configured in settings file, etc. </div>      <div class="param">gridSquare (optional)</div>
+      
+            <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash; Grid square used for WSPR transmission </div>      <div class="param">power (optional)</div>
+      
+            <div class="param-desc"><span class="param-type">Query Parameter</span> &mdash; Power level used for WSPR transmission </div>    </div>  <!-- field-items -->
 
 
 
@@ -465,10 +416,13 @@
 
     <h3 class="field-label">Responses</h3>
     <h4 class="field-label">201</h4>
-    Message sending
+    Message added to queue
         <a href="#"></a>
     <h4 class="field-label">400</h4>
     Invalid / not understood
+        <a href="#"></a>
+    <h4 class="field-label">409</h4>
+    Unable to accept message into queue
         <a href="#"></a>
   </div> <!-- method -->
   <hr/>
@@ -867,6 +821,44 @@
     <h4 class="field-label">200</h4>
     githash
         <a href="#String">String</a>
+  </div> <!-- method -->
+  <hr/>
+  <div class="method"><a name="heapGet"></a>
+    <div class="method-path">
+    <a class="up" href="#__Methods">Up</a>
+    <pre class="get"><code class="huge"><span class="http-method">get</span> /heap</code></pre></div>
+    <div class="method-summary">Gets the radio's available heap space (<span class="nickname">heapGet</span>)</div>
+    <div class="method-notes"></div>
+
+
+
+
+
+
+
+    <h3 class="field-label">Return type</h3>
+    <div class="return-type">
+      
+      Integer
+    </div>
+
+    <!--Todo: process Response Object and its headers, schema, examples -->
+
+    <h3 class="field-label">Example data</h3>
+    <div class="example-data-content-type">Content-Type: application/json</div>
+    <pre class="example"><code>0</code></pre>
+
+    <h3 class="field-label">Produces</h3>
+    This API call produces the following media types according to the <span class="header">Accept</span> request header;
+    the media type will be conveyed by the <span class="header">Content-Type</span> response header.
+    <ul>
+      <li><code>text/plain</code></li>
+    </ul>
+
+    <h3 class="field-label">Responses</h3>
+    <h4 class="field-label">200</h4>
+    Free heap space in bytes
+        <a href="#Integer">Integer</a>
   </div> <!-- method -->
   <hr/>
   <div class="method"><a name="hwRevisionGet"></a>

@@ -58,10 +58,17 @@ enum output_state {
   OUTPUT_ANT_XFMR,
 };
 
-enum mode_type {
+enum qsk_state_type {
   MODE_RX,
   MODE_TX,
   MODE_QSK_COUNTDOWN
+};
+
+enum sk_state_type {
+  MODE_SK_FALLING,
+  MODE_SK_DOWN,
+  MODE_SK_RISING,
+  MODE_SK_UP
 };
 
 
@@ -100,17 +107,18 @@ struct DigitalMessage {
   uint8_t buf[255];
 };
 
-#define DIGITAL_QUEUE_LEN   32
+#define DIGITAL_QUEUE_LEN   8
 Queue<DigitalMessage> digital_queue(DIGITAL_QUEUE_LEN);
 
 
 // flag_freq indicates whether frequency OR rx bandwidth need to change
 bool flag_freq = false, flag_vol = true, flag_special = false;
-bool dit_flag = false, dah_flag = false;
+bool dit_flag = false, dah_flag = false, sk_flag = false;
 
 String ip_address = "No IP";
 
-mode_type tx_rx_mode = MODE_QSK_COUNTDOWN;
+qsk_state_type tx_rx_mode = MODE_QSK_COUNTDOWN;
+sk_state_type sk_mode = MODE_SK_UP;
 int64_t qsk_counter = 0;
 
 // used in OTA
@@ -223,44 +231,74 @@ void setup(void) {
 void loop(void) {
   uint8_t i = 0;
   
-  // handle key inputs
+  // handle paddle and key inputs
   // continue after dit or dah to skip other checks. Minimizes delay if there's another key press immediately
-  if (dit_flag) {
-    dit();
+  if(key == KEY_PADDLE) {
+    // empty the queue so touching the key stops ongoing messages
+    if(dit_flag || dah_flag)
+      empty_digital_queue();
+      
+    if(dit_flag)
+      dit();
+    else if(dah_flag)
+      dah();
     return;
   }
-  if (dah_flag) {
-    dah();
-    return;
+  if(key == KEY_STRAIGHT) {
+    // interrupt sets this flag
+    if(sk_flag) {
+      if(sk_mode == MODE_SK_DOWN) {
+        key_on();
+      }
+      if(sk_mode == MODE_SK_UP) {
+        key_off();
+      }
+      
+      // clear the flag
+      sk_flag = false;
+
+      // start looking at pins again
+      attach_sk_isr(true);
+
+      empty_digital_queue();
+    }
+    // poll to make sure we haven't missed an interrupt (hack...)
+    if(sk_mode == MODE_SK_DOWN && digitalRead(12) == 1) {
+      key_off();
+      sk_mode = MODE_SK_UP;
+      attach_sk_isr(true);
+    }
+    if(sk_mode == MODE_SK_UP && digitalRead(12) == 0) {
+      key_on();
+      sk_mode = MODE_SK_DOWN;
+      attach_sk_isr(true);
+    }
   }
+  
 
   // reconfig clocks if frequency has changed
   // don't update frequency if we are still in TX mode - derisks hardware damage
-  if (flag_freq) {
+  if(flag_freq) {
     change_freq();
   }
 
   // perform volume update if change detected
-  if (flag_vol) {
+  if(flag_vol) {
     flag_vol = false;
     update_volume(vol);
   }
 
   // take action based on special debug functions
-  if (flag_special) {
+  if(flag_special) {
     flag_special = false;
     special_mode(special);
   }
 
-  // todo - queues   
+  // handle any digital modes queue entries (CQ, FT8, WSPR)
   if(digital_queue.count() > 0) {
-    Serial.print("entering digital queue with f_rf: ");
-    Serial.println(f_rf);
     service_digital_queue();
   }
   
-  
-
   // decrement QSK timer if needed
   update_qsk_timer();
 
@@ -302,5 +340,5 @@ void loop(void) {
   MDNS.update();
   i++;
 
-  my_delay(10);
+  my_delay(25);
 }

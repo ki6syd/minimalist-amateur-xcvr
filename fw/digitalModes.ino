@@ -8,8 +8,6 @@
 #define WSPR_DELAY              683          // Delay value for WSPR
 #define WSPR_TIME_CORR_MS       4
 
-
-
 void handle_cw(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) { 
   if(request_type == HTTP_POST) {
     DigitalMessage tmp;
@@ -40,7 +38,7 @@ void handle_cw(WebRequestMethodComposite request_type, AsyncWebServerRequest *re
     }
 
     // package string into the buffer
-    message_text.toCharArray((char *) tmp.buf, DIGITAL_QUEUE_LEN);
+    message_text.toCharArray((char *) tmp.buf, 255);
     // add null terminator
     tmp.buf[message_text.length()] = '\0';
 
@@ -240,11 +238,14 @@ void service_digital_queue() {
   if(tx_rx_mode == MODE_TX)
     return;
 
+  if(digital_queue.count() == 0)
+    return;
+
   // save the original frequency so we can return to it after sending
   uint64_t f_rf_orig = f_rf;
   uint64_t f_bfo_orig = f_bfo;
   uint64_t f_vfo_orig = f_vfo;
-  
+
   DigitalMessage to_send = digital_queue.peek();
   
   // Update radio frequency if needed
@@ -252,6 +253,9 @@ void service_digital_queue() {
     f_rf = to_send.freq;
     change_freq();
   }
+
+  // clear the keyer abort flag before starting to send something
+  keyer_abort = false;
 
   // send something depending on mode
   if(to_send.type == MODE_CW)
@@ -267,9 +271,6 @@ void service_digital_queue() {
   f_vfo = f_vfo_orig;
   f_bfo = f_bfo_orig;
   change_freq();
-  
-  // clear this flag
-  keyer_abort = false;
 }
 
 // clears out the whole queue, of all data types
@@ -332,17 +333,33 @@ void wait_wspr_window() {
 }
 
 void send_cw_from_queue() {
+  // check if there is anything to pop from queue
+  if(digital_queue.count() == 0)
+    return;
   DigitalMessage to_send = digital_queue.pop();
+
+  // enable interrupts so we are able to abort by pressing key
+  if(key == KEY_PADDLE)
+    attach_paddle_isr(true, true);
+  else
+    attach_sk_isr(true);
   
   Serial.print("[CW] Keying: ");
   
   uint8_t i=0;
   while(to_send.buf[i] != '\0' && i < 255) {
-    if(keyer_abort)
-      continue;
-
+    // don't continue sending if there was a key press
+    if(keyer_abort || sk_flag || dit_flag || dah_flag)
+      return;
+    
     Serial.println(String((char) to_send.buf[i]));
     morse_letter(String((char) to_send.buf[i++]));
+
+    // allow volume updates between letters
+    if (flag_vol) {
+      flag_vol = false;
+      update_volume(vol);
+    }
   }
 }
 
@@ -350,6 +367,9 @@ void send_cw_from_queue() {
 void send_ft8_from_queue() {
   Serial.println("[FT8] Starting to send FT8");
 
+  // check if there is anything to pop from queue
+  if(digital_queue.count() == 0)
+    return;
   DigitalMessage to_send = digital_queue.pop();
 
   // change to correct frequency before keying up
@@ -398,7 +418,10 @@ void send_ft8_from_queue() {
 
 void send_wspr_from_queue() {
   Serial.println("[WSPR] Starting to send WSPR");
-
+  
+  // check if there is anything to pop from queue
+  if(digital_queue.count() == 0)
+    return;
   DigitalMessage to_send = digital_queue.pop();
 
   // change to correct frequency before keying up

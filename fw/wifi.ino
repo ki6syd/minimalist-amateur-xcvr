@@ -66,7 +66,7 @@ void init_wifi_mdns() {
   Serial.println(WiFi.status());
 
   // for testing only
-  // wifi_scan();
+  wifi_scan();
   
   // set wifi power
   int wifi_dBm = load_json_config(wifi_file, "wifi_power_dbm").toInt();

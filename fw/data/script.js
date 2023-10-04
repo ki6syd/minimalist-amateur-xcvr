@@ -252,7 +252,6 @@ function adj_speed(change) {
 
 function set_bw() {
   bw = document.getElementById('bw').value;
-  console.log(bw)
   http_request("PUT", "rxBandwidth", ["bw"], [bw])
 }
 
@@ -391,6 +390,8 @@ function get_s_meter() {
   func = function() {
     if (this.readyState == 4 && this.status == 200) {
       document.getElementById('s_meter').value = this.responseText;
+
+      console.log(this.responseText)
 
       // do heartbeat update in this function, we look at S meter often.
       wd_count = wd_count_max;
@@ -764,20 +765,20 @@ document.getElementById('cq').addEventListener('long-press', function(e) {
 
 // refresh variables
 setInterval(function() { get_freq();}, 500);
-setInterval(function() { get_input_voltage();}, 500);
-setInterval(function() { get_s_meter();}, 250);
-setInterval(function() { get_volume();}, 3000); 
+setInterval(function() { get_input_voltage();}, 1500);
+setInterval(function() { get_s_meter();}, 500);
+setInterval(function() { get_volume();}, 5000); 
 setInterval(function() { get_speed();}, 5000); 
 setInterval(function() { get_bw();}, 3000); 
 setInterval(function() { get_lna();}, 3000); 
 setInterval(function() { get_antenna();}, 3000); 
 setInterval(function() { get_sidetone();}, 3000); 
-setInterval(function() { get_queue_len();}, 2000); 
+// setInterval(function() { get_queue_len();}, 2000); 
 // setInterval(function() { get_debug();}, 500);
 setInterval(function() { get_utc_time();}, 5000) 
 setInterval(function() { set_epoch_ms();}, 60000)
 // watchdog update runs slightly slower than s-meter
-setInterval(function() { watchdog_update();}, 300)
+setInterval(function() { watchdog_update();}, 500)
 // repeat logic runs every 500ms
 setInterval(function() { repeat_update();}, rpt_count_step_ms)
 // pull new SOTA spots every 10 seconds
