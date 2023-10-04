@@ -238,11 +238,14 @@ void loop(void) {
     if(dit_flag || dah_flag)
       empty_digital_queue();
       
-    if(dit_flag)
+    if(dit_flag) {
       dit();
-    else if(dah_flag)
+      return;
+    }
+    else if(dah_flag) {
       dah();
-    return;
+      return;
+    }
   }
   if(key == KEY_STRAIGHT) {
     // interrupt sets this flag
