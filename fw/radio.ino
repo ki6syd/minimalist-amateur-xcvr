@@ -138,6 +138,7 @@ void set_mode(qsk_state_type new_mode) {
     gpio_write(OUTPUT_RX_MUTE, OUTPUT_MUTED);
     
     // TODO: create a sidetone level option in json file
+    // TODO: update 
     if(vol + mon_offset < 1)
       update_volume(1);
     else if(vol + mon_offset >= 5)
