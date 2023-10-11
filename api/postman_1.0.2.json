@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "a9020c5c-67b3-492f-97d7-765afcbbc9ba",
+		"_postman_id": "e0c01f1e-4662-42b3-b2c0-ebca8f7988c8",
 		"name": "MAX-3B",
 		"description": "API for MAX-3B radio\n\nContact Support:\n Email: ki6syd@gmail.com",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
@@ -16,7 +16,7 @@
 						"method": "POST",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/ft8?messageText=<string>&timeNow=<integer>&rfFrequency=<integer>&audioFrequency=<integer>",
+							"raw": "{{baseUrl}}/ft8?messageText=<string>&timeNow=<integer>&rfFrequency=<integer>&audioFrequency=<integer>&ignoreTime=<boolean>",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -37,12 +37,17 @@
 								{
 									"key": "rfFrequency",
 									"value": "<integer>",
-									"description": "Dial frequency for FT8 [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use standard digital mode frequency in the current current band, a pre-set configured frequency for sending all FT8 messages, etc."
+									"description": "Dial frequency for sending [Hz]. If not provided, radio will pick a frequency using firmware-defined logic."
 								},
 								{
 									"key": "audioFrequency",
 									"value": "<integer>",
-									"description": "Audio frequency (USB) relative to RF dial frequency [Hz]. Radio will pick an audio frequency if nothing provided. May be randomized, fixed 1500 Hz, configured in settings file, etc."
+									"description": "Audio frequency (USB) [hz] relative to RF dial frequency [Hz]. If not provided, radio will pick an audio frequency using firmware-programmed logic. If audioFrequency is provided but rfFrequency is not provided, behavior is undefined."
+								},
+								{
+									"key": "ignoreTime",
+									"value": "<boolean>",
+									"description": "If set true, FT8 transmission will begin immediately without waiting for the next 15 second window. If set false or not included, the radio will wait for the next transmission window based on its internal time estimate."
 								}
 							]
 						}
@@ -54,7 +59,7 @@
 								"method": "POST",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/ft8?messageText=<string>&timeNow=<integer>&rfFrequency=<integer>&audioFrequency=<integer>",
+									"raw": "{{baseUrl}}/ft8?messageText=<string>&timeNow=<integer>&rfFrequency=<integer>&audioFrequency=<integer>&ignoreTime=<boolean>",
 									"host": [
 										"{{baseUrl}}"
 									],
@@ -75,12 +80,17 @@
 										{
 											"key": "rfFrequency",
 											"value": "<integer>",
-											"description": "Dial frequency for FT8 [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use standard digital mode frequency in the current current band, a pre-set configured frequency for sending all FT8 messages, etc."
+											"description": "Dial frequency for sending [Hz]. If not provided, radio will pick a frequency using firmware-defined logic."
 										},
 										{
 											"key": "audioFrequency",
 											"value": "<integer>",
-											"description": "Audio frequency (USB) relative to RF dial frequency [Hz]. Radio will pick an audio frequency if nothing provided. May be randomized, fixed 1500 Hz, configured in settings file, etc."
+											"description": "Audio frequency (USB) [hz] relative to RF dial frequency [Hz]. If not provided, radio will pick an audio frequency using firmware-programmed logic. If audioFrequency is provided but rfFrequency is not provided, behavior is undefined."
+										},
+										{
+											"key": "ignoreTime",
+											"value": "<boolean>",
+											"description": "If set true, FT8 transmission will begin immediately without waiting for the next 15 second window. If set false or not included, the radio will wait for the next transmission window based on its internal time estimate."
 										}
 									]
 								}
@@ -98,7 +108,7 @@
 								"method": "POST",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/ft8?messageText=<string>&timeNow=<integer>&rfFrequency=<integer>&audioFrequency=<integer>",
+									"raw": "{{baseUrl}}/ft8?messageText=<string>&timeNow=<integer>&rfFrequency=<integer>&audioFrequency=<integer>&ignoreTime=<boolean>",
 									"host": [
 										"{{baseUrl}}"
 									],
@@ -119,12 +129,17 @@
 										{
 											"key": "rfFrequency",
 											"value": "<integer>",
-											"description": "Dial frequency for FT8 [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use standard digital mode frequency in the current current band, a pre-set configured frequency for sending all FT8 messages, etc."
+											"description": "Dial frequency for sending [Hz]. If not provided, radio will pick a frequency using firmware-defined logic."
 										},
 										{
 											"key": "audioFrequency",
 											"value": "<integer>",
-											"description": "Audio frequency (USB) relative to RF dial frequency [Hz]. Radio will pick an audio frequency if nothing provided. May be randomized, fixed 1500 Hz, configured in settings file, etc."
+											"description": "Audio frequency (USB) [hz] relative to RF dial frequency [Hz]. If not provided, radio will pick an audio frequency using firmware-programmed logic. If audioFrequency is provided but rfFrequency is not provided, behavior is undefined."
+										},
+										{
+											"key": "ignoreTime",
+											"value": "<boolean>",
+											"description": "If set true, FT8 transmission will begin immediately without waiting for the next 15 second window. If set false or not included, the radio will wait for the next transmission window based on its internal time estimate."
 										}
 									]
 								}
@@ -142,7 +157,7 @@
 								"method": "POST",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/ft8?messageText=<string>&timeNow=<integer>&rfFrequency=<integer>&audioFrequency=<integer>",
+									"raw": "{{baseUrl}}/ft8?messageText=<string>&timeNow=<integer>&rfFrequency=<integer>&audioFrequency=<integer>&ignoreTime=<boolean>",
 									"host": [
 										"{{baseUrl}}"
 									],
@@ -163,12 +178,17 @@
 										{
 											"key": "rfFrequency",
 											"value": "<integer>",
-											"description": "Dial frequency for FT8 [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use standard digital mode frequency in the current current band, a pre-set configured frequency for sending all FT8 messages, etc."
+											"description": "Dial frequency for sending [Hz]. If not provided, radio will pick a frequency using firmware-defined logic."
 										},
 										{
 											"key": "audioFrequency",
 											"value": "<integer>",
-											"description": "Audio frequency (USB) relative to RF dial frequency [Hz]. Radio will pick an audio frequency if nothing provided. May be randomized, fixed 1500 Hz, configured in settings file, etc."
+											"description": "Audio frequency (USB) [hz] relative to RF dial frequency [Hz]. If not provided, radio will pick an audio frequency using firmware-programmed logic. If audioFrequency is provided but rfFrequency is not provided, behavior is undefined."
+										},
+										{
+											"key": "ignoreTime",
+											"value": "<boolean>",
+											"description": "If set true, FT8 transmission will begin immediately without waiting for the next 15 second window. If set false or not included, the radio will wait for the next transmission window based on its internal time estimate."
 										}
 									]
 								}
@@ -181,62 +201,237 @@
 							"body": ""
 						}
 					]
-				},
+				}
+			]
+		},
+		{
+			"name": "wspr",
+			"item": [
 				{
-					"name": "Stop sending any FT8 messages and clear FT8 messages from queue",
+					"name": "Send a WSPR message",
 					"request": {
-						"method": "DELETE",
+						"method": "POST",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/ft8",
+							"raw": "{{baseUrl}}/wspr?callSign=<string>&timeNow=<integer>&rfFrequency=<integer>&audioFrequency=<integer>&gridSquare=<string>&power=<integer>&ignoreTime=<boolean>",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
-								"ft8"
+								"wspr"
+							],
+							"query": [
+								{
+									"key": "callSign",
+									"value": "<string>",
+									"description": "(Required) Callsign (6 characters maximum)"
+								},
+								{
+									"key": "timeNow",
+									"value": "<integer>",
+									"description": "Caller's current time [epoch ms]. If provided, radio will update its current time to match timeNow. If not provided, radio will use its best estimate of current time."
+								},
+								{
+									"key": "rfFrequency",
+									"value": "<integer>",
+									"description": "Dial frequency for sending [Hz]. If not provided, radio will pick a frequency using firmware-defined logic."
+								},
+								{
+									"key": "audioFrequency",
+									"value": "<integer>",
+									"description": "Audio frequency (USB) [Hz] relative to RF dial frequency [Hz]. If not provided, radio will pick an audio frequency using firmware-programmed logic. If audioFrequency is provided but rfFrequency is not provided, behavior is undefined."
+								},
+								{
+									"key": "gridSquare",
+									"value": "<string>",
+									"description": "Grid square used for WSPR transmission (4 characters maximum)"
+								},
+								{
+									"key": "power",
+									"value": "<integer>",
+									"description": "Power level [dBm] used for WSPR transmission information (dBm). Does not"
+								},
+								{
+									"key": "ignoreTime",
+									"value": "<boolean>",
+									"description": "If set true, FT8 transmission will begin immediately without waiting for the next transmission second window. If set false or not included, the radio will wait for the next transmission window based on its internal time estimate."
+								}
 							]
 						}
 					},
 					"response": [
 						{
-							"name": "Stopped and deleted FT8.",
+							"name": "Message added to queue",
 							"originalRequest": {
-								"method": "DELETE",
+								"method": "POST",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/ft8",
+									"raw": "{{baseUrl}}/wspr?callSign=<string>&timeNow=<integer>&rfFrequency=<integer>&audioFrequency=<integer>&gridSquare=<string>&power=<integer>&ignoreTime=<boolean>",
 									"host": [
 										"{{baseUrl}}"
 									],
 									"path": [
-										"ft8"
+										"wspr"
+									],
+									"query": [
+										{
+											"key": "callSign",
+											"value": "<string>",
+											"description": "(Required) Callsign (6 characters maximum)"
+										},
+										{
+											"key": "timeNow",
+											"value": "<integer>",
+											"description": "Caller's current time [epoch ms]. If provided, radio will update its current time to match timeNow. If not provided, radio will use its best estimate of current time."
+										},
+										{
+											"key": "rfFrequency",
+											"value": "<integer>",
+											"description": "Dial frequency for sending [Hz]. If not provided, radio will pick a frequency using firmware-defined logic."
+										},
+										{
+											"key": "audioFrequency",
+											"value": "<integer>",
+											"description": "Audio frequency (USB) [Hz] relative to RF dial frequency [Hz]. If not provided, radio will pick an audio frequency using firmware-programmed logic. If audioFrequency is provided but rfFrequency is not provided, behavior is undefined."
+										},
+										{
+											"key": "gridSquare",
+											"value": "<string>",
+											"description": "Grid square used for WSPR transmission (4 characters maximum)"
+										},
+										{
+											"key": "power",
+											"value": "<integer>",
+											"description": "Power level [dBm] used for WSPR transmission information (dBm). Does not"
+										},
+										{
+											"key": "ignoreTime",
+											"value": "<boolean>",
+											"description": "If set true, FT8 transmission will begin immediately without waiting for the next transmission second window. If set false or not included, the radio will wait for the next transmission window based on its internal time estimate."
+										}
 									]
 								}
 							},
-							"status": "No Content",
-							"code": 204,
+							"status": "Created",
+							"code": 201,
 							"_postman_previewlanguage": "text",
 							"header": [],
 							"cookie": [],
 							"body": ""
 						},
 						{
-							"name": "Nothing to delete.",
+							"name": "Invalid / not understood",
 							"originalRequest": {
-								"method": "DELETE",
+								"method": "POST",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/ft8",
+									"raw": "{{baseUrl}}/wspr?callSign=<string>&timeNow=<integer>&rfFrequency=<integer>&audioFrequency=<integer>&gridSquare=<string>&power=<integer>&ignoreTime=<boolean>",
 									"host": [
 										"{{baseUrl}}"
 									],
 									"path": [
-										"ft8"
+										"wspr"
+									],
+									"query": [
+										{
+											"key": "callSign",
+											"value": "<string>",
+											"description": "(Required) Callsign (6 characters maximum)"
+										},
+										{
+											"key": "timeNow",
+											"value": "<integer>",
+											"description": "Caller's current time [epoch ms]. If provided, radio will update its current time to match timeNow. If not provided, radio will use its best estimate of current time."
+										},
+										{
+											"key": "rfFrequency",
+											"value": "<integer>",
+											"description": "Dial frequency for sending [Hz]. If not provided, radio will pick a frequency using firmware-defined logic."
+										},
+										{
+											"key": "audioFrequency",
+											"value": "<integer>",
+											"description": "Audio frequency (USB) [Hz] relative to RF dial frequency [Hz]. If not provided, radio will pick an audio frequency using firmware-programmed logic. If audioFrequency is provided but rfFrequency is not provided, behavior is undefined."
+										},
+										{
+											"key": "gridSquare",
+											"value": "<string>",
+											"description": "Grid square used for WSPR transmission (4 characters maximum)"
+										},
+										{
+											"key": "power",
+											"value": "<integer>",
+											"description": "Power level [dBm] used for WSPR transmission information (dBm). Does not"
+										},
+										{
+											"key": "ignoreTime",
+											"value": "<boolean>",
+											"description": "If set true, FT8 transmission will begin immediately without waiting for the next transmission second window. If set false or not included, the radio will wait for the next transmission window based on its internal time estimate."
+										}
 									]
 								}
 							},
-							"status": "Not Found",
-							"code": 404,
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Unable to accept message into queue",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/wspr?callSign=<string>&timeNow=<integer>&rfFrequency=<integer>&audioFrequency=<integer>&gridSquare=<string>&power=<integer>&ignoreTime=<boolean>",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"wspr"
+									],
+									"query": [
+										{
+											"key": "callSign",
+											"value": "<string>",
+											"description": "(Required) Callsign (6 characters maximum)"
+										},
+										{
+											"key": "timeNow",
+											"value": "<integer>",
+											"description": "Caller's current time [epoch ms]. If provided, radio will update its current time to match timeNow. If not provided, radio will use its best estimate of current time."
+										},
+										{
+											"key": "rfFrequency",
+											"value": "<integer>",
+											"description": "Dial frequency for sending [Hz]. If not provided, radio will pick a frequency using firmware-defined logic."
+										},
+										{
+											"key": "audioFrequency",
+											"value": "<integer>",
+											"description": "Audio frequency (USB) [Hz] relative to RF dial frequency [Hz]. If not provided, radio will pick an audio frequency using firmware-programmed logic. If audioFrequency is provided but rfFrequency is not provided, behavior is undefined."
+										},
+										{
+											"key": "gridSquare",
+											"value": "<string>",
+											"description": "Grid square used for WSPR transmission (4 characters maximum)"
+										},
+										{
+											"key": "power",
+											"value": "<integer>",
+											"description": "Power level [dBm] used for WSPR transmission information (dBm). Does not"
+										},
+										{
+											"key": "ignoreTime",
+											"value": "<boolean>",
+											"description": "If set true, FT8 transmission will begin immediately without waiting for the next transmission second window. If set false or not included, the radio will wait for the next transmission window based on its internal time estimate."
+										}
+									]
+								}
+							},
+							"status": "Conflict",
+							"code": 409,
 							"_postman_previewlanguage": "text",
 							"header": [],
 							"cookie": [],
@@ -255,7 +450,7 @@
 						"method": "POST",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/cw?messageText=<string>&speed=<integer>&rfFrequency=<integer>",
+							"raw": "{{baseUrl}}/cw?messageText=<string>&rfFrequency=<integer>",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -269,14 +464,9 @@
 									"description": "(Required) String to send"
 								},
 								{
-									"key": "speed",
-									"value": "<integer>",
-									"description": "Keyer speed while sending CW message [wpm]"
-								},
-								{
 									"key": "rfFrequency",
 									"value": "<integer>",
-									"description": "Dial frequency for sending [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use the existing dial frequency, beacon frequency, etc."
+									"description": "Dial frequency for sending [Hz]. If not provided, radio will pick a frequency using firmware-defined logic."
 								}
 							]
 						}
@@ -288,7 +478,7 @@
 								"method": "POST",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/cw?messageText=<string>&speed=<integer>&rfFrequency=<integer>",
+									"raw": "{{baseUrl}}/cw?messageText=<string>&rfFrequency=<integer>",
 									"host": [
 										"{{baseUrl}}"
 									],
@@ -302,14 +492,9 @@
 											"description": "(Required) String to send"
 										},
 										{
-											"key": "speed",
-											"value": "<integer>",
-											"description": "Keyer speed while sending CW message [wpm]"
-										},
-										{
 											"key": "rfFrequency",
 											"value": "<integer>",
-											"description": "Dial frequency for sending [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use the existing dial frequency, beacon frequency, etc."
+											"description": "Dial frequency for sending [Hz]. If not provided, radio will pick a frequency using firmware-defined logic."
 										}
 									]
 								}
@@ -327,7 +512,7 @@
 								"method": "POST",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/cw?messageText=<string>&speed=<integer>&rfFrequency=<integer>",
+									"raw": "{{baseUrl}}/cw?messageText=<string>&rfFrequency=<integer>",
 									"host": [
 										"{{baseUrl}}"
 									],
@@ -341,14 +526,9 @@
 											"description": "(Required) String to send"
 										},
 										{
-											"key": "speed",
-											"value": "<integer>",
-											"description": "Keyer speed while sending CW message [wpm]"
-										},
-										{
 											"key": "rfFrequency",
 											"value": "<integer>",
-											"description": "Dial frequency for sending [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use the existing dial frequency, beacon frequency, etc."
+											"description": "Dial frequency for sending [Hz]. If not provided, radio will pick a frequency using firmware-defined logic."
 										}
 									]
 								}
@@ -366,7 +546,7 @@
 								"method": "POST",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/cw?messageText=<string>&speed=<integer>&rfFrequency=<integer>",
+									"raw": "{{baseUrl}}/cw?messageText=<string>&rfFrequency=<integer>",
 									"host": [
 										"{{baseUrl}}"
 									],
@@ -380,82 +560,15 @@
 											"description": "(Required) String to send"
 										},
 										{
-											"key": "speed",
-											"value": "<integer>",
-											"description": "Keyer speed while sending CW message [wpm]"
-										},
-										{
 											"key": "rfFrequency",
 											"value": "<integer>",
-											"description": "Dial frequency for sending [Hz]. If nothing provided, radio will decide the best frequency using its own logic. Radio may use the existing dial frequency, beacon frequency, etc."
+											"description": "Dial frequency for sending [Hz]. If not provided, radio will pick a frequency using firmware-defined logic."
 										}
 									]
 								}
 							},
 							"status": "Conflict",
 							"code": 409,
-							"_postman_previewlanguage": "text",
-							"header": [],
-							"cookie": [],
-							"body": ""
-						}
-					]
-				},
-				{
-					"name": "Stop sending any CW messages and clear CW messages from queue",
-					"request": {
-						"method": "DELETE",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/cw",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"cw"
-							]
-						}
-					},
-					"response": [
-						{
-							"name": "Stopped and deleted CW messages.",
-							"originalRequest": {
-								"method": "DELETE",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/cw",
-									"host": [
-										"{{baseUrl}}"
-									],
-									"path": [
-										"cw"
-									]
-								}
-							},
-							"status": "No Content",
-							"code": 204,
-							"_postman_previewlanguage": "text",
-							"header": [],
-							"cookie": [],
-							"body": ""
-						},
-						{
-							"name": "Nothing to delete.",
-							"originalRequest": {
-								"method": "DELETE",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/cw",
-									"host": [
-										"{{baseUrl}}"
-									],
-									"path": [
-										"cw"
-									]
-								}
-							},
-							"status": "Not Found",
-							"code": 404,
 							"_postman_previewlanguage": "text",
 							"header": [],
 							"cookie": [],
@@ -578,109 +691,6 @@
 							},
 							"status": "Not Found",
 							"code": 404,
-							"_postman_previewlanguage": "text",
-							"header": [],
-							"cookie": [],
-							"body": ""
-						}
-					]
-				}
-			]
-		},
-		{
-			"name": "sotamat",
-			"item": [
-				{
-					"name": "DO NOT USE. For testing only. Sends SOTAmat spot as soon as message is received.",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/sotamat?call=<string>&suffix=<string>",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"sotamat"
-							],
-							"query": [
-								{
-									"key": "call",
-									"value": "<string>",
-									"description": "(Required) Operator's callsign"
-								},
-								{
-									"key": "suffix",
-									"value": "<string>",
-									"description": "(Required) SOTAMAT"
-								}
-							]
-						}
-					},
-					"response": [
-						{
-							"name": "Message sending",
-							"originalRequest": {
-								"method": "POST",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/sotamat?call=<string>&suffix=<string>",
-									"host": [
-										"{{baseUrl}}"
-									],
-									"path": [
-										"sotamat"
-									],
-									"query": [
-										{
-											"key": "call",
-											"value": "<string>",
-											"description": "(Required) Operator's callsign"
-										},
-										{
-											"key": "suffix",
-											"value": "<string>",
-											"description": "(Required) SOTAMAT"
-										}
-									]
-								}
-							},
-							"status": "Created",
-							"code": 201,
-							"_postman_previewlanguage": "text",
-							"header": [],
-							"cookie": [],
-							"body": ""
-						},
-						{
-							"name": "Invalid / not understood",
-							"originalRequest": {
-								"method": "POST",
-								"header": [],
-								"url": {
-									"raw": "{{baseUrl}}/sotamat?call=<string>&suffix=<string>",
-									"host": [
-										"{{baseUrl}}"
-									],
-									"path": [
-										"sotamat"
-									],
-									"query": [
-										{
-											"key": "call",
-											"value": "<string>",
-											"description": "(Required) Operator's callsign"
-										},
-										{
-											"key": "suffix",
-											"value": "<string>",
-											"description": "(Required) SOTAMAT"
-										}
-									]
-								}
-							},
-							"status": "Bad Request",
-							"code": 400,
 							"_postman_previewlanguage": "text",
 							"header": [],
 							"cookie": [],
@@ -1481,7 +1491,7 @@
 								}
 							],
 							"cookie": [],
-							"body": "CW"
+							"body": "SSB"
 						}
 					]
 				},
@@ -1491,7 +1501,7 @@
 						"method": "PUT",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/rxBandwidth?bw=CW",
+							"raw": "{{baseUrl}}/rxBandwidth?bw=SSB",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -1501,7 +1511,7 @@
 							"query": [
 								{
 									"key": "bw",
-									"value": "CW",
+									"value": "SSB",
 									"description": "(Required) Audio filter bandwidth"
 								}
 							]
@@ -1514,7 +1524,7 @@
 								"method": "PUT",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/rxBandwidth?bw=CW",
+									"raw": "{{baseUrl}}/rxBandwidth?bw=SSB",
 									"host": [
 										"{{baseUrl}}"
 									],
@@ -1524,7 +1534,7 @@
 									"query": [
 										{
 											"key": "bw",
-											"value": "CW",
+											"value": "SSB",
 											"description": "(Required) Audio filter bandwidth"
 										}
 									]
@@ -1543,7 +1553,7 @@
 								"method": "PUT",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/rxBandwidth?bw=CW",
+									"raw": "{{baseUrl}}/rxBandwidth?bw=SSB",
 									"host": [
 										"{{baseUrl}}"
 									],
@@ -1553,7 +1563,7 @@
 									"query": [
 										{
 											"key": "bw",
-											"value": "CW",
+											"value": "SSB",
 											"description": "(Required) Audio filter bandwidth"
 										}
 									]
@@ -1624,7 +1634,7 @@
 								}
 							],
 							"cookie": [],
-							"body": "false"
+							"body": "true"
 						}
 					]
 				},
@@ -1634,7 +1644,7 @@
 						"method": "PUT",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/lna?lnaState=false",
+							"raw": "{{baseUrl}}/lna?lnaState=true",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -1644,7 +1654,7 @@
 							"query": [
 								{
 									"key": "lnaState",
-									"value": "false",
+									"value": "true",
 									"description": "(Required) LNA state"
 								}
 							]
@@ -1657,7 +1667,7 @@
 								"method": "PUT",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/lna?lnaState=false",
+									"raw": "{{baseUrl}}/lna?lnaState=true",
 									"host": [
 										"{{baseUrl}}"
 									],
@@ -1667,7 +1677,7 @@
 									"query": [
 										{
 											"key": "lnaState",
-											"value": "false",
+											"value": "true",
 											"description": "(Required) LNA state"
 										}
 									]
@@ -1686,7 +1696,7 @@
 								"method": "PUT",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/lna?lnaState=false",
+									"raw": "{{baseUrl}}/lna?lnaState=true",
 									"host": [
 										"{{baseUrl}}"
 									],
@@ -1696,7 +1706,7 @@
 									"query": [
 										{
 											"key": "lnaState",
-											"value": "false",
+											"value": "true",
 											"description": "(Required) LNA state"
 										}
 									]
@@ -1767,7 +1777,7 @@
 								}
 							],
 							"cookie": [],
-							"body": "DIRECT"
+							"body": "EFHW"
 						}
 					]
 				},
@@ -1777,7 +1787,7 @@
 						"method": "PUT",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/antenna?antennaPath=DIRECT",
+							"raw": "{{baseUrl}}/antenna?antennaPath=EFHW",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -1787,7 +1797,7 @@
 							"query": [
 								{
 									"key": "antennaPath",
-									"value": "DIRECT",
+									"value": "EFHW",
 									"description": "(Required) Requested RF pathway to connect to antenna"
 								}
 							]
@@ -1800,7 +1810,7 @@
 								"method": "PUT",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/antenna?antennaPath=DIRECT",
+									"raw": "{{baseUrl}}/antenna?antennaPath=EFHW",
 									"host": [
 										"{{baseUrl}}"
 									],
@@ -1810,7 +1820,7 @@
 									"query": [
 										{
 											"key": "antennaPath",
-											"value": "DIRECT",
+											"value": "EFHW",
 											"description": "(Required) Requested RF pathway to connect to antenna"
 										}
 									]
@@ -1829,7 +1839,7 @@
 								"method": "PUT",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/antenna?antennaPath=DIRECT",
+									"raw": "{{baseUrl}}/antenna?antennaPath=EFHW",
 									"host": [
 										"{{baseUrl}}"
 									],
@@ -1839,7 +1849,7 @@
 									"query": [
 										{
 											"key": "antennaPath",
-											"value": "DIRECT",
+											"value": "EFHW",
 											"description": "(Required) Requested RF pathway to connect to antenna"
 										}
 									]
@@ -1910,7 +1920,7 @@
 								}
 							],
 							"cookie": [],
-							"body": "false"
+							"body": "true"
 						}
 					]
 				},
@@ -1920,7 +1930,7 @@
 						"method": "PUT",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/speaker?speakerState=false",
+							"raw": "{{baseUrl}}/speaker?speakerState=true",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -1930,7 +1940,7 @@
 							"query": [
 								{
 									"key": "speakerState",
-									"value": "false",
+									"value": "true",
 									"description": "(Required) LNA state"
 								}
 							]
@@ -1943,7 +1953,7 @@
 								"method": "PUT",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/speaker?speakerState=false",
+									"raw": "{{baseUrl}}/speaker?speakerState=true",
 									"host": [
 										"{{baseUrl}}"
 									],
@@ -1953,7 +1963,7 @@
 									"query": [
 										{
 											"key": "speakerState",
-											"value": "false",
+											"value": "true",
 											"description": "(Required) LNA state"
 										}
 									]
@@ -1972,7 +1982,7 @@
 								"method": "PUT",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/speaker?speakerState=false",
+									"raw": "{{baseUrl}}/speaker?speakerState=true",
 									"host": [
 										"{{baseUrl}}"
 									],
@@ -1982,7 +1992,7 @@
 									"query": [
 										{
 											"key": "speakerState",
-											"value": "false",
+											"value": "true",
 											"description": "(Required) LNA state"
 										}
 									]
@@ -2024,7 +2034,7 @@
 					},
 					"response": [
 						{
-							"name": "Current time [epoch ms]",
+							"name": "Current input voltage [V]",
 							"originalRequest": {
 								"method": "GET",
 								"header": [
@@ -2300,6 +2310,66 @@
 			]
 		},
 		{
+			"name": "heap",
+			"item": [
+				{
+					"name": "Gets the radio's available heap space",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/heap",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"heap"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Free heap space in bytes",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/heap",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"heap"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "<integer>"
+						}
+					]
+				}
+			]
+		},
+		{
 			"name": "address",
 			"item": [
 				{
@@ -2360,6 +2430,126 @@
 			]
 		},
 		{
+			"name": "hwRevision",
+			"item": [
+				{
+					"name": "Information about radio hardware",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/hwRevision",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"hwRevision"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Information about radio hardware",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/hwRevision",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"hwRevision"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "<string>"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "unitSerial",
+			"item": [
+				{
+					"name": "Hardware serial number",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/unitSerial",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"unitSerial"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Radio's serial number",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/unitSerial",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"unitSerial"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "<string>"
+						}
+					]
+				}
+			]
+		},
+		{
 			"name": "api",
 			"item": [
 				{
@@ -2384,7 +2574,7 @@
 					},
 					"response": [
 						{
-							"name": "Current status",
+							"name": "Highest API version implemented by the radio",
 							"originalRequest": {
 								"method": "GET",
 								"header": [
@@ -2420,6 +2610,109 @@
 			]
 		},
 		{
+			"name": "selfTest",
+			"item": [
+				{
+					"name": "Routines for characterization. All return an array of XY points",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/selfTest?testName=AUDIO",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"selfTest"
+							],
+							"query": [
+								{
+									"key": "testName",
+									"value": "AUDIO",
+									"description": "(Required) Type of self-test to run"
+								}
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Data collected",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/selfTest?testName=AUDIO",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"selfTest"
+									],
+									"query": [
+										{
+											"key": "testName",
+											"value": "AUDIO",
+											"description": "(Required) Type of self-test to run"
+										}
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "[]"
+						},
+						{
+							"name": "Unable to complete routine",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/selfTest?testName=AUDIO",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"selfTest"
+									],
+									"query": [
+										{
+											"key": "testName",
+											"value": "AUDIO",
+											"description": "(Required) Type of self-test to run"
+										}
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
 			"name": "debug",
 			"item": [
 				{
@@ -2444,7 +2737,7 @@
 					},
 					"response": [
 						{
-							"name": "Current debug variable. Radio may respond with any relevant value.",
+							"name": "Current debug variable. Radio picks the value to send depending on context.",
 							"originalRequest": {
 								"method": "GET",
 								"header": [

@@ -12,6 +12,7 @@ void handle_cw(WebRequestMethodComposite request_type, AsyncWebServerRequest *re
   if(request_type == HTTP_POST) {
     DigitalMessage tmp;
     tmp.type = MODE_CW;
+    tmp.ignore_time = true;
     
     // look for required parameters in the message
     if(!request->hasParam("messageText")) {
@@ -49,11 +50,12 @@ void handle_cw(WebRequestMethodComposite request_type, AsyncWebServerRequest *re
   }
 }
 
-void handle_ft8(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) { 
+void handle_ft8(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) {
   if(request_type == HTTP_POST) {
     // struct that we will enqueue at the end of the function
     DigitalMessage tmp;
     tmp.type = MODE_FT8;
+    tmp.ignore_time = false;
     
     // look for required parameters in the message
     if(!request->hasParam("messageText")) {
@@ -98,6 +100,11 @@ void handle_ft8(WebRequestMethodComposite request_type, AsyncWebServerRequest *r
       tmp.freq = 14074000;
     }
 
+    if(request->hasParam("ignoreTime")) {
+      if(request->getParam("ignoreTime")->value() == "true")
+        tmp.ignore_time = true;
+    }
+
     // encode the message. This runs in less than 1ms, probably OK to keep in the callback function
     // TODO - return an error code if encoding fails
     Serial.print("[FT8] Encoding: ");
@@ -129,13 +136,11 @@ void handle_ft8(WebRequestMethodComposite request_type, AsyncWebServerRequest *r
 
 
 void handle_wspr(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) { 
-  // delete me
-  print_request_details(request);
-  
   if(request_type == HTTP_POST) {
     // struct that we will enqueue at the end of the function
     DigitalMessage tmp;
     tmp.type = MODE_WSPR;
+    tmp.ignore_time = false;
 
     // reject the message if FT8 is already busy
     if(digital_queue.count() >= DIGITAL_QUEUE_LEN) {
@@ -170,6 +175,10 @@ void handle_wspr(WebRequestMethodComposite request_type, AsyncWebServerRequest *
       power = request->getParam("power")->value();
     }
 
+    if(request->hasParam("ignoreTime")) {
+      if(request->getParam("ignoreTime")->value() == "true")
+        tmp.ignore_time = true;
+    }
 
     // update WSPR frequency if one is given
     if(request->hasParam("rfFrequency") && request->hasParam("audioFrequency")) {
@@ -381,7 +390,8 @@ void send_ft8_from_queue() {
   gpio_write(OUTPUT_BW_SEL, (output_state) OUTPUT_SEL_SSB);
 
   // wait for the next window to begin
-  wait_ft8_window();
+  if(!to_send.ignore_time)
+    wait_ft8_window();
 
   // send FT8
   key_on();
@@ -433,7 +443,8 @@ void send_wspr_from_queue() {
   gpio_write(OUTPUT_BW_SEL, (output_state) OUTPUT_SEL_SSB);
 
   // wait for the next window to begin
-  wait_wspr_window();
+  if(!to_send.ignore_time)
+    wait_wspr_window();
 
   // send WSPR
   key_on();

@@ -1,7 +1,7 @@
 // useful for flash use debug: "C:\Program Files (x86)\Arduino\hardware\tools\avr\bin\avr-nm.exe" --size-sort -C -r fw.ino.elf
 
 #include <ESP8266WiFi.h>
-#include <ESPAsyncTCP.h>
+// #include <ESPAsyncTCP.h>
 #include <ESP8266mDNS.h>
 #include <ESPAsyncWebServer.h>
 #include <Updater.h>
@@ -103,6 +103,7 @@ bool keyer_abort = false;
 // todo: use a more reasonable buffer length
 struct DigitalMessage {
   digital_message_type type;
+  bool ignore_time;
   uint64_t freq;
   uint8_t buf[255];
 };
