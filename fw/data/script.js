@@ -389,9 +389,9 @@ function get_s_meter() {
   // define callback function
   func = function() {
     if (this.readyState == 4 && this.status == 200) {
-      document.getElementById('s_meter').value = this.responseText;
+      document.getElementById('s_meter').value = calc_s_meter(this.responseText);
 
-      console.log(this.responseText)
+      console.log(this.responseText, ' ', calc_s_meter(this.responseText))
 
       // do heartbeat update in this function, we look at S meter often.
       wd_count = wd_count_max;
@@ -593,6 +593,15 @@ function watchdog_update() {
   else {
     document.getElementById('address').className = 'readout_tiny'
   }
+}
+
+// this function is a hack for turning RMS voltage and volume into a S-meter reading
+// needs to capture the logarithmic behavior, and be calibrated
+function calc_s_meter(voltage) {
+  var vol = parseFloat(document.getElementById('af_gain').value).toFixed(4)
+  vol = 6-vol
+  var s_meter = vol * parseFloat(voltage) * 100
+  return s_meter
 }
 
 // convenient way for sotawatch links to set frequency
