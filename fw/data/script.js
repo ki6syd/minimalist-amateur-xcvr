@@ -12,6 +12,7 @@ var mon_min = -2;
 var mon_max = 2;
 
 var api_base_url = "/api/v1/"
+var sotamat_base_url = "sotamat://api/v1?app=max3b&appversion=2.1"
 var sota_url_1 = "https://api2.sota.org.uk/api/spots/";
 var sota_url_2 = "/all/"
 var sotlas_url = "https://sotl.as/summits/"
@@ -121,6 +122,9 @@ function set_freq() {
 
   // request freq back as a way to update UI fast
   get_freq();
+
+  // update SOTAmat link
+  updateSOTAmatLink();
 }
 
 
@@ -279,6 +283,9 @@ function press_bw() {
 
   set_bw();
   get_bw();
+
+  // update SOTAmat link
+  updateSOTAmatLink();
 }
 
 function set_lna() {
@@ -538,6 +545,15 @@ function plot_dataset(json_data, chart_name, y_axis_type) {
       events: []
     }
   });
+}
+
+function updateSOTAmatLink() {
+  var freq = document.getElementById("freq_mhz").value;
+  var mode = document.getElementById("bw").value;
+  var currentUrl = window.location.href;  // get the current page's URL
+  var encodedReturnPath = encodeURIComponent(currentUrl);
+  var newHref = sotamat_base_url + "&frequency=" + freq + "&mode=" + mode + "&returnpath=" + encodedReturnPath;
+  document.getElementById("sotamat_action").href = newHref;
 }
 
 // TODO - remove concept of multiple memories, keep CQ separate. This function will cancel repeat on CQ if you press mem.
