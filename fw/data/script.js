@@ -548,7 +548,7 @@ function plot_dataset(json_data, chart_name, y_axis_type) {
 }
 
 function updateSOTAmatLink() {
-  var freq = document.getElementById("freq_mhz").value;
+  var freq = parseFloat(document.getElementById("freq_mhz").value) * 1e6;
   var mode = document.getElementById("bw").value;
   var currentUrl = window.location.href;  // get the current page's URL
   var encodedReturnPath = encodeURIComponent(currentUrl);
