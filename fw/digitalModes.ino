@@ -366,7 +366,9 @@ void send_cw_from_queue() {
   // check if there is anything to pop from queue
   if(digital_queue.count() == 0)
     return;
-  DigitalMessage to_send = digital_queue.pop();
+
+  // don't pop quite yet - delays the decrement of queue length.
+  DigitalMessage to_send = digital_queue.peek();
 
   // enable interrupts so we are able to abort by pressing key
   if(key == KEY_PADDLE)
@@ -391,6 +393,8 @@ void send_cw_from_queue() {
       update_volume(vol);
     }
   }
+
+  digital_queue.pop();
 }
 
 // TODO - get rid of magic delays
@@ -400,7 +404,8 @@ void send_ft8_from_queue() {
   // check if there is anything to pop from queue
   if(digital_queue.count() == 0)
     return;
-  DigitalMessage to_send = digital_queue.pop();
+  // don't pop quite yet - delays the decrement of queue length.
+  DigitalMessage to_send = digital_queue.peek();
 
   // change to correct frequency before keying up
   f_rf = to_send.freq + to_send.buf[0];
@@ -446,6 +451,8 @@ void send_ft8_from_queue() {
   Serial.print("[FT8] Took: ");
   Serial.print(end_time - start_time);
   Serial.println("ms");
+
+  digital_queue.pop();
 }
 
 
@@ -455,7 +462,8 @@ void send_wspr_from_queue() {
   // check if there is anything to pop from queue
   if(digital_queue.count() == 0)
     return;
-  DigitalMessage to_send = digital_queue.pop();
+  // don't pop quite yet - delays the decrement of queue length.
+  DigitalMessage to_send = digital_queue.peek();
 
   // change to correct frequency before keying up
   f_vfo = update_vfo(f_rf, f_bfo, f_audio);
@@ -501,4 +509,6 @@ void send_wspr_from_queue() {
   Serial.print("[WSPR] Took: ");
   Serial.print(end_time - start_time);
   Serial.println("ms");
+
+  digital_queue.pop();
 }

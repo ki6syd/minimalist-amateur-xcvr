@@ -117,6 +117,10 @@ function set_epoch_ms() {
 
 
 function set_freq() {
+  // clear the queue if there is something there
+  if(queue_len > 0)
+    clear_queue();
+
   freq = parseFloat(document.getElementById('freq_mhz').value) * 1e6;
   http_request("PUT", "frequency", ["frequency"], [freq])
 
@@ -556,6 +560,7 @@ function updateSOTAmatLink() {
   document.getElementById("sotamat_action").href = newHref;
 }
 
+
 // TODO - remove concept of multiple memories, keep CQ separate. This function will cancel repeat on CQ if you press mem.
 function memory(num) {
   // force update on keyer queue length
@@ -786,6 +791,7 @@ document.getElementById('cq').addEventListener('long-press', function(e) {
 
   // call CQ
   memory(0);
+
 });
 
 // refresh variables
@@ -798,7 +804,7 @@ setInterval(function() { get_bw();}, 3000);
 setInterval(function() { get_lna();}, 3000); 
 setInterval(function() { get_antenna();}, 3000); 
 setInterval(function() { get_sidetone();}, 3000); 
-// setInterval(function() { get_queue_len();}, 2000); 
+setInterval(function() { get_queue_len();}, 1000); 
 // setInterval(function() { get_debug();}, 500);
 setInterval(function() { get_utc_time();}, 5000) 
 setInterval(function() { set_epoch_ms();}, 60000)
