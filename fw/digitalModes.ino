@@ -424,8 +424,8 @@ void send_ft8_from_queue() {
   uint64_t start_time = millis();
   for(uint8_t i = 0; i < FT8_SYMBOL_COUNT; i++)
   {
-    // abort sending if a callback has said that FT8 is no longer busy
-    if(keyer_abort)
+    // abort sending if a callback has said that FT8 is no longer busy, or key press
+    if(keyer_abort || sk_flag || dit_flag || dah_flag)
       continue;
 
     set_clk2_fine((to_send.freq * 100) + ((uint64_t) to_send.buf[i] * FT8_TONE_SPACING));
@@ -482,8 +482,8 @@ void send_wspr_from_queue() {
   uint64_t start_time = millis();
   for(uint8_t i = 0; i < WSPR_SYMBOL_COUNT; i++)
   {
-    // abort sending if a callback has said that FT8 is no longer busy
-    if(keyer_abort)
+    // abort sending if a callback has said that FT8 is no longer busy, or key press
+    if(keyer_abort || sk_flag || dit_flag || dah_flag)
       continue;
     
     set_clk2_fine((to_send.freq * 100) + ((uint64_t) to_send.buf[i] * WSPR_TONE_SPACING));
