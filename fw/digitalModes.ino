@@ -38,6 +38,13 @@ void handle_cw(WebRequestMethodComposite request_type, AsyncWebServerRequest *re
       tmp.freq = f_rf;
     }
 
+    // reject if frequency was out of range
+    if(!freq_valid(tmp.freq)) {
+      Serial.println("[CW] Invalid frequency.");
+      request->send(409, "text/plain", "Invalid frequency.");
+      return;
+    }
+
     // package string into the buffer
     message_text.toCharArray((char *) tmp.buf, 255);
     // add null terminator
@@ -98,6 +105,13 @@ void handle_ft8(WebRequestMethodComposite request_type, AsyncWebServerRequest *r
     else {
       // TODO - add more sophistocated logic than this default frequency
       tmp.freq = 14074000;
+    }
+
+    // reject if frequency was out of range
+    if(!freq_valid(tmp.freq)) {
+      Serial.println("[FT8] Invalid frequency.");
+      request->send(409, "text/plain", "Invalid frequency.");
+      return;
     }
 
     if(request->hasParam("ignoreTime")) {
@@ -190,6 +204,13 @@ void handle_wspr(WebRequestMethodComposite request_type, AsyncWebServerRequest *
     else {
       // TODO - add more sophistocated logic than this default frequency
       tmp.freq = 14095600;
+    }
+
+    // reject if frequency was out of range
+    if(!freq_valid(tmp.freq)) {
+      Serial.println("[WSPR] Invalid frequency.");
+      request->send(409, "text/plain", "Invalid frequency.");
+      return;
     }
 
     // create arrays for encoding, copy data into them
