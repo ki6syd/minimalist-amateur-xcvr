@@ -395,7 +395,7 @@ void send_ft8_from_queue() {
 
   // send FT8
   key_on();
-  uint16_t start_time = millis();
+  uint64_t start_time = millis();
   for(uint8_t i = 0; i < FT8_SYMBOL_COUNT; i++)
   {
     // abort sending if a callback has said that FT8 is no longer busy
@@ -408,12 +408,14 @@ void send_ft8_from_queue() {
     if (flag_vol) {
       flag_vol = false;
       update_volume(vol);
-    }
+    }  
 
-    // todo: calibrate this properly, don't use a magic number
-    my_delay(FT8_DELAY - FT8_TIME_CORR_MS);    
+    // rather than delaying until FT8_DELAY, make sure the overall sequence is on track (FT8_DELAY*i)
+    uint64_t wait_until = (i+1) * FT8_DELAY;
+    while(millis() - start_time < wait_until)
+      my_delay(10);
   }
-  uint16_t end_time = millis();
+  uint64_t end_time = millis();
   key_off();
 
   // restore BW
@@ -448,7 +450,7 @@ void send_wspr_from_queue() {
 
   // send WSPR
   key_on();
-  uint16_t start_time = millis();
+  uint64_t start_time = millis();
   for(uint8_t i = 0; i < WSPR_SYMBOL_COUNT; i++)
   {
     // abort sending if a callback has said that FT8 is no longer busy
@@ -463,10 +465,12 @@ void send_wspr_from_queue() {
       update_volume(vol);
     }
 
-    // todo: calibrate this properly, don't use a magic number
-    my_delay(WSPR_DELAY - WSPR_TIME_CORR_MS);    
+    // rather than delaying until FT8_DELAY, make sure the overall sequence is on track (FT8_DELAY*i)
+    uint64_t wait_until = (i+1) * WSPR_DELAY;
+    while(millis() - start_time < wait_until)
+      my_delay(10);
   }
-  uint16_t end_time = millis();
+  uint64_t end_time = millis();
   key_off();
 
   // restore BW
