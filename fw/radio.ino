@@ -146,12 +146,13 @@ void set_mode(qsk_state_type new_mode) {
     else
       update_volume(vol + mon_offset);
       
-    // HACK for v1: CW audio shows distortion with sidetone. use SSB.
+    // this was originally a hack for v1: CW audio shows distortion with sidetone. use SSB.
+    // carried over into v2 as well, sounds more pleasant.
     if(hardware_rev == "max-3b_v1") {
       gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB);
     }
     if(hardware_rev == "max-3b_v2") {
-      // do nothing, stay on same bw
+      gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB);
     }
 
     my_delay(10);
