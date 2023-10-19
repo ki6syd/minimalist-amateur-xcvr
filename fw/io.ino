@@ -21,13 +21,13 @@ void handle_antenna(WebRequestMethodComposite request_type, AsyncWebServerReques
     else if(ant_path = "EFHW")
       ant = OUTPUT_ANT_XFMR;
     else {
-      request->send(400, "text/plain", "Requested antenna pathway not possible");
+      request->send(400, "text/plain", "Requested antenna pathway not a valid option");
       return;
     }
 
     // hardware update will happen through main loop
     flag_freq = true;
-    request->send(200, "text/plain", "OK");
+    request->send(201, "text/plain", "OK");
   }
   else if(request_type == HTTP_GET) {
     String result;
@@ -57,13 +57,13 @@ void handle_lna(WebRequestMethodComposite request_type, AsyncWebServerRequest *r
     else if(lna = "OFF")
       lna_state = false;
     else {
-      request->send(400, "text/plain", "Requested LNA state not possible");
+      request->send(400, "text/plain", "Requested LNA state not a valid option");
       return;
     }
 
     // hardware update will happen through main loop
     flag_freq = true;
-    request->send(200, "text/plain", "OK");
+    request->send(201, "text/plain", "OK");
   }
   else if(request_type == HTTP_GET) {
     String lna = "";

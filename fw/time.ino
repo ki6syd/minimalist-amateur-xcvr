@@ -19,7 +19,7 @@ void handle_time(WebRequestMethodComposite request_type, AsyncWebServerRequest *
 
     time_update(time_now);
 
-    request->send(200, "text/plain", "OK");
+    request->send(201, "text/plain", "OK");
   }
   if(request_type == HTTP_GET) {
     if(timeStatus() == timeNotSet) {

@@ -24,13 +24,13 @@ void handle_cw_speed(WebRequestMethodComposite request_type, AsyncWebServerReque
     uint8_t new_speed = request->getParam("speed")->value().toInt();
 
     if(new_speed < keyer_min || new_speed > keyer_max) {
-      request->send(400, "text/plain", "Invalid speed");
+      request->send(409, "text/plain", "Invalid speed");
       return;
     }
 
     keyer_speed = new_speed;
     
-    request->send(200, "text/plain", "OK");
+    request->send(201, "text/plain", "OK");
   }
   if(request_type == HTTP_GET) {
     request->send(200, "text/plain", String(keyer_speed));

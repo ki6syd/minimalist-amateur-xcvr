@@ -10,9 +10,8 @@ void handle_frequency(WebRequestMethodComposite request_type, AsyncWebServerRequ
     uint64_t freq_request = request->getParam("frequency")->value().toFloat();
 
     // check frequency bounds before doing anything else
-    // todo: control this more cleanly (JSON file?) and have arbitrary numbers of bands
-    if((freq_request < f_rf_min_band1 && freq_request > f_rf_max_band1) && (freq_request < f_rf_min_band2 && freq_request > f_rf_max_band2) && (freq_request < f_rf_min_band3 && freq_request > f_rf_max_band3)) {
-      request->send(400, "text/plain", "Radio hardware does not support this frequency.");
+    if(!freq_valid(freq_request)) {
+      request->send(409, "text/plain", "Radio hardware does not support this frequency.");
       return;
     }
 
@@ -31,7 +30,7 @@ void handle_frequency(WebRequestMethodComposite request_type, AsyncWebServerRequ
     print_uint64_t(f_bfo);
     Serial.println();
 
-    request->send(200, "text/plain", "OK");
+    request->send(201, "text/plain", "OK");
   }
   if(request_type == HTTP_GET) {
     request->send(200, "text/plain", String(f_rf));

@@ -53,7 +53,7 @@ void handle_cw(WebRequestMethodComposite request_type, AsyncWebServerRequest *re
     // add to queue;
     digital_queue.push(tmp);
     
-    request->send(200, "text/plain", "OK");
+    request->send(201, "text/plain", "OK");
   }
 }
 
@@ -144,7 +144,7 @@ void handle_ft8(WebRequestMethodComposite request_type, AsyncWebServerRequest *r
     
     digital_queue.push(tmp);
 
-    request->send(200, "text/plain", "OK");
+    request->send(201, "text/plain", "OK");
   }
 }
 
@@ -238,7 +238,7 @@ void handle_wspr(WebRequestMethodComposite request_type, AsyncWebServerRequest *
     
     digital_queue.push(tmp);
 
-    request->send(200, "text/plain", "OK");
+    request->send(201, "text/plain", "OK");
   }
 }
 
