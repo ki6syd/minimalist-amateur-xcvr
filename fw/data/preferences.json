@@ -18,5 +18,9 @@
 	"vol_min": "1",
 	"vol_max": "6",
 	"v_bat_min_cutoff": "5.5",
-	"v_bat_max_cutoff": "16.0"
+	"v_bat_max_cutoff": "16.0",
+	"beacon_mode": "wspr",
+	"beacon_interval": "300000",
+	"time_server":  "http://worldtimeapi.org/api/ip",
+	"time_server_keyword": "unixtime"
 }

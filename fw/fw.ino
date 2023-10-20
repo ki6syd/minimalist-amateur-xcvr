@@ -4,6 +4,8 @@
 // #include <ESPAsyncTCP.h>
 #include <ESP8266mDNS.h>
 #include <ESPAsyncWebServer.h>
+#include <WiFiClient.h>
+#include <ESP8266HTTPClient.h>
 #include <Updater.h>
 #include <SPIFFSEditor.h>
 #include <ArduinoJson.h>
@@ -90,6 +92,8 @@ String api_base_url = "/api/v1/";
 const int led = LED_BUILTIN;
 
 AsyncWebServer server(80);
+HTTPClient http;
+WiFiClient client;
 Si5351 si5351;
 JTEncode jtencode;
 PCF8574 pcf8574_20(0x20);
@@ -111,6 +115,10 @@ struct DigitalMessage {
 #define DIGITAL_QUEUE_LEN   8
 Queue<DigitalMessage> digital_queue(DIGITAL_QUEUE_LEN);
 
+String beacon_mode = "false";
+bool beacon = false;
+uint32_t beacon_interval = 1000*60*60;  // milliseconds
+uint64_t last_beacon = 0;
 
 // flag_freq indicates whether frequency OR rx bandwidth need to change
 bool flag_freq = false, flag_vol = true, flag_special = false;
@@ -221,6 +229,8 @@ void setup(void) {
   qsk_period = load_json_config(preference_file, "qsk_delay_ms").toFloat();
   mon_offset = load_json_config(preference_file, "sidetone_level").toFloat();
 
+  init_beacon();
+
   // initial read of battery voltage
   last_vbat = analog_read(INPUT_VBAT);
 
@@ -296,6 +306,11 @@ void loop(void) {
   if(flag_special) {
     flag_special = false;
     special_mode(special);
+  }
+
+  // run beacon logic if necessary
+  if(beacon) {
+    update_beacon();
   }
 
   // handle any digital modes queue entries (CQ, FT8, WSPR)
