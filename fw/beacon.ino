@@ -14,7 +14,7 @@ void init_beacon() {
 
 void update_beacon() {
   // no action until next beacon interval
-  if(millis() - last_beacon < BEACON_INTERVAL) 
+  if(millis() - last_beacon < beacon_interval) 
     return;
 
   // no action if there's something in the queue
