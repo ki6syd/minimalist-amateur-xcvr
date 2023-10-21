@@ -12,6 +12,7 @@ var mon_min = -2;
 var mon_max = 2;
 
 var api_base_url = "/api/v1/"
+var sotamat_base_url = "sotamat://api/v1?app=max3b&appversion=2.1"
 var sota_url_1 = "https://api2.sota.org.uk/api/spots/";
 var sota_url_2 = "/all/"
 var sotlas_url = "https://sotl.as/summits/"
@@ -71,12 +72,20 @@ function send_ft8() {
   var rf = 14074000;
   var af = parseInt(document.getElementById('ft8AudioFreq').value);
 
-  http_request("POST", "ft8", ["messageText", "timeNow", "rfFrequency", "audioFrequency"], [ft8String, timeNow, rf, af])
+  http_request("POST", "ft8", ["messageText", "timeNow", "rfFrequency", "audioFrequency", "ignoreTime"], [ft8String, timeNow, rf, af, false])
 }
 
-function stop_ft8() {
-  http_request("DELETE", "ft8", [], [])
+function send_wspr() {
+  var call = document.getElementById('wsprCall').value;
+  var timeNow = Date.now();
+  var rf = 14095600;
+  var af = parseInt(document.getElementById('wsprFreq').value);
+  var grid = document.getElementById('wsprGrid').value;
+  var power = parseInt(document.getElementById('wsprPower').value);
+
+  http_request("POST", "wspr", ["callSign", "timeNow", "rfFrequency", "audioFrequency", "gridSquare", "power", "ignoreTime"], [call, timeNow, rf, af, grid, power, false])
 }
+
 
 function send_cw() {
   var cur_char = document.getElementById('freeform').value
@@ -97,6 +106,10 @@ function get_queue_len() {
   http_request("GET", "queue", [], [], func)
 }
 
+function clear_queue() {
+  http_request("DELETE", "queue", [], [])
+}
+
 function set_epoch_ms() {
   const time_now = Date.now();
   http_request("PUT", "time", ["timeNow"], [time_now])
@@ -104,11 +117,18 @@ function set_epoch_ms() {
 
 
 function set_freq() {
+  // clear the queue if there is something there
+  if(queue_len > 0)
+    clear_queue();
+
   freq = parseFloat(document.getElementById('freq_mhz').value) * 1e6;
   http_request("PUT", "frequency", ["frequency"], [freq])
 
   // request freq back as a way to update UI fast
   get_freq();
+
+  // update SOTAmat link
+  updateSOTAmatLink();
 }
 
 
@@ -240,7 +260,6 @@ function adj_speed(change) {
 
 function set_bw() {
   bw = document.getElementById('bw').value;
-  console.log(bw)
   http_request("PUT", "rxBandwidth", ["bw"], [bw])
 }
 
@@ -268,6 +287,9 @@ function press_bw() {
 
   set_bw();
   get_bw();
+
+  // update SOTAmat link
+  updateSOTAmatLink();
 }
 
 function set_lna() {
@@ -378,7 +400,9 @@ function get_s_meter() {
   // define callback function
   func = function() {
     if (this.readyState == 4 && this.status == 200) {
-      document.getElementById('s_meter').value = this.responseText;
+      document.getElementById('s_meter').value = calc_s_meter(this.responseText);
+
+      console.log(this.responseText, ' ', calc_s_meter(this.responseText))
 
       // do heartbeat update in this function, we look at S meter often.
       wd_count = wd_count_max;
@@ -527,6 +551,16 @@ function plot_dataset(json_data, chart_name, y_axis_type) {
   });
 }
 
+function updateSOTAmatLink() {
+  var freq = parseFloat(document.getElementById("freq_mhz").value) * 1e6;
+  var mode = document.getElementById("bw").value;
+  var currentUrl = window.location.href;  // get the current page's URL
+  var encodedReturnPath = encodeURIComponent(currentUrl);
+  var newHref = sotamat_base_url + "&frequency=" + freq + "&mode=" + mode + "&returnpath=" + encodedReturnPath;
+  document.getElementById("sotamat_action").href = newHref;
+}
+
+
 // TODO - remove concept of multiple memories, keep CQ separate. This function will cancel repeat on CQ if you press mem.
 function memory(num) {
   // force update on keyer queue length
@@ -580,6 +614,15 @@ function watchdog_update() {
   else {
     document.getElementById('address').className = 'readout_tiny'
   }
+}
+
+// this function is a hack for turning RMS voltage and volume into a S-meter reading
+// needs to capture the logarithmic behavior, and be calibrated
+function calc_s_meter(voltage) {
+  var vol = parseFloat(document.getElementById('af_gain').value).toFixed(4)
+  vol = 6-vol
+  var s_meter = vol * parseFloat(voltage) * 100
+  return s_meter
 }
 
 // convenient way for sotawatch links to set frequency
@@ -748,24 +791,25 @@ document.getElementById('cq').addEventListener('long-press', function(e) {
 
   // call CQ
   memory(0);
+
 });
 
 // refresh variables
 setInterval(function() { get_freq();}, 500);
-setInterval(function() { get_input_voltage();}, 500);
-setInterval(function() { get_s_meter();}, 250);
-setInterval(function() { get_volume();}, 3000); 
+setInterval(function() { get_input_voltage();}, 1500);
+setInterval(function() { get_s_meter();}, 500);
+setInterval(function() { get_volume();}, 5000); 
 setInterval(function() { get_speed();}, 5000); 
 setInterval(function() { get_bw();}, 3000); 
 setInterval(function() { get_lna();}, 3000); 
 setInterval(function() { get_antenna();}, 3000); 
 setInterval(function() { get_sidetone();}, 3000); 
-setInterval(function() { get_queue_len();}, 2000); 
+setInterval(function() { get_queue_len();}, 1000); 
 // setInterval(function() { get_debug();}, 500);
 setInterval(function() { get_utc_time();}, 5000) 
 setInterval(function() { set_epoch_ms();}, 60000)
 // watchdog update runs slightly slower than s-meter
-setInterval(function() { watchdog_update();}, 300)
+setInterval(function() { watchdog_update();}, 500)
 // repeat logic runs every 500ms
 setInterval(function() { repeat_update();}, rpt_count_step_ms)
 // pull new SOTA spots every 10 seconds

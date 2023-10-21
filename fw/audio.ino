@@ -22,7 +22,7 @@ void handle_rx_bandwidth(WebRequestMethodComposite request_type, AsyncWebServerR
     // indicate that relays need an update
     flag_freq = true;
 
-    request->send(200, "text/plain", "OK");
+    request->send(201, "text/plain", "OK");
   }
   if(request_type == HTTP_GET) {
     String bw = "";
@@ -48,7 +48,7 @@ void handle_volume(WebRequestMethodComposite request_type, AsyncWebServerRequest
     uint8_t new_vol = request->getParam("audioLevel")->value().toInt();
 
     if(new_vol < vol_min || new_vol > vol_max) {
-      request->send(400, "text/plain", "Unable to set requested volume");
+      request->send(409, "text/plain", "Unable to set requested volume");
       return;
     }
 
@@ -56,7 +56,7 @@ void handle_volume(WebRequestMethodComposite request_type, AsyncWebServerRequest
     vol = new_vol;
     flag_vol = true;
 
-    request->send(200, "text/plain", "OK");
+    request->send(201, "text/plain", "OK");
   }
   if(request_type == HTTP_GET) {    
     request->send(200, "text/plain", String(vol));
@@ -84,7 +84,7 @@ void handle_sidetone(WebRequestMethodComposite request_type, AsyncWebServerReque
 
     mon_offset = new_sidetone_offset;
 
-    request->send(200, "text/plain", "OK");
+    request->send(201, "text/plain", "OK");
   }
   if(request_type == HTTP_GET) {    
     request->send(200, "text/plain", String(mon_offset));
@@ -113,8 +113,8 @@ void handle_speaker(WebRequestMethodComposite request_type, AsyncWebServerReques
     }
 
     // hardware update will happen through main loop
-    flag_freq = true;
-    request->send(200, "text/plain", "OK");
+    flag_vol = true;
+    request->send(201, "text/plain", "OK");
   }
   else if(request_type == HTTP_GET) {
     String speaker = "";

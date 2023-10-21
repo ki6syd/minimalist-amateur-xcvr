@@ -21,13 +21,13 @@ void handle_antenna(WebRequestMethodComposite request_type, AsyncWebServerReques
     else if(ant_path = "EFHW")
       ant = OUTPUT_ANT_XFMR;
     else {
-      request->send(400, "text/plain", "Requested antenna pathway not possible");
+      request->send(400, "text/plain", "Requested antenna pathway not a valid option");
       return;
     }
 
     // hardware update will happen through main loop
     flag_freq = true;
-    request->send(200, "text/plain", "OK");
+    request->send(201, "text/plain", "OK");
   }
   else if(request_type == HTTP_GET) {
     String result;
@@ -57,13 +57,13 @@ void handle_lna(WebRequestMethodComposite request_type, AsyncWebServerRequest *r
     else if(lna = "OFF")
       lna_state = false;
     else {
-      request->send(400, "text/plain", "Requested LNA state not possible");
+      request->send(400, "text/plain", "Requested LNA state not a valid option");
       return;
     }
 
     // hardware update will happen through main loop
     flag_freq = true;
-    request->send(200, "text/plain", "OK");
+    request->send(201, "text/plain", "OK");
   }
   else if(request_type == HTTP_GET) {
     String lna = "";
@@ -111,7 +111,22 @@ void init_gpio() {
   // paddle GPIOs
   pinMode(12, INPUT_PULLUP);
   pinMode(13, INPUT_PULLUP);
-  attach_paddle_isr(true, true);
+
+  // detect key type at startup. straight key will have one pin shorted.
+  if(digitalRead(13) == LOW) {
+    Serial.println("[KEYER] Straight key detected");
+    key = KEY_STRAIGHT;
+  }
+  else {
+    Serial.println("[KEYER] Paddle detected");
+    key = KEY_PADDLE;
+  }
+
+  // different interrupt actions for different key types
+  if(key == KEY_PADDLE)
+    attach_paddle_isr(true, true);
+  else
+    attach_sk_isr(true);
 
   analogWriteFreq(load_json_config(preference_file, "sidetone_pitch_hz").toInt());
 
@@ -125,7 +140,6 @@ void init_gpio() {
 
 // attaches/deattaches interrupt on dit/dah pins
 void attach_paddle_isr(bool dit_en, bool dah_en) {
-  
   if(dit_en)
     attachInterrupt(digitalPinToInterrupt(12), paddle_isr, ONLOW);
   if(!dit_en)
@@ -140,7 +154,7 @@ void attach_paddle_isr(bool dit_en, bool dah_en) {
 
 // when we detect dit/dah paddle:
 //  - turn off the interrupt to prevent future events
-//  - set a flag
+//  - set flag so main loop can dit() or dah()
 ICACHE_RAM_ATTR void paddle_isr() {
   
   if(!digitalRead(12)) {
@@ -151,9 +165,37 @@ ICACHE_RAM_ATTR void paddle_isr() {
     attach_paddle_isr(true, false);
     dah_flag = true;
   }
+}
 
-  // empty the keyer queue so touching the paddle stops any ongoing messages
-  tx_queue = "";
+// straight key interrupt enable/disable
+void attach_sk_isr(bool key_en) {
+  if(key_en)
+    attachInterrupt(digitalPinToInterrupt(12), sk_isr, CHANGE);
+  else
+    detachInterrupt(digitalPinToInterrupt(12));    
+}
+
+// when we detect key falling:
+// - turn off interrupt so key_on() or key_off() can complete before we look again
+// - set flag so main loop can act
+ICACHE_RAM_ATTR void sk_isr() {  
+  // don't listen for interrupts for a bit
+  attach_sk_isr(false);
+
+  // check if we need to transition state from UP to DOWN
+  if(sk_mode == MODE_SK_UP && digitalRead(12) == 0) {
+    Serial.println("key pressed");
+    sk_mode = MODE_SK_DOWN;
+  }
+
+  // check if we need to transition state from DONW to UP
+  if(sk_mode == MODE_SK_DOWN && digitalRead(12) == 1) {
+    Serial.println("key released");
+    sk_mode = MODE_SK_UP;
+  }
+
+  // set a flag for the main loop to act on
+  sk_flag = true;
 }
 
 
@@ -470,5 +512,11 @@ void update_volume(uint16_t volume) {
         pcf8574_21.write(vol_4, LOW);
         pcf8574_21.write(vol_5, LOW);
     }
+
+    // set speaker
+    if(speaker_state)
+      gpio_write(OUTPUT_SPKR_EN, OUTPUT_ON);
+    else
+      gpio_write(OUTPUT_SPKR_EN, OUTPUT_OFF);
   }
 }

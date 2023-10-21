@@ -10,7 +10,7 @@ void handle_debug(WebRequestMethodComposite request_type, AsyncWebServerRequest 
     special = request->getParam("command")->value().toInt();
 
     flag_special = true;
-    request->send(200, "text/plain", "OK");
+    request->send(201, "text/plain", "OK");
   }
   else if(request_type == HTTP_GET) {
     request->send(200, "text/plain", String (0));

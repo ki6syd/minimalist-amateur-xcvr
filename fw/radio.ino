@@ -10,9 +10,8 @@ void handle_frequency(WebRequestMethodComposite request_type, AsyncWebServerRequ
     uint64_t freq_request = request->getParam("frequency")->value().toFloat();
 
     // check frequency bounds before doing anything else
-    // todo: control this more cleanly (JSON file?) and have arbitrary numbers of bands
-    if((freq_request < f_rf_min_band1 && freq_request > f_rf_max_band1) && (freq_request < f_rf_min_band2 && freq_request > f_rf_max_band2) && (freq_request < f_rf_min_band3 && freq_request > f_rf_max_band3)) {
-      request->send(400, "text/plain", "Radio hardware does not support this frequency.");
+    if(!freq_valid(freq_request)) {
+      request->send(409, "text/plain", "Radio hardware does not support this frequency.");
       return;
     }
 
@@ -31,29 +30,33 @@ void handle_frequency(WebRequestMethodComposite request_type, AsyncWebServerRequ
     print_uint64_t(f_bfo);
     Serial.println();
 
-    request->send(200, "text/plain", "OK");
+    request->send(201, "text/plain", "OK");
   }
   if(request_type == HTTP_GET) {
     request->send(200, "text/plain", String(f_rf));
   }
 }
 
-
 void set_dial_freq(String freq) {
+  uint64_t tmp = freq.toFloat() * 1000000;
+  set_dial_freq(tmp);
+}
+
+void set_dial_freq(uint64_t freq) {
   Serial.print("[FREQ UPDATE] ");
   Serial.print(freq);
   Serial.print("\t");
   
-  uint64_t tmp = freq.toFloat() * 1000000;
-
   // check frequency bounds before doing anything else
-  if((tmp < f_rf_min_band1 && tmp > f_rf_max_band1) && (tmp < f_rf_min_band2 && tmp > f_rf_max_band2) && (tmp < f_rf_min_band3 && tmp > f_rf_max_band3))
+  if(!freq_valid(freq))
     return;
 
-  flag_freq = true;
-  f_rf = tmp;
+  // force relay updates, audio path updates, etc if needed
+  f_rf = freq;
   // TODO: make sure we don't get negative numbers
   f_vfo = update_vfo(f_rf, f_bfo, f_audio);
+
+  change_freq();
 
   Serial.print("RF: ");
   print_uint64_t(f_rf);
@@ -62,6 +65,18 @@ void set_dial_freq(String freq) {
   Serial.print("\tBFO: ");
   print_uint64_t(f_bfo);
   Serial.println();
+}
+
+// todo: support arbitrary num bands
+bool freq_valid(uint64_t freq) {
+  if(freq > f_rf_min_band1 && freq < f_rf_max_band1)
+    return true;
+  if(freq > f_rf_min_band2 && freq < f_rf_max_band2)
+    return true;
+  if(freq > f_rf_min_band3 && freq < f_rf_max_band3)
+    return true;
+
+  return false;
 }
 
 // updates the relay references
@@ -99,7 +114,7 @@ void update_relays(uint64_t f_rf) {
 
 // handles relay switching and mute
 // TODO: figure out what to do with the random delay
-void set_mode(mode_type new_mode) {
+void set_mode(qsk_state_type new_mode) {
   
   // for re-setting the mode to TX, reset the QSK counter
   if(new_mode == MODE_TX);
@@ -114,10 +129,15 @@ void set_mode(mode_type new_mode) {
   gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
 
   if(new_mode == MODE_TX) {
+    // do not proceed for out of band frequencies
+    if(!freq_valid(f_rf))
+      return;
+    
     // mute and set volume to lowest setting before using sidetone
     gpio_write(OUTPUT_RX_MUTE, OUTPUT_MUTED);
     
     // TODO: create a sidetone level option in json file
+    // TODO: update 
     if(vol + mon_offset < 1)
       update_volume(1);
     else if(vol + mon_offset >= 5)
@@ -125,12 +145,13 @@ void set_mode(mode_type new_mode) {
     else
       update_volume(vol + mon_offset);
       
-    // HACK for v1: CW audio shows distortion with sidetone. use SSB.
+    // this was originally a hack for v1: CW audio shows distortion with sidetone. use SSB.
+    // carried over into v2 as well, sounds more pleasant.
     if(hardware_rev == "max-3b_v1") {
       gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB);
     }
     if(hardware_rev == "max-3b_v2") {
-      // do nothing, stay on same bw
+      gpio_write(OUTPUT_BW_SEL, OUTPUT_SEL_SSB);
     }
 
     my_delay(10);
@@ -189,8 +210,52 @@ void set_mode(mode_type new_mode) {
   gpio_write(OUTPUT_GREEN_LED, OUTPUT_OFF);
 }
 
-// TODO: pull out the magic 10ms delay
-void key_on() {  
+// called when frequency flag is set
+// only do this if we are in RX mode, to avoid changing relays while transmitting
+void change_freq() {  
+  if (tx_rx_mode == MODE_RX) {
+    flag_freq = false;
+
+    gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
+    update_relays(f_rf);
+    gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
+
+    gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
+
+    // update antenna connection
+    gpio_write(OUTPUT_ANT_SEL, (output_state) ant);
+
+    // set LNA hardware
+    if(lna_state)
+      gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
+    else
+      gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
+    
+    // TODO: this logic might make more sense elsewhere. Also should consider the concept of USB/LSB, dial freq, and mode rather than this mess of if statements.
+    if(rx_bw == OUTPUT_SEL_CW)
+      set_clocks(f_bfo, f_vfo, f_rf);
+    else {
+      if(f_rf < 10e6)
+        set_clocks(f_bfo, f_vfo, f_rf - f_audio);
+      else
+        set_clocks(f_bfo, f_vfo, f_rf + f_audio);
+    }
+    gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
+  }
+  else
+    Serial.println("[SAFETY] Did not update frequency because radio was transmitting.");
+
+  // update AF filter routing, regardless of whether tx_rx_mode changed
+  // TODO - add a flag for this?
+  gpio_write(OUTPUT_BW_SEL, (output_state) rx_bw);
+}
+
+// TODO: pull out the magic 2ms delay
+void key_on() {    
+  // do not proceed for out of band frequencies
+  if(!freq_valid(f_rf))
+    return;
+  
   // change over relays and sidetone
   set_mode(MODE_TX);
 

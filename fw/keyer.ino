@@ -9,64 +9,9 @@ void init_keyer() {
   keyer_speed = load_json_config(preference_file, "keyer_speed_default_wpm").toInt();
   keyer_min = load_json_config(preference_file, "keyer_speed_min_wpm").toInt();
   keyer_max = load_json_config(preference_file, "keyer_speed_max_wpm").toInt();
-
-  // detect key type at startup. straight key will have one pin shorted.
-  if(digitalRead(12) == LOW) {
-    Serial.println("[KEYER] Straight key detected");
-    key_type = KEY_STRAIGHT;
-  }
-  else {
-    Serial.println("[KEYER] Paddle detected");
-    key_type = KEY_PADDLE;
-  }
 }
 
-void handle_cw(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) { 
-  if(request_type == HTTP_POST) {
-    // look for required parameters in the message
-    if(!request->hasParam("messageText")) {
-      request->send(400, "text/plain", "messageText not found");
-      return;
-    }
-  
-    String message_text = request->getParam("messageText")->value();
 
-    // update keyer speed if parameter given
-    if(request->hasParam("speed")) {
-      uint8_t tmp = request->getParam("speed")->value().toInt();
-      
-      if(tmp < keyer_min || tmp > keyer_max) {
-        request->send(400, "text/plain", "Invalid speed");
-        return;
-      }
-      else {
-        keyer_speed = tmp;
-      }
-    }
-
-    if(request->hasParam("rfFrequency")) {
-      // TODO: add better logic. Blindly follows command for now.
-      f_rf = (uint64_t) request->getParam("rfFrequency")->value().toFloat();
-      
-      flag_freq = true;
-      // TODO: make sure we don't get negative numbers
-      // TODO: consider making this part of frequency setting?
-      f_vfo = update_vfo(f_rf, f_bfo, f_audio);
-    }
-
-    // add to queue;
-    tx_queue += message_text;
-    request->send(200, "text/plain", "OK");
-  }
-  if(request_type == HTTP_DELETE) {
-    if(tx_queue.length() == 0)
-      request->send(404, "text/plain", "Nothing in CW queue");
-
-    tx_queue = "";
-
-    request->send(204, "text/plain", "Stopped sending CW.");
-  }
-}
 
 void handle_cw_speed(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) { 
   if(request_type == HTTP_PUT) {
@@ -79,28 +24,20 @@ void handle_cw_speed(WebRequestMethodComposite request_type, AsyncWebServerReque
     uint8_t new_speed = request->getParam("speed")->value().toInt();
 
     if(new_speed < keyer_min || new_speed > keyer_max) {
-      request->send(400, "text/plain", "Invalid speed");
+      request->send(409, "text/plain", "Invalid speed");
       return;
     }
 
     keyer_speed = new_speed;
     
-    request->send(200, "text/plain", "OK");
+    request->send(201, "text/plain", "OK");
   }
   if(request_type == HTTP_GET) {
     request->send(200, "text/plain", String(keyer_speed));
   }
 }
 
-void update_keyer_queue() {
-  // handle one character in the queue
-  if(tx_queue.length() > 0) {   
-    Serial.print("[DEQUEUE] ");
-    Serial.println(tx_queue[0]);
-    morse_letter(String(tx_queue[0]));
-    tx_queue = tx_queue.substring(1);
-  }
-}
+
 
 void dit() {
   dit_flag = false;
@@ -112,7 +49,10 @@ void dit() {
   my_delay(MORSE_SYMBOL_MS_WPM / keyer_speed);
 
   // start listening for key inputs again
-  attach_paddle_isr(true, true);
+  if(key == KEY_PADDLE)
+    attach_paddle_isr(true, true);
+  else
+    attach_sk_isr(true);
 }
 
 
@@ -126,7 +66,10 @@ void dah() {
   my_delay(MORSE_SYMBOL_MS_WPM  / keyer_speed);
 
   // start listening for key inputs again
-  attach_paddle_isr(true, true);
+  if(key == KEY_PADDLE)
+    attach_paddle_isr(true, true);
+  else
+    attach_sk_isr(true);
 }
 
 

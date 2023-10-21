@@ -11,17 +11,15 @@ void init_web_server() {
   server.on(CONCAT(API_BASE_URL, "ft8"), HTTP_POST, [](AsyncWebServerRequest *request){
     handle_ft8(HTTP_POST, request);
   });
-  server.on(CONCAT(API_BASE_URL, "ft8"), HTTP_DELETE, [](AsyncWebServerRequest *request){
-    handle_ft8(HTTP_DELETE, request);
-  });
 
+  // handlers for WSPR messages
+  server.on(CONCAT(API_BASE_URL, "wspr"), HTTP_POST, [](AsyncWebServerRequest *request){
+    handle_wspr(HTTP_POST, request);
+  });
 
   // handlers for CW messages
   server.on(CONCAT(API_BASE_URL, "cw"), HTTP_POST, [](AsyncWebServerRequest *request){
     handle_cw(HTTP_POST, request);
-  });
-  server.on(CONCAT(API_BASE_URL, "cw"), HTTP_DELETE, [](AsyncWebServerRequest *request){
-    handle_cw(HTTP_DELETE, request);
   });
   
 
@@ -119,9 +117,12 @@ void init_web_server() {
     request->send(200, "text/plain", String(GIT_VERSION));
   });
 
+  server.on(CONCAT(API_BASE_URL, "heap"), HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", String(ESP.getFreeHeap()));
+  });
+
   server.on(CONCAT(API_BASE_URL, "address"), HTTP_GET, [](AsyncWebServerRequest *request){
-    IPAddress ip = WiFi.localIP();
-    request->send(200, "text/plain", String(ip.toString()));
+    request->send(200, "text/plain", ip_address);
   });
 
   server.on(CONCAT(API_BASE_URL, "hwRevision"), HTTP_GET, [](AsyncWebServerRequest *request){
@@ -155,6 +156,8 @@ void init_web_server() {
   server.on(CONCAT(API_BASE_URL, "debug"), HTTP_GET, [](AsyncWebServerRequest *request){
     handle_debug(HTTP_GET, request);
   });
+
+  
 
   server.on("/ota", HTTP_POST, [](AsyncWebServerRequest *request) {
         request->send(200);

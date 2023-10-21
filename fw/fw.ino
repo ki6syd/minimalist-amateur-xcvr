@@ -1,9 +1,11 @@
 // useful for flash use debug: "C:\Program Files (x86)\Arduino\hardware\tools\avr\bin\avr-nm.exe" --size-sort -C -r fw.ino.elf
 
 #include <ESP8266WiFi.h>
-#include <ESPAsyncTCP.h>
+// #include <ESPAsyncTCP.h>
 #include <ESP8266mDNS.h>
 #include <ESPAsyncWebServer.h>
+#include <WiFiClient.h>
+#include <ESP8266HTTPClient.h>
 #include <Updater.h>
 #include <SPIFFSEditor.h>
 #include <ArduinoJson.h>
@@ -13,6 +15,7 @@
 #include <JTEncode.h>
 #include <TimeLib.h>
 #include "git-version.h"
+#include "Queue.h"
 
 enum output_pin {
   OUTPUT_RX_MUTE,
@@ -57,16 +60,29 @@ enum output_state {
   OUTPUT_ANT_XFMR,
 };
 
-enum mode_type {
+enum qsk_state_type {
   MODE_RX,
   MODE_TX,
   MODE_QSK_COUNTDOWN
 };
 
+enum sk_state_type {
+  MODE_SK_FALLING,
+  MODE_SK_DOWN,
+  MODE_SK_RISING,
+  MODE_SK_UP
+};
 
-enum key_types {
+
+enum key_type {
   KEY_STRAIGHT,
   KEY_PADDLE
+};
+
+enum digital_message_type {
+  MODE_CW,
+  MODE_FT8,
+  MODE_WSPR
 };
 
 const char * preference_file = "/preferences.json";
@@ -76,29 +92,42 @@ String api_base_url = "/api/v1/";
 const int led = LED_BUILTIN;
 
 AsyncWebServer server(80);
+HTTPClient http;
+WiFiClient client;
 Si5351 si5351;
 JTEncode jtencode;
 PCF8574 pcf8574_20(0x20);
 PCF8574 pcf8574_21(0x21);
 
-
-// ------------------------------ FT8 variables ------------------------------
-uint8_t ft8_buffer[255];
-bool ft8_busy = false;
-uint64_t ft8_freq = 14070000;
-
-
 // ------------------------------ time variables ------------------------------
 uint64_t time_offset = 0;
 
+// ------------------------------ queue variables -----------------------------
+bool keyer_abort = false;
+// todo: use a more reasonable buffer length
+struct DigitalMessage {
+  digital_message_type type;
+  bool ignore_time;
+  uint64_t freq;
+  uint8_t buf[255];
+};
+
+#define DIGITAL_QUEUE_LEN   8
+Queue<DigitalMessage> digital_queue(DIGITAL_QUEUE_LEN);
+
+String beacon_mode = "false";
+bool beacon = false;
+uint32_t beacon_interval = 1000*60*60;  // milliseconds
+uint64_t last_beacon = 0;
 
 // flag_freq indicates whether frequency OR rx bandwidth need to change
-bool flag_freq = false, flag_vol = true, flag_special = false, flag_ft8 = false;
-bool dit_flag = false, dah_flag = false;
+bool flag_freq = false, flag_vol = true, flag_special = false;
+bool dit_flag = false, dah_flag = false, sk_flag = false;
 
+String ip_address = "No IP";
 
-
-mode_type tx_rx_mode = MODE_QSK_COUNTDOWN;
+qsk_state_type tx_rx_mode = MODE_QSK_COUNTDOWN;
+sk_state_type sk_mode = MODE_SK_UP;
 int64_t qsk_counter = 0;
 
 // used in OTA
@@ -116,11 +145,10 @@ uint16_t keyer_speed = 0;
 uint16_t vol = 0;
 int16_t mon_offset = 0;
 uint16_t special = 0;
-String tx_queue = "";
 // TODO: turn this into an enum
 bool lna_state = false;
 bool speaker_state = false;
-key_types key_type = KEY_PADDLE;
+key_type key = KEY_PADDLE;
 output_pin lpf_relay = OUTPUT_LPF_1, bpf_relay = OUTPUT_BPF_1;
 
 float last_vbat = 0, last_smeter = 0;
@@ -201,6 +229,8 @@ void setup(void) {
   qsk_period = load_json_config(preference_file, "qsk_delay_ms").toFloat();
   mon_offset = load_json_config(preference_file, "sidetone_level").toFloat();
 
+  init_beacon();
+
   // initial read of battery voltage
   last_vbat = analog_read(INPUT_VBAT);
 
@@ -211,81 +241,83 @@ void setup(void) {
 
 void loop(void) {
   uint8_t i = 0;
+  
+  // handle paddle and key inputs
+  // continue after dit or dah to skip other checks. Minimizes delay if there's another key press immediately
+  if(key == KEY_PADDLE) {
+    // empty the queue so touching the key stops ongoing messages
+    if(dit_flag || dah_flag)
+      empty_digital_queue();
+      
+    if(dit_flag) {
+      dit();
+      return;
+    }
+    else if(dah_flag) {
+      dah();
+      return;
+    }
+  }
+  if(key == KEY_STRAIGHT) {
+    // interrupt sets this flag
+    if(sk_flag) {
+      if(sk_mode == MODE_SK_DOWN) {
+        key_on();
+      }
+      if(sk_mode == MODE_SK_UP) {
+        key_off();
+      }
+      
+      // clear the flag
+      sk_flag = false;
 
-  MDNS.update();
+      // start looking at pins again
+      attach_sk_isr(true);
+
+      empty_digital_queue();
+    }
+    // poll to make sure we haven't missed an interrupt (hack...)
+    if(sk_mode == MODE_SK_DOWN && digitalRead(12) == 1) {
+      key_off();
+      sk_mode = MODE_SK_UP;
+      attach_sk_isr(true);
+    }
+    if(sk_mode == MODE_SK_UP && digitalRead(12) == 0) {
+      key_on();
+      sk_mode = MODE_SK_DOWN;
+      attach_sk_isr(true);
+    }
+  }
+  
 
   // reconfig clocks if frequency has changed
-  if (flag_freq) {
-    // don't update frequency if we are still in TX mode - derisks hardware damage
-    if (tx_rx_mode == MODE_RX) {
-      flag_freq = false;
-
-      gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
-      update_relays(f_rf);
-      gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
-
-      gpio_write(OUTPUT_RED_LED, OUTPUT_ON);
-
-      // update antenna connection
-      gpio_write(OUTPUT_ANT_SEL, (output_state) ant);
-
-      // set LNA hardware
-      if(lna_state)
-        gpio_write(OUTPUT_LNA_SEL, OUTPUT_ON);
-      else
-        gpio_write(OUTPUT_LNA_SEL, OUTPUT_OFF);
-
-      // set speaker
-      if(speaker_state)
-        gpio_write(OUTPUT_SPKR_EN, OUTPUT_ON);
-      else
-        gpio_write(OUTPUT_SPKR_EN, OUTPUT_OFF);
-      
-      // TODO: this logic might make more sense elsewhere. Also should consider the concept of USB/LSB, dial freq, and mode rather than this mess of if statements.
-      if(rx_bw == OUTPUT_SEL_CW)
-        set_clocks(f_bfo, f_vfo, f_rf);
-      else {
-        if(f_rf < 10e6)
-          set_clocks(f_bfo, f_vfo, f_rf - f_audio);
-        else
-          set_clocks(f_bfo, f_vfo, f_rf + f_audio);
-      }
-      gpio_write(OUTPUT_RED_LED, OUTPUT_OFF);
-    }
-    else
-      Serial.println("[SAFETY] Did not update frequency because radio was transmitting.");
-
-    // update AF filter routing, regardless of whether tx_rx_mode changed
-    // TODO - add a flag for this?
-    gpio_write(OUTPUT_BW_SEL, (output_state) rx_bw);
+  // don't update frequency if we are still in TX mode - derisks hardware damage
+  if(flag_freq) {
+    change_freq();
   }
 
   // perform volume update if change detected
-  if (flag_vol) {
+  if(flag_vol) {
     flag_vol = false;
     update_volume(vol);
   }
 
-  // take action based on special functions
-  if (flag_special) {
+  // take action based on special debug functions
+  if(flag_special) {
     flag_special = false;
     special_mode(special);
   }
 
-  // todo - queues 
-  if(flag_ft8) {
-    send_ft8();
+  // run beacon logic if necessary
+  if(beacon) {
+    update_beacon();
   }
 
-  // handle key inputs
-  if (dit_flag)
-    dit();
-  if (dah_flag)
-    dah();
-
-  // send a letter from the queue if there is anything
-  update_keyer_queue();
-
+  // handle any digital modes queue entries (CQ, FT8, WSPR)
+  if(digital_queue.count() > 0) {
+    service_digital_queue();
+  }
+  
   // decrement QSK timer if needed
   update_qsk_timer();
 
@@ -295,8 +327,11 @@ void loop(void) {
     last_vbat = analog_read(INPUT_VBAT);
   else {
     // do this every 10th loop. Frequent ADC reads disrupt wifi
-    if(i % 10 == 0)
+    if(i % 100 == 0) {
       update_smeter();
+      // Serial.print("[HEAP] ");
+      // Serial.println(ESP.getFreeHeap());
+    }
   }
 
   // TODO - have some better logic for this, and extract the 2.0v rationality threshold into a settings file
@@ -321,6 +356,8 @@ void loop(void) {
     last_vbat = analog_read(INPUT_VBAT);
   }
 
-  // my_delay(5);
+  MDNS.update();
   i++;
+
+  my_delay(25);
 }

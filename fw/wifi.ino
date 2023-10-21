@@ -59,13 +59,14 @@ void init_wifi_mdns() {
   }
 
   Serial.print("[WIFI] IP address: ");
-  Serial.println(ip);
+  ip_address = ip.toString();
+  Serial.println(ip_address);
 
   Serial.print("[WIFI] Connection status: ");
   Serial.println(WiFi.status());
 
   // for testing only
-  // wifi_scan();
+  wifi_scan();
   
   // set wifi power
   int wifi_dBm = load_json_config(wifi_file, "wifi_power_dbm").toInt();

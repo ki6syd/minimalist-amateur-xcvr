@@ -11,6 +11,9 @@
 </head>
 
 <body>
+
+<a href="javascript:history.back()">&larr; Back</a>
+
 <h1>FT8 Transmit</h1>
 <div class="table">
 <form>
@@ -30,13 +33,57 @@
 <form>
 <div>
       <button type="button" class="button" onclick="send_ft8()">SEND FT8</button>
-      <button type="button" class="button" onclick="stop_ft8()">STOP FT8</button>
+      <button type="button" class="button" onclick="clear_queue()">STOP FT8</button>
 </div>
 </form>
+</div>
 
 <br>
 <br>
 <br>
+
+<h1>WSPR Transmit</h1>
+<div class="table">
+<form>
+<div>
+  <label for="wsprCall" class="label">CALL</output>
+  <input type="text" id="wsprCall" value="KI6SYD">
+</div>
+</form>
+
+<form>
+<div>
+  <label for="wsprFreq" class="label">Audio Frequency</label>
+  <input type="text" id="wsprFreq" value="1500">
+</div>
+</form>
+
+<form>
+<div>
+  <label for="wsprGrid" class="label">Grid Square</label>
+  <input type="text" id="wsprGrid" value="CM86">
+</div>
+</form>
+
+<form>
+<div>
+  <label for="wsprPower" class="label">Power Level</label>
+  <input type="text" id="wsprPower" value="33">
+</div>
+</form>
+
+<form>
+<div>
+      <button type="button" class="button" onclick="send_wspr()">SEND WSPR</button>
+      <button type="button" class="button" onclick="clear_queue()">STOP WSPR</button>
+</div>
+</form>
+</div>
+
+<br>
+<br>
+<br>
+
 
 <h1>OTA Update</h1>
 <form method='post' action='/ota' enctype='multipart/form-data'>
@@ -55,7 +102,14 @@
 <br>
 <br>
 
+<h1>Reboot</h1>
+<button type="button" class="button" onclick="debug_action(22)">REBOOT</button>
+<br>
+<br>
+<br>
+
 <h1>Hardware Controls</h1>
+<h3>Use carefully, bypasses all hardware safety checks</h3>
 <div class="table">
 <form>
   <div>
@@ -80,7 +134,6 @@
       <button type="button" class="button" onclick="debug_action(19)">BPF SHAPE</button>
       <button type="button" class="button" onclick="debug_action(20)">AF SHAPE</button>
       <button type="button" class="button" onclick="debug_action(21)">SUPPR TEST</button>-->
-      <button type="button" class="button" onclick="debug_action(22)">REBOOT</button>
       <button type="button" class="button" onclick="debug_action(23)">LNA ON</button>
       <button type="button" class="button" onclick="debug_action(24)">LNA OFF</button>
       <button type="button" class="button" onclick="debug_action(25)">ANT DIRECT</button>
@@ -97,19 +150,23 @@
 <br> 
 <br> 
 
-<h1>Self-Test Tools</h1>
+<h1>Self-Test Tools (Work in Progress)</h1>
 <div class="table">
 <form>
   <div>
-    <!-- not working: <button type="button" class="button" onclick="self_test('BPF')">BPF FILTER</button>-->
-    <button type="button" class="button" onclick="self_test('XTAL')">XTAL</button>
+    <button type="button" class="button" onclick="self_test('BPF')">BPF FILTER ***</button>
+    <button type="button" class="button" onclick="self_test('XTAL')">XTAL **</button>
     <button type="button" class="button" onclick="self_test('AUDIO')">AUDIO</button>
     <button type="button" class="button" onclick="self_test('SUPPR')">SIDEBAND</button>
-    <button type="button" class="button" onclick="self_test('XMIT')">TRANSMIT (10 SECONDS)</button>
-    <button type="button" class="button" onclick="self_test('NOISE')">NOISE</button>
+    <button type="button" class="button" onclick="self_test('XMIT')">TRANSMIT (10 SECONDS) *</button>
+    <button type="button" class="button" onclick="self_test('NOISE')">NOISE **</button>
   </div>
 </form>
 </div>
+
+<p>*** = not complete</p>
+<p>** = unreliable results</p>
+<p>* = crashes occasionally</p>
 
 <canvas id="my_chart" style="width:100%;max-width:700px"></canvas>
 
