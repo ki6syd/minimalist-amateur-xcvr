@@ -1,13 +1,70 @@
 void init_beacon() {
   Serial.println("[BEACON] Initializing beacon");
 
-  beacon_mode = load_json_config(preference_file, "beacon_mode");
+  beacon_mode = load_json_config(beacon_file, "beacon_mode");
   beacon_mode.toLowerCase();
   
   if(beacon_mode == "wspr" || beacon_mode == "cw" || beacon_mode == "ft8")
     beacon = true;
 
-  beacon_interval = load_json_config(preference_file, "beacon_interval").toFloat();
+  beacon_interval = load_json_config(beacon_file, "beacon_interval").toFloat();
+
+  // fill up the queue of beacon frequencies
+  if(beacon_mode == "wspr") {
+    /*
+    StaticJsonDocument<1024> doc;
+    JsonArray arr = doc.to<JsonArray>();
+    load_json_array(beacon_file, "wspr_freq", arr);
+    size_t arr_len = arr.size();
+
+    for (size_t i = 0; i < arr.size(); ++i) {
+      String tmp = arr[i].as<const char *>();
+      Serial.println(tmp);
+      // wsprFreqValues[i] = strtoull(arr[i].as<const char*>(), nullptr, 10);
+    }
+
+    
+
+    for(uint8_t i = 0; i < arr_len; i++) {
+      Serial.println(i);
+      String tmp = arr[i].as<String>();
+      // uint64_t tmp_uint = strtoull(arr[i].as<const char*>(), nullptr, 10);
+      Serial.print(tmp);
+      Serial.print("\t");
+      // Serial.println(tmp_uint);
+      // beacon_freqs.push(tmp_uint);
+      Serial.println(i);
+      Serial.println(arr.size());
+    }
+    */
+
+
+    
+
+    
+    
+    File configFile = SPIFFS.open("/beacon.json", "r");
+
+    StaticJsonDocument<512> doc;
+    DeserializationError error = deserializeJson(doc, configFile);
+    configFile.close();
+  
+    JsonArray arr = doc["wspr_freq"].as<JsonArray>();
+
+    serializeJsonPretty(arr, Serial);
+
+    uint64_t wsprFreqValues[arr.size()];
+
+    // Convert and store each element of the JsonArray as uint64_t
+    for (size_t i = 0; i < arr.size(); ++i) {
+      String tmp = arr[i].as<String>();
+      Serial.println(tmp);
+      wsprFreqValues[i] = strtoull(arr[i].as<const char*>(), nullptr, 10);
+      print_uint64_t(wsprFreqValues[i]);
+    }
+  
+    
+  }
   
   update_time_from_web();
 }
@@ -32,9 +89,10 @@ void update_beacon() {
 
   if(beacon_mode == "wspr") {
     tmp.type = MODE_WSPR;
-    
-    uint64_t freq_list[] = {7038600, 14095600, 21094600};
-    tmp.freq = freq_list[random(0, 3)];
+
+    // pick from the front of the queue, and insert back at the end
+    tmp.freq = beacon_freqs.pop();
+    beacon_freqs.push(tmp.freq);
   
     // add audio freq plus some randomness
     tmp.freq += 1000;

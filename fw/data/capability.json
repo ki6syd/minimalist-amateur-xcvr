@@ -1,0 +1,16 @@
+{
+	"bands": [
+		{
+			"min_freq": "7000000",
+			"max_freq": "7300000",
+			"rx_modes": ["ssb", "cw"],
+			"tx_modes": ["cw"]
+		},
+		{
+			"min_freq": "14000000",
+			"max_freq": "14350000",
+			"rx_modes": ["ssb", "cw"],
+			"tx_modes": ["cw"]
+		}
+	]
+}

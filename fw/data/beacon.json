@@ -1,0 +1,5 @@
+{
+	"beacon_mode": "wspr",
+	"beacon_interval": "3600000",
+	"wspr_freq": ["7038600", "14095600", "21094600"]
+}

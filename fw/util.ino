@@ -40,6 +40,34 @@ String load_json_config(String file_name, String param_name) {
 }
 
 
+void load_json_array(String file_name, String param_name, JsonArray &arr) {
+  File configFile = SPIFFS.open(file_name, "r");
+
+  if (!configFile) {
+    Serial.println("Config file not found");
+    recovery();
+  }
+
+  size_t sz = configFile.size();
+  if (sz > 1024) {
+    Serial.println("Config file size is too large");
+    recovery();
+  }
+
+  StaticJsonDocument<512> doc;
+  DeserializationError error = deserializeJson(doc, configFile);
+  configFile.close();
+
+  arr = doc[param_name].as<JsonArray>();
+
+  Serial.print("[JSON READ] ");
+  Serial.print(param_name);
+  Serial.println(":");
+  serializeJsonPretty(arr, Serial);
+}
+
+
+
 // https://stackoverflow.com/questions/45974514/serial-print-uint64-t-in-arduino
 void print_uint64_t(uint64_t num) {
 

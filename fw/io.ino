@@ -210,7 +210,8 @@ void gpio_write(output_pin pin, output_state state) {
       break;
       
     case OUTPUT_TX_VDD_EN:
-      if(state == OUTPUT_ON)
+      // don't turn on power amp rail if we are not allowing tx
+      if(state == OUTPUT_ON && allow_tx)
         digitalWrite(14, HIGH);
       if(state == OUTPUT_OFF)
         digitalWrite(14, LOW);

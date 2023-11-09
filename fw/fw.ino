@@ -88,6 +88,7 @@ enum digital_message_type {
 const char * preference_file = "/preferences.json";
 const char * wifi_file = "/wifi_info.json";
 const char * hardware_file = "/hardware_info.json";
+const char * beacon_file = "/beacon.json";
 String api_base_url = "/api/v1/";
 const int led = LED_BUILTIN;
 
@@ -115,10 +116,12 @@ struct DigitalMessage {
 #define DIGITAL_QUEUE_LEN   8
 Queue<DigitalMessage> digital_queue(DIGITAL_QUEUE_LEN);
 
+#define BEACON_FREQ_LIST_LEN    8
 String beacon_mode = "false";
 bool beacon = false;
 uint32_t beacon_interval = 1000*60*60;  // milliseconds
 uint64_t last_beacon = 0;
+Queue<uint64_t> beacon_freqs(BEACON_FREQ_LIST_LEN);
 
 // flag_freq indicates whether frequency OR rx bandwidth need to change
 bool flag_freq = false, flag_vol = true, flag_special = false;
@@ -150,6 +153,8 @@ bool lna_state = false;
 bool speaker_state = false;
 key_type key = KEY_PADDLE;
 output_pin lpf_relay = OUTPUT_LPF_1, bpf_relay = OUTPUT_BPF_1;
+
+bool allow_tx = true;
 
 float last_vbat = 0, last_smeter = 0;
 float min_vbat, max_vbat;
@@ -229,13 +234,15 @@ void setup(void) {
   qsk_period = load_json_config(preference_file, "qsk_delay_ms").toFloat();
   mon_offset = load_json_config(preference_file, "sidetone_level").toFloat();
 
+  if(load_json_config(preference_file, "allow_tx") == "false")
+    allow_tx = false;
+
+  unit_serial = load_json_config(hardware_file, "serial_number");
+
   init_beacon();
 
   // initial read of battery voltage
   last_vbat = analog_read(INPUT_VBAT);
-
-  // load serial number
-  unit_serial = load_json_config(hardware_file, "serial_number");
 }
 
 
