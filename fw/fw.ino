@@ -182,14 +182,6 @@ uint64_t f_audio = 0;
 uint64_t f_vfo = 0;
 uint64_t f_if = 0;
 
-// TODO: replace this with something that would more easily scale to an arbitrary number of bands
-uint64_t f_rf_min_band1 = 0;
-uint64_t f_rf_max_band1 = 0;
-uint64_t f_rf_min_band2 = 0;
-uint64_t f_rf_max_band2 = 0;
-uint64_t f_rf_min_band3 = 0;
-uint64_t f_rf_max_band3 = 0;
-
 uint16_t keyer_min = 0;
 uint16_t keyer_max = 0;
 uint16_t vol_min = 0;
