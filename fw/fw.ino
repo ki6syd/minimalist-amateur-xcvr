@@ -247,6 +247,7 @@ void setup(void) {
 
   unit_serial = load_json_config(hardware_file, "serial_number");
 
+  // start the beacon module
   init_beacon();
 
   // initial read of battery voltage
