@@ -46,7 +46,7 @@ enum input_pin {
   INPUT_AUDIO
 };
 
-// enums for output pin states - to help with clarity in situations like open drain outputs or high/low signal driving a relay 
+// enums for output pin states - to help with clarity in situations like open drain outputs or high/low signal driving a relay
 enum output_state {
   OUTPUT_HIGH,
   OUTPUT_LOW,
