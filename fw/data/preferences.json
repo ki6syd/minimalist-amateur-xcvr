@@ -3,7 +3,7 @@
 	"sidetone_pitch_hz": "700",
 	"ant_default": "OUTPUT_ANT_XFMR",
 	"lna_default": "OFF",
-	"qsk_delay_ms": "300",
+	"qsk_delay_ms": "150",
 	"f_rf_default_mhz": "14.060",
 	"keyer_speed_default_wpm": "15",
 	"keyer_speed_min_wpm": "5",
