@@ -16,6 +16,8 @@
 #include <TimeLib.h>
 #include "git-version.h"
 #include "Queue.h"
+// TODO - create a Set/List/Array or similar class. Queue does not make sense for a lot of the usage here.
+// something like: https://github.com/codebndr/DynamicArrayHelper-Arduino-Library/blob/master/DynamicArrayHelper.cpp
 
 enum output_pin {
   OUTPUT_RX_MUTE,
@@ -89,6 +91,7 @@ const char * preference_file = "/preferences.json";
 const char * wifi_file = "/wifi_info.json";
 const char * hardware_file = "/hardware_info.json";
 const char * beacon_file = "/beacon.json";
+const char * capability_file = "/capability.json";
 String api_base_url = "/api/v1/";
 const int led = LED_BUILTIN;
 
@@ -122,6 +125,19 @@ bool beacon = false;
 uint32_t beacon_interval = 1000*60*60;  // milliseconds
 uint64_t last_beacon = 0;
 Queue<uint64_t> beacon_freqs(BEACON_FREQ_LIST_LEN);
+
+
+struct BandCapability {
+  uint8_t band_num;
+  uint64_t min_freq;
+  uint64_t max_freq;
+  String tx_modes[4];
+  String rx_modes[4];
+};
+
+#define BAND_CAPABILITY_LIST_LEN  5
+Queue<BandCapability> bands(BAND_CAPABILITY_LIST_LEN);
+
 
 // flag_freq indicates whether frequency OR rx bandwidth need to change
 bool flag_freq = false, flag_vol = true, flag_special = false;
@@ -338,6 +354,7 @@ void loop(void) {
       update_smeter();
       // Serial.print("[HEAP] ");
       // Serial.println(ESP.getFreeHeap());
+      // Serial.println(ESP.getHeapFragmentation());
     }
   }
 

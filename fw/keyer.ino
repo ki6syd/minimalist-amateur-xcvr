@@ -12,7 +12,6 @@ void init_keyer() {
 }
 
 
-
 void handle_cw_speed(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) { 
   if(request_type == HTTP_PUT) {
     // look for required parameters in the message

@@ -67,43 +67,52 @@ void set_dial_freq(uint64_t freq) {
   Serial.println();
 }
 
-// todo: support arbitrary num bands
+// checks whether the radio supports a given frequency
 bool freq_valid(uint64_t freq) {
-  if(freq > f_rf_min_band1 && freq < f_rf_max_band1)
-    return true;
-  if(freq > f_rf_min_band2 && freq < f_rf_max_band2)
-    return true;
-  if(freq > f_rf_min_band3 && freq < f_rf_max_band3)
-    return true;
+  for(uint8_t i = 0; i < bands.count(); i++) {
+    BandCapability b = bands.cycle();
+    // return true if given frequency is in a band
+    if(b.min_freq < freq && freq < b.max_freq)
+      return true;
+  }
 
+  Serial.println("[FREQ UPDATE] No valid band found.");
+  // nothing found if we have gotten here.
   return false;
 }
 
-// updates the relay references
+// updates the relay references based on the dial frequency
 // turns off all relays and then enables the new RX relay
 void update_relays(uint64_t f_rf) {
   // turn off the currently selected relays
   gpio_write(bpf_relay, OUTPUT_OFF);
   gpio_write(lpf_relay, OUTPUT_OFF);
-  
-  // choose the new LPF and BPF based on frequency
-  if(f_rf >= f_rf_min_band1 && f_rf <= f_rf_max_band1) {
-    lpf_relay = OUTPUT_LPF_1;
-    bpf_relay = OUTPUT_BPF_1;
+
+  bool match_found = false;
+  for(uint8_t i = 0; i < bands.count(); i++) {
+    BandCapability b = bands.cycle();
+    if(b.min_freq < f_rf && f_rf < b.max_freq) {
+      match_found = true;
+      if(b.band_num == 1) {
+        lpf_relay = OUTPUT_LPF_1;
+        bpf_relay = OUTPUT_BPF_1;
+      }
+      else if(b.band_num == 2) {
+        lpf_relay = OUTPUT_LPF_2;
+        bpf_relay = OUTPUT_BPF_2;
+      }
+      else if(b.band_num == 3) {
+        lpf_relay = OUTPUT_LPF_3;
+        bpf_relay = OUTPUT_BPF_3;
+      }
+    }
   }
-  else if(f_rf >= f_rf_min_band2 && f_rf <= f_rf_max_band2) {
-    lpf_relay = OUTPUT_LPF_2;
-    bpf_relay = OUTPUT_BPF_2;
-  }
-  else if(f_rf >= f_rf_min_band3 && f_rf <= f_rf_max_band3) {
-    lpf_relay = OUTPUT_LPF_3;
-    bpf_relay = OUTPUT_BPF_3;
-  }
-  else {
+  // report no matching frequency found
+  if(!match_found) {
     Serial.print("[FILTER] Unable to select relays based on freq: ");
     Serial.println(f_rf);
   }
-  
+
   // set relays to RX configuration
   gpio_write(bpf_relay, OUTPUT_ON);
   gpio_write(lpf_relay, OUTPUT_OFF);
@@ -299,35 +308,38 @@ void update_qsk_timer() {
 
 // TODO: load calibration factors and freq offsets out of the JSON file
 void init_radio() {
-  // load frequency limits from flash
-  f_rf_min_band1 = load_json_config(preference_file, "f_rf_min_hz_band1").toFloat();
-  f_rf_max_band1 = load_json_config(preference_file, "f_rf_max_hz_band1").toFloat();
-  f_rf_min_band2 = load_json_config(preference_file, "f_rf_min_hz_band2").toFloat();
-  f_rf_max_band2 = load_json_config(preference_file, "f_rf_max_hz_band2").toFloat();
-  f_rf_min_band3 = load_json_config(preference_file, "f_rf_min_hz_band3").toFloat();
-  f_rf_max_band3 = load_json_config(preference_file, "f_rf_max_hz_band3").toFloat();
-  
   // load frequencies from flash
   // TODO: need a better way to update all the frequencies at once. Introduce concept of USB/LSB, RX mode, and dial frequency.
   uint64_t xtal = load_json_config(hardware_file, "xtal_freq_hz").toFloat();
   f_audio = load_json_config(preference_file, "sidetone_pitch_hz").toFloat();
   f_if = load_json_config(hardware_file, "if_freq_hz").toFloat();
   f_bfo = f_if + f_audio;
-  // f_bfo = f_if + 2500;
 
+  // load the band capability from JSON file
+  load_json_bands(capability_file, bands);
+  Serial.println("[CAPABILITY] ");
+  for(uint8_t i = 0; i < bands.count(); i++) {
+    BandCapability b = bands.cycle();
+    Serial.print("Band #");
+    Serial.print(b.band_num);
+    Serial.print(":\t");
+    Serial.print(b.min_freq);
+    Serial.print("\t");
+    Serial.println(b.max_freq);
+  }
+  
   // load default frequency from JSON, use function in server module
   set_dial_freq(load_json_config(preference_file, "f_rf_default_mhz"));
 
 
   // initialize radio hardare
   Wire.begin();
-  Serial.print("[SI5351] ");
+  Serial.print("[SI5351] Status: ");
   Serial.println(si5351.si5351_read(SI5351_DEVICE_STATUS));
   si5351.init(SI5351_CRYSTAL_LOAD_8PF , xtal , 0);
   
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLA);
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLB);
-
 
   set_clocks(f_bfo, f_vfo, f_rf);
 
@@ -335,13 +347,8 @@ void init_radio() {
   si5351.drive_strength(SI5351_CLK1, SI5351_DRIVE_2MA);
   
   si5351.output_enable(SI5351_CLK0, 1);
-  // si5351.output_driver(SI5351_CLK0, 1);
-
   si5351.output_enable(SI5351_CLK1, 1);
-  // si5351.output_driver(SI5351_CLK1, 1);
-
   si5351.output_enable(SI5351_CLK2, 0);
-  // si5351.output_driver(SI5351_CLK2, 0);
 
   set_mode(MODE_RX);
 }

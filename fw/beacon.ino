@@ -10,60 +10,8 @@ void init_beacon() {
   beacon_interval = load_json_config(beacon_file, "beacon_interval").toFloat();
 
   // fill up the queue of beacon frequencies
-  if(beacon_mode == "wspr") {
-    /*
-    StaticJsonDocument<1024> doc;
-    JsonArray arr = doc.to<JsonArray>();
-    load_json_array(beacon_file, "wspr_freq", arr);
-    size_t arr_len = arr.size();
-
-    for (size_t i = 0; i < arr.size(); ++i) {
-      String tmp = arr[i].as<const char *>();
-      Serial.println(tmp);
-      // wsprFreqValues[i] = strtoull(arr[i].as<const char*>(), nullptr, 10);
-    }
-
-    
-
-    for(uint8_t i = 0; i < arr_len; i++) {
-      Serial.println(i);
-      String tmp = arr[i].as<String>();
-      // uint64_t tmp_uint = strtoull(arr[i].as<const char*>(), nullptr, 10);
-      Serial.print(tmp);
-      Serial.print("\t");
-      // Serial.println(tmp_uint);
-      // beacon_freqs.push(tmp_uint);
-      Serial.println(i);
-      Serial.println(arr.size());
-    }
-    */
-
-
-    
-
-    
-    
-    File configFile = SPIFFS.open("/beacon.json", "r");
-
-    StaticJsonDocument<512> doc;
-    DeserializationError error = deserializeJson(doc, configFile);
-    configFile.close();
-  
-    JsonArray arr = doc["wspr_freq"].as<JsonArray>();
-
-    serializeJsonPretty(arr, Serial);
-
-    uint64_t wsprFreqValues[arr.size()];
-
-    // Convert and store each element of the JsonArray as uint64_t
-    for (size_t i = 0; i < arr.size(); ++i) {
-      String tmp = arr[i].as<String>();
-      Serial.println(tmp);
-      wsprFreqValues[i] = strtoull(arr[i].as<const char*>(), nullptr, 10);
-      print_uint64_t(wsprFreqValues[i]);
-    }
-  
-    
+  if(beacon_mode == "wspr") {    
+    load_json_array(beacon_file, "wspr_freq", beacon_freqs);
   }
   
   update_time_from_web();
@@ -97,10 +45,20 @@ void update_beacon() {
     // add audio freq plus some randomness
     tmp.freq += 1000;
     tmp.freq += random(0, 700);
+
+
+    // load up char arrays from JSON configuration
+    char call[7];
+    String call_sign = load_json_config(beacon_file, "wspr_call");
+    call_sign.toCharArray(call, 7);
     
-    char call[] = {"KI6SYD"};
-    char loc[] = {"CM86"};
-    uint8_t dbm = 35;
+    char loc[5];
+    String grid_square = load_json_config(beacon_file, "wspr_grid");
+    grid_square.toCharArray(loc, 5);
+
+    String power = load_json_config(beacon_file, "wspr_power");
+    uint8_t dbm = power.toInt();
+
   
     Serial.print("[WSPR] Freq: ");
     Serial.println(tmp.freq);

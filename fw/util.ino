@@ -39,8 +39,9 @@ String load_json_config(String file_name, String param_name) {
   return tmp;
 }
 
-
-void load_json_array(String file_name, String param_name, JsonArray &arr) {
+// loads a JSON array into the queue, passed by reference
+// array must be at top level of the json hierarchy
+void load_json_array(String file_name, String param_name, Queue<uint64_t> &queue) {
   File configFile = SPIFFS.open(file_name, "r");
 
   if (!configFile) {
@@ -54,19 +55,68 @@ void load_json_array(String file_name, String param_name, JsonArray &arr) {
     recovery();
   }
 
-  StaticJsonDocument<512> doc;
+  StaticJsonDocument<1024> doc;
   DeserializationError error = deserializeJson(doc, configFile);
   configFile.close();
 
-  arr = doc[param_name].as<JsonArray>();
+  JsonArray arr = doc[param_name].as<JsonArray>();
 
   Serial.print("[JSON READ] ");
   Serial.print(param_name);
   Serial.println(":");
   serializeJsonPretty(arr, Serial);
+  Serial.println();
+
+  for (size_t i = 0; i < arr.size(); i++) {
+    queue.push(strtoull(arr[i].as<const char*>(), nullptr, 10));
+  }
 }
 
+void load_json_bands(String file_name, Queue<BandCapability> &bands) {
+  File configFile = SPIFFS.open(file_name, "r");
 
+  if (!configFile) {
+    Serial.println("Config file not found");
+    recovery();
+  }
+  
+  size_t sz = configFile.size();
+  if (sz > 1024) {
+    Serial.println("Config file size is too large");
+    recovery();
+  }
+
+  StaticJsonDocument<1024> doc;
+  DeserializationError error = deserializeJson(doc, configFile);
+  configFile.close();
+
+  JsonArray arr = doc["bands"].as<JsonArray>();
+
+  Serial.print("[JSON READ] ");
+
+  for (size_t i = 0; i < arr.size(); i++) {
+    BandCapability tmp;
+    JsonObject entry = arr[i];
+
+    // pull out information from the JSON object
+    tmp.band_num = entry["band_num"].as<String>().toInt();
+    tmp.min_freq = strtoull(entry["min_freq"].as<const char*>(), nullptr, 10);
+    tmp.max_freq = strtoull(entry["max_freq"].as<const char*>(), nullptr, 10);
+
+    /*
+     * comment this in when it's time to start consuming mode capability
+    JsonArray tx_arr = entry["tx_modes"].as<JsonArray>();
+    JsonArray rx_arr = entry["rx_modes"].as<JsonArray>();
+    serializeJsonPretty(tx_arr, Serial);    
+    Serial.println();
+    serializeJsonPretty(rx_arr, Serial);    
+    Serial.println();
+    */
+
+    // add to band capability variable
+    bands.push(tmp);
+  }
+}
 
 // https://stackoverflow.com/questions/45974514/serial-print-uint64-t-in-arduino
 void print_uint64_t(uint64_t num) {
