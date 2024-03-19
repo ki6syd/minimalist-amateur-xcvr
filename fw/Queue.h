@@ -60,6 +60,7 @@ class Queue {
     void push(const T &item);
     T peek();
     T pop();
+    T cycle();
     void clear();
 };
 
@@ -111,6 +112,29 @@ template<class T>
 T Queue<T>::peek() {
   if(_count <= 0) return T(); // Returns empty
   else return _data[_front];
+}
+
+// cycles front element to back, returns the element formerly at the front
+// hacky function to give list-like behavior
+// not in original library - Max added this
+template<class T>
+T Queue<T>::cycle() {
+  if(_count <= 0) return T(); // Returns empty
+
+  T result = _data[_front];
+
+  // copy front data into back, and increment
+  _data[_back++] = result;
+  // move front marker up
+  _front++;
+
+  // Check wrap around
+  if (_back > _maxitems)
+    _back -= (_maxitems + 1);
+  if (_front > _maxitems) 
+      _front -= (_maxitems + 1);
+  
+  return result;
 }
 
 template<class T>

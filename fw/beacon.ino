@@ -1,13 +1,18 @@
 void init_beacon() {
   Serial.println("[BEACON] Initializing beacon");
 
-  beacon_mode = load_json_config(preference_file, "beacon_mode");
+  beacon_mode = load_json_config(beacon_file, "beacon_mode");
   beacon_mode.toLowerCase();
   
   if(beacon_mode == "wspr" || beacon_mode == "cw" || beacon_mode == "ft8")
     beacon = true;
 
-  beacon_interval = load_json_config(preference_file, "beacon_interval").toFloat();
+  beacon_interval = load_json_config(beacon_file, "beacon_interval").toFloat();
+
+  // fill up the queue of beacon frequencies
+  if(beacon_mode == "wspr") {    
+    load_json_array(beacon_file, "wspr_freq", beacon_freqs);
+  }
   
   update_time_from_web();
 }
@@ -32,17 +37,28 @@ void update_beacon() {
 
   if(beacon_mode == "wspr") {
     tmp.type = MODE_WSPR;
-    
-    uint64_t freq_list[] = {7038600, 14095600, 21094600};
-    tmp.freq = freq_list[random(0, 3)];
+
+    // pick from the front of the queue, and insert back at the end
+    tmp.freq = beacon_freqs.pop();
+    beacon_freqs.push(tmp.freq);
   
     // add audio freq plus some randomness
     tmp.freq += 1000;
     tmp.freq += random(0, 700);
+
+
+    // load up char arrays from JSON configuration
+    char call[7];
+    String call_sign = load_json_config(beacon_file, "wspr_call");
+    call_sign.toCharArray(call, 7);
     
-    char call[] = {"KI6SYD"};
-    char loc[] = {"CM86"};
-    uint8_t dbm = 35;
+    char loc[5];
+    String grid_square = load_json_config(beacon_file, "wspr_grid");
+    grid_square.toCharArray(loc, 5);
+
+    String power = load_json_config(beacon_file, "wspr_power");
+    uint8_t dbm = power.toInt();
+
   
     Serial.print("[WSPR] Freq: ");
     Serial.println(tmp.freq);

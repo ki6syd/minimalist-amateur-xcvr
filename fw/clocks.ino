@@ -12,7 +12,6 @@ uint64_t update_vfo(uint64_t f_rf, uint64_t f_bfo, uint64_t f_audio) {
 }
 
 
-
 // update SI5351 clocks
 // TODO: update this so it's possible to take in smaller steps, such as FT8 at 6.25Hz tone spacing
 void set_clocks(uint64_t clk_0, uint64_t clk_1, uint64_t clk_2) {    
@@ -35,7 +34,7 @@ void set_clocks(uint64_t clk_0, uint64_t clk_1, uint64_t clk_2) {
 void set_clk2_fine(uint64_t clk_2) {
   Serial.print("[Si5351] CLK2 Fine Steps");
   Serial.print("\t");
-print_uint64_t(clk_2);
+  print_uint64_t(clk_2);
 
   si5351.set_freq(clk_2, SI5351_CLK2);
 }
