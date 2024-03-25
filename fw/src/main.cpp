@@ -1,9 +1,28 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <si5351.h>
+
+
+#include "AudioTools.h"
+#include "AudioLibs/I2SCodecStream.h"
+
 #include "wifi_conn.h"
 
 Si5351 si5351;
+// TwoWire clockBus = TwoWire(0);
+// TwoWire codecBus = TwoWire(1);
+
+
+AudioInfo                     audio_info(44200, 2, 16);                // sampling rate, # channels, bit depth
+SineWaveGenerator<int16_t>    sine_wave(32000);                        // amplitude
+GeneratedSoundStream<int16_t> sound_stream(sine_wave);                 // sound generator
+DriverPins                    my_pins;                                 // board pins
+AudioBoard                    audio_board(AudioDriverES8388, my_pins); // audio board
+I2SCodecStream                i2s_out_stream(audio_board);             // i2s coded
+StreamCopy                    copier(i2s_out_stream, sound_stream);    // stream copy sound generator to i2s codec
+TwoWire                       myWire = TwoWire(0);                     // universal I2C interface
+
+
 
 void setup() {
   // put your setup code here, to run once:
@@ -15,6 +34,35 @@ void setup() {
 
   wifi_init();
 
+  AudioLogger::instance().begin(Serial, AudioLogger::Warning);
+  LOGLEVEL_AUDIODRIVER = AudioDriverWarning;
+
+
+  Serial.println("I2C pin ...");
+  my_pins.addI2C(PinFunction::CODEC, CODEC_SCL, CODEC_SDA, CODEC_ADDR, CODEC_I2C_SPEED, myWire);
+  Serial.println("I2S pin ...");
+  my_pins.addI2S(PinFunction::CODEC, CODEC_MCLK, CODEC_BCLK, CODEC_WS, CODEC_DO, CODEC_DI);
+
+  Serial.println("Pins begin ..."); 
+  my_pins.begin();
+
+  Serial.println("Board begin ..."); 
+  audio_board.begin();
+
+  Serial.println("I2S begin ..."); 
+  auto i2s_config = i2s_out_stream.defaultConfig();
+  i2s_config.copyFrom(audio_info);  
+  i2s_out_stream.begin(i2s_config); // this should apply I2C and I2S configuration
+
+  // Setup sine wave
+  Serial.println("Sine wave begin...");
+  sine_wave.begin(audio_info, N_B4); // 493.88 Hz
+
+  Serial.println("Setup completed ...");
+
+
+  // clockBus.begin(CLOCK_SDA, CLOCK_SCL, 100000);
+  /*
   Wire.begin(CLOCK_SDA, CLOCK_SCL);
   Serial.print("[SI5351] Status: ");
   Serial.println(si5351.si5351_read(SI5351_DEVICE_STATUS));
@@ -33,12 +81,16 @@ void setup() {
   si5351.output_enable(SI5351_CLK0, 1);
   si5351.output_enable(SI5351_CLK1, 1);
   si5351.output_enable(SI5351_CLK2, 0);
+  */
+
+
 
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
 
+  /*
   digitalWrite(LED_GRN, HIGH);
   // wait for a second
   delay(1000);
@@ -46,4 +98,7 @@ void loop() {
   digitalWrite(LED_GRN, LOW);
    // wait for a second
   delay(1000);
+  */
+
+  copier.copy();
 }
