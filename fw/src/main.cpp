@@ -20,7 +20,7 @@ DriverPins                    my_pins;                                 // board 
 AudioBoard                    audio_board(AudioDriverES8388, my_pins); // audio board
 I2SCodecStream                i2s_out_stream(audio_board);             // i2s coded
 StreamCopy                    copier(i2s_out_stream, sound_stream);    // stream copy sound generator to i2s codec
-TwoWire                       myWire = TwoWire(0);                     // universal I2C interface
+TwoWire                       myWire = TwoWire(1);                     // universal I2C interface
 
 
 
@@ -30,12 +30,36 @@ void setup() {
   pinMode(LED_RED, OUTPUT);
   Serial.begin(460800);
 
-  delay(2000);
+  delay(5000);
 
-  wifi_init();
+  // wifi_init();
+
+  // myWire.begin(CODEC_SDA, CODEC_SCL);
+  // myWire.beginTransmission(CODEC_ADDR);
+  // myWire.write(46);
+  // int error = myWire.endTransmission();
+  // myWire.requestFrom(CODEC_ADDR, 1);
+  // int result = myWire.read();
+  // Serial.print("error: ");
+  // Serial.println(error);
+  // Serial.print("result: ");
+  // Serial.println(result);
+
+
+  // myWire.beginTransmission(CODEC_ADDR);
+  // myWire.write(46);
+  // error = myWire.endTransmission();
+  // myWire.requestFrom(CODEC_ADDR, 1);
+  // result = myWire.read();
+  // Serial.print("error: ");
+  // Serial.println(error);
+  // Serial.print("result: ");
+  // Serial.println(result);
+
 
   AudioLogger::instance().begin(Serial, AudioLogger::Warning);
-  LOGLEVEL_AUDIODRIVER = AudioDriverWarning;
+  // LOGLEVEL_AUDIODRIVER = AudioDriverWarning;
+  LOGLEVEL_AUDIODRIVER = AudioDriverDebug;
 
 
   Serial.println("I2C pin ...");
@@ -49,6 +73,12 @@ void setup() {
   Serial.println("Board begin ..."); 
   audio_board.begin();
 
+  // try changing the output channel with a CodecConfig
+  CodecConfig cfg;
+  // cfg.output_device = DAC_OUTPUT_LINE2;
+  cfg.output_device = DAC_OUTPUT_ALL;
+  audio_board.setConfig(cfg);
+
   Serial.println("I2S begin ..."); 
   auto i2s_config = i2s_out_stream.defaultConfig();
   i2s_config.copyFrom(audio_info);  
@@ -60,8 +90,22 @@ void setup() {
 
   Serial.println("Setup completed ...");
 
+  i2s_out_stream.setVolume(0.1);
+
+
+  // myWire.beginTransmission(CODEC_ADDR);
+  // myWire.write(46);
+  // error = myWire.endTransmission();
+  // myWire.requestFrom(CODEC_ADDR, 1);
+  // result = myWire.read();
+  // Serial.print("error: ");
+  // Serial.println(error);
+  // Serial.print("result: ");
+  // Serial.println(result);
+
 
   // clockBus.begin(CLOCK_SDA, CLOCK_SCL, 100000);
+
   /*
   Wire.begin(CLOCK_SDA, CLOCK_SCL);
   Serial.print("[SI5351] Status: ");
