@@ -20,7 +20,7 @@ DriverPins                    my_pins;                                 // board 
 AudioBoard                    audio_board(AudioDriverES8388, my_pins); // audio board
 I2SCodecStream                i2s_out_stream(audio_board);             // i2s coded
 StreamCopy                    copier(i2s_out_stream, sound_stream);    // stream copy sound generator to i2s codec
-TwoWire                       myWire = TwoWire(1);                     // universal I2C interface
+TwoWire                       myWire = TwoWire(0);                     // universal I2C interface
 
 
 
@@ -46,52 +46,17 @@ void setup() {
   // Serial.println(result);
 
 
-  // myWire.beginTransmission(CODEC_ADDR);
-  // myWire.write(46);
-  // error = myWire.endTransmission();
-  // myWire.requestFrom(CODEC_ADDR, 1);
-  // result = myWire.read();
-  // Serial.print("error: ");
-  // Serial.println(error);
-  // Serial.print("result: ");
-  // Serial.println(result);
-
-
   AudioLogger::instance().begin(Serial, AudioLogger::Warning);
   // LOGLEVEL_AUDIODRIVER = AudioDriverWarning;
   LOGLEVEL_AUDIODRIVER = AudioDriverDebug;
+  // LOGLEVEL_AUDIODRIVER = AudioDriverInfo;
 
+  
 
-  Serial.println("I2C pin ...");
-  my_pins.addI2C(PinFunction::CODEC, CODEC_SCL, CODEC_SDA, CODEC_ADDR, CODEC_I2C_SPEED, myWire);
-  Serial.println("I2S pin ...");
-  my_pins.addI2S(PinFunction::CODEC, CODEC_MCLK, CODEC_BCLK, CODEC_WS, CODEC_DO, CODEC_DI);
+  // i2s_out_stream.setVolume(0.1);
 
-  Serial.println("Pins begin ..."); 
-  my_pins.begin();
-
-  Serial.println("Board begin ..."); 
-  audio_board.begin();
-
-  // try changing the output channel with a CodecConfig
-  CodecConfig cfg;
-  // cfg.output_device = DAC_OUTPUT_LINE2;
-  cfg.output_device = DAC_OUTPUT_ALL;
-  audio_board.setConfig(cfg);
-
-  Serial.println("I2S begin ..."); 
-  auto i2s_config = i2s_out_stream.defaultConfig();
-  i2s_config.copyFrom(audio_info);  
-  i2s_out_stream.begin(i2s_config); // this should apply I2C and I2S configuration
-
-  // Setup sine wave
-  Serial.println("Sine wave begin...");
-  sine_wave.begin(audio_info, N_B4); // 493.88 Hz
-
-  Serial.println("Setup completed ...");
-
-  i2s_out_stream.setVolume(0.1);
-
+  // AudioInfo tmp(44200, 1, 16);
+  // i2s_out_stream.setAudioInfo(tmp);
 
   // myWire.beginTransmission(CODEC_ADDR);
   // myWire.write(46);
@@ -144,5 +109,38 @@ void loop() {
   delay(1000);
   */
 
-  copier.copy();
+  my_pins.addI2C(PinFunction::CODEC, CODEC_SCL, CODEC_SDA, CODEC_ADDR, CODEC_I2C_SPEED, myWire);
+  my_pins.addI2S(PinFunction::CODEC, CODEC_MCLK, CODEC_BCLK, CODEC_WS, CODEC_DO, CODEC_DI);
+  my_pins.begin();
+  audio_board.begin();
+
+
+/*
+  Serial.println("Configure output device ..."); 
+  // try changing the output channel with a CodecConfig
+  CodecConfig cfg;
+  cfg.output_device = DAC_OUTPUT_LINE2;
+  cfg.input_device = ADC_INPUT_LINE1;
+  // cfg.output_device = DAC_OUTPUT_ALL;
+  // audio_board.setConfig(cfg);
+  audio_board.begin(cfg);
+*/
+
+
+  Serial.println("I2S begin ..."); 
+  auto i2s_config = i2s_out_stream.defaultConfig(RXTX_MODE);
+  i2s_config.copyFrom(audio_info);  
+  i2s_config.output_device = DAC_OUTPUT_LINE1;
+  i2s_config.input_device = ADC_INPUT_LINE1;
+  i2s_out_stream.begin(i2s_config); // this should apply I2C and I2S configuration
+
+  // Setup sine wave
+  Serial.println("Sine wave begin...");
+  sine_wave.begin(audio_info, N_B4); // 493.88 Hz
+
+  Serial.println("Setup completed ...");
+
+  while(1) {
+    copier.copy();
+  }
 }
