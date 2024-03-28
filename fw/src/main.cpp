@@ -28,7 +28,7 @@ void setup() {
   // put your setup code here, to run once:
   pinMode(LED_GRN, OUTPUT);
   pinMode(LED_RED, OUTPUT);
-  Serial.begin(460800);
+  Serial.begin(SERIAL_SPEED);
 
   delay(5000);
 
@@ -114,7 +114,6 @@ void loop() {
   my_pins.begin();
   audio_board.begin();
 
-
 /*
   Serial.println("Configure output device ..."); 
   // try changing the output channel with a CodecConfig
@@ -130,8 +129,8 @@ void loop() {
   Serial.println("I2S begin ..."); 
   auto i2s_config = i2s_out_stream.defaultConfig(RXTX_MODE);
   i2s_config.copyFrom(audio_info);  
-  i2s_config.output_device = DAC_OUTPUT_LINE1;
-  i2s_config.input_device = ADC_INPUT_LINE1;
+  // i2s_config.output_device = DAC_OUTPUT_LINE1;
+  // i2s_config.input_device = ADC_INPUT_LINE1;
   i2s_out_stream.begin(i2s_config); // this should apply I2C and I2S configuration
 
   // Setup sine wave
@@ -140,7 +139,29 @@ void loop() {
 
   Serial.println("Setup completed ...");
 
+  int t = 0;
+  int counter = 0;
   while(1) {
     copier.copy();
+
+    if(millis() - t > 1000) {
+      AudioDriver *driver = audio_board.getDriver();
+      if(counter % 2 == 0) {
+        driver->setMute(false, 0);
+        driver->setMute(true, 1);
+        digitalWrite(LED_GRN, HIGH);
+        Serial.println("on");
+      }
+      else {
+        driver->setMute(true, 0);
+        driver->setMute(false, 1);
+        digitalWrite(LED_GRN, LOW);
+        Serial.println("off");
+      }
+      
+      counter++;
+      t = millis();
+    }
+    
   }
 }
