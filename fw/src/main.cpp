@@ -13,14 +13,29 @@ Si5351 si5351;
 // TwoWire codecBus = TwoWire(1);
 
 
+/*
 AudioInfo                     audio_info(44200, 2, 16);                // sampling rate, # channels, bit depth
 SineWaveGenerator<int16_t>    sine_wave(32000);                        // amplitude
 GeneratedSoundStream<int16_t> sound_stream(sine_wave);                 // sound generator
 DriverPins                    my_pins;                                 // board pins
 AudioBoard                    audio_board(AudioDriverES8388, my_pins); // audio board
-I2SCodecStream                i2s_out_stream(audio_board);             // i2s coded
-StreamCopy                    copier(i2s_out_stream, sound_stream);    // stream copy sound generator to i2s codec
+I2SCodecStream                i2s_stream(audio_board);             // i2s codec
+StreamCopy                    copier(i2s_stream, sound_stream);    // stream copy sound generator to i2s codec
 TwoWire                       myWire = TwoWire(0);                     // universal I2C interface
+*/
+
+
+AudioInfo                     audio_info(44200, 2, 16);                 // sampling rate, # channels, bit depth
+DriverPins                    my_pins;                                  // board pins
+AudioBoard                    audio_board(AudioDriverES8388, my_pins);  // audio board
+I2SCodecStream                i2s_stream(audio_board);                  // i2s codec
+VolumeStream                  outVol(i2s_stream);                       // vol outputs to i2s_stream (output)
+VolumeStream                  inVol(i2s_stream);                        // vol acceps from i2s_stream
+StreamCopy                    copier(outVol, inVol);                    // copy i2s_stream (input) to inVol (output)
+TwoWire                       myWire = TwoWire(0);                      // universal I2C interface
+
+
+// example of i2s codec for both input and output: https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-audiokit/streams-audiokit-filter-audiokit/streams-audiokit-filter-audiokit.ino
 
 
 
@@ -28,49 +43,20 @@ void setup() {
   // put your setup code here, to run once:
   pinMode(LED_GRN, OUTPUT);
   pinMode(LED_RED, OUTPUT);
+  pinMode(SPARE_0, OUTPUT);
   Serial.begin(SERIAL_SPEED);
 
   delay(5000);
 
   // wifi_init();
 
-  // myWire.begin(CODEC_SDA, CODEC_SCL);
-  // myWire.beginTransmission(CODEC_ADDR);
-  // myWire.write(46);
-  // int error = myWire.endTransmission();
-  // myWire.requestFrom(CODEC_ADDR, 1);
-  // int result = myWire.read();
-  // Serial.print("error: ");
-  // Serial.println(error);
-  // Serial.print("result: ");
-  // Serial.println(result);
-
-
   AudioLogger::instance().begin(Serial, AudioLogger::Warning);
   // LOGLEVEL_AUDIODRIVER = AudioDriverWarning;
   LOGLEVEL_AUDIODRIVER = AudioDriverDebug;
   // LOGLEVEL_AUDIODRIVER = AudioDriverInfo;
 
-  
-
-  // i2s_out_stream.setVolume(0.1);
-
-  // AudioInfo tmp(44200, 1, 16);
-  // i2s_out_stream.setAudioInfo(tmp);
-
-  // myWire.beginTransmission(CODEC_ADDR);
-  // myWire.write(46);
-  // error = myWire.endTransmission();
-  // myWire.requestFrom(CODEC_ADDR, 1);
-  // result = myWire.read();
-  // Serial.print("error: ");
-  // Serial.println(error);
-  // Serial.print("result: ");
-  // Serial.println(result);
-
 
   // clockBus.begin(CLOCK_SDA, CLOCK_SCL, 100000);
-
   /*
   Wire.begin(CLOCK_SDA, CLOCK_SCL);
   Serial.print("[SI5351] Status: ");
@@ -91,9 +77,6 @@ void setup() {
   si5351.output_enable(SI5351_CLK1, 1);
   si5351.output_enable(SI5351_CLK2, 0);
   */
-
-
-
 }
 
 void loop() {
@@ -101,11 +84,8 @@ void loop() {
 
   /*
   digitalWrite(LED_GRN, HIGH);
-  // wait for a second
   delay(1000);
-  // turn the LED off by making the voltage LOW
   digitalWrite(LED_GRN, LOW);
-   // wait for a second
   delay(1000);
   */
 
@@ -118,26 +98,34 @@ void loop() {
   Serial.println("Configure output device ..."); 
   // try changing the output channel with a CodecConfig
   CodecConfig cfg;
-  cfg.output_device = DAC_OUTPUT_LINE2;
-  cfg.input_device = ADC_INPUT_LINE1;
+  cfg.output_device = DAC_OUTPUT_LINE1;
+  //cfg.input_device = ADC_INPUT_LINE1;
   // cfg.output_device = DAC_OUTPUT_ALL;
   // audio_board.setConfig(cfg);
   audio_board.begin(cfg);
 */
 
-
   Serial.println("I2S begin ..."); 
-  auto i2s_config = i2s_out_stream.defaultConfig(RXTX_MODE);
-  i2s_config.copyFrom(audio_info);  
-  // i2s_config.output_device = DAC_OUTPUT_LINE1;
-  // i2s_config.input_device = ADC_INPUT_LINE1;
-  i2s_out_stream.begin(i2s_config); // this should apply I2C and I2S configuration
+  auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
+  i2s_config.copyFrom(audio_info);
+  // i2s_config.input_device = ADC_INPUT_LINE1;  // intend dto use RIN1, not sure 
+  // i2s_config.output_device  = DAC_OUTPUT_LINE1;
+  i2s_stream.begin(i2s_config); // this should apply I2C and I2S configuration
+  
+
+  
+  inVol.begin(audio_info);
+  inVol.setVolume(1.0);
+  outVol.begin(audio_info);
+  outVol.setVolume(1.0);
+
 
   // Setup sine wave
   Serial.println("Sine wave begin...");
-  sine_wave.begin(audio_info, N_B4); // 493.88 Hz
+  // sine_wave.begin(audio_info, N_B4); // 493.88 Hz
 
   Serial.println("Setup completed ...");
+
 
   int t = 0;
   int counter = 0;
@@ -157,11 +145,14 @@ void loop() {
         driver->setMute(false, 1);
         digitalWrite(LED_GRN, LOW);
         Serial.println("off");
-      }
-      
+      }      
       counter++;
       t = millis();
     }
-    
+
+    if(millis() % 2 == 0)
+      digitalWrite(SPARE_0, HIGH);
+    else 
+      digitalWrite(SPARE_0, LOW);
   }
 }
