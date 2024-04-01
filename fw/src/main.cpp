@@ -29,8 +29,9 @@ ChannelSplitOutput            input_split;                              // split
 // ChannelsSelectOutput          input_split;
 VolumeStream                  in_vol;                                   // input volume control
 VolumeStream                  out_vol;                                  // output volume control
-// FilteredStream<int16_t, float> filtered(out_vol, info_mono.channels);
-OutputMixer<int16_t>           output_mixer(i2s_stream, 2);                             // merges two mono channels into a stereo output
+VolumeStream tmp;
+FilteredStream<int16_t, float> filtered(tmp, info_mono.channels);
+OutputMixer<float>           output_mixer(i2s_stream, 2);                             // merges two mono channels into a stereo output
 // StreamCopy                    copier(input_split, i2s_stream);          // copier(output, input) drives data from stream to the splitter
 // StreamCopy copier(i2s_stream, output_merge);
 StreamCopy copier_1(input_split, in_vol);
@@ -85,7 +86,7 @@ void setup() {
 
   csvStream.begin(info_stereo);
   
-  // filtered.setFilter(0, new FIR<float>(coef));
+  filtered.setFilter(0, new FIR<float>(coef));
 
   // i2s --> in_vol --> input_split
   in_vol.setVolume(1.0);
@@ -102,9 +103,12 @@ void setup() {
 
   // input_split (mono) --> out_vol (mono)
   out_vol.setVolume(1.0);
-  out_vol.setOutput(output_mixer);
-  // out_vol.setOutput(filtered);
+  // out_vol.setOutput(output_mixer);
+  out_vol.setOutput(filtered);
   out_vol.begin(info_mono);
+
+  tmp.setVolume(1.0);
+  tmp.setOutput(output_mixer);
 
   Serial.println("Done creating out_vol");
 
