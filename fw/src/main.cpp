@@ -88,13 +88,6 @@ void setup() {
   i2s_stream.begin(i2s_config); // this should apply I2C and I2S configuration
 
   csvStream.begin(info_mono);
-
-/*
-  input_split.begin(info_stereo);
-  input_split.addOutput(in_vol, 0);
-  input_split.addOutput(dummy_1, 1);
-*/ 
-
   
   // i2s --> in_vol --> input_split
   in_vol.setVolume(1.0);
@@ -105,12 +98,9 @@ void setup() {
   Serial.println("done creating in_vol");
 
   // input_split (stereo) --> out_vol (mono)
-  input_split.addOutput(out_vol, 0);
+  input_split.addOutput(out_vol, 1);
   input_split.begin(info_stereo);
   Serial.println("Done creating input_split");
-
-  // sine_wave.begin(info_mono, N_B4); // 493.88 Hz
-  // sine_wave2.begin(info_mono, N_C4);
 
   // input_split (mono) --> out_vol (mono)
   out_vol.setVolume(1.0);
