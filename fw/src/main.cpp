@@ -29,11 +29,12 @@ ChannelSplitOutput            input_split;                              // split
 // ChannelsSelectOutput          input_split;
 VolumeStream                  in_vol;                                   // input volume control
 VolumeStream                  out_vol;                                  // output volume control
-// FilteredStream<int16_t, float> filtered(inVol, audio_info.channels);
-InputMerge<int16_t>           output_merge;                             // merges two mono channels into a stereo output
+// FilteredStream<int16_t, float> filtered(out_vol, info_mono.channels);
+OutputMixer<int16_t>           output_mixer(i2s_stream, 2);                             // merges two mono channels into a stereo output
 // StreamCopy                    copier(input_split, i2s_stream);          // copier(output, input) drives data from stream to the splitter
 // StreamCopy copier(i2s_stream, output_merge);
-StreamCopy copier(input_split, in_vol);
+StreamCopy copier_1(input_split, in_vol);
+// StreamCopy copier_1(csvStream, output_merge);
 
 // example of i2s codec for both input and output: https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-audiokit/streams-audiokit-filter-audiokit/streams-audiokit-filter-audiokit.ino
 
@@ -59,11 +60,6 @@ void setup() {
   // LOGLEVEL_AUDIODRIVER = AudioDriverWarning;
   LOGLEVEL_AUDIODRIVER = AudioDriverDebug;
   // LOGLEVEL_AUDIODRIVER = AudioDriverInfo;
-
-
-  // filtered.setFilter(0, new FIR<float>(coef));
-  // filtered.setFilter(1, new FIR<float>(coef));
-
   
 
   my_pins.addI2C(PinFunction::CODEC, CODEC_SCL, CODEC_SDA, CODEC_ADDR, CODEC_I2C_SPEED, myWire);
@@ -87,12 +83,14 @@ void setup() {
   // i2s_config.output_device  = DAC_OUTPUT_LINE1;
   i2s_stream.begin(i2s_config); // this should apply I2C and I2S configuration
 
-  csvStream.begin(info_mono);
+  csvStream.begin(info_stereo);
   
+  // filtered.setFilter(0, new FIR<float>(coef));
+
   // i2s --> in_vol --> input_split
   in_vol.setVolume(1.0);
   in_vol.setStream(i2s_stream);
-  // in_vol.setOutput(input_split);
+  in_vol.setOutput(input_split);
   in_vol.begin(info_stereo);
 
   Serial.println("done creating in_vol");
@@ -104,16 +102,13 @@ void setup() {
 
   // input_split (mono) --> out_vol (mono)
   out_vol.setVolume(1.0);
-  //out_vol.setStream(sound_stream2);
-  out_vol.setOutput(csvStream);
+  out_vol.setOutput(output_mixer);
+  // out_vol.setOutput(filtered);
   out_vol.begin(info_mono);
 
   Serial.println("Done creating out_vol");
 
-  // out_vol (mono) --> output_merge (stereo)
-  output_merge.add(out_vol);
-  output_merge.begin(info_stereo);
-  Serial.println("Done creating output_merge");
+  output_mixer.begin();
 
   // clockBus.begin(CLOCK_SDA, CLOCK_SCL, 100000);
   /*
@@ -140,7 +135,7 @@ void setup() {
 }
 
 void loop() { 
-  copier.copy();
+  copier_1.copy();
 
   if(millis() - t > 100) {
     AudioDriver *driver = audio_board.getDriver();
@@ -165,7 +160,7 @@ void loop() {
   }
 
   
-  if((millis()/10) % 2 == 0) {
+  if((millis()/50) % 2 == 0) {
     digitalWrite(SPARE_0, HIGH);
     digitalWrite(SPARE_1, HIGH);
   }
