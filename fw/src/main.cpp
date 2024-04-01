@@ -13,27 +13,27 @@ Si5351 si5351;
 // TwoWire codecBus = TwoWire(1);
 TwoWire                       myWire = TwoWire(0);                      // universal I2C interface
 
-AudioInfo                     info_stereo(44200, 2, 16);                // sampling rate, # channels, bit depth
-AudioInfo                     info_mono(44200, 1, 16);                  // sampling rate, # channels, bit depth
+AudioInfo                     info_stereo(22050, 2, 16);                // sampling rate, # channels, bit depth
+AudioInfo                     info_mono(22050, 1, 16);                  // sampling rate, # channels, bit depth
 DriverPins                    my_pins;                                  // board pins
 AudioBoard                    audio_board(AudioDriverES8388, my_pins);  // audio board
 I2SCodecStream                i2s_stream(audio_board);                  // i2s codec
+CsvOutput<int16_t> csvStream(Serial);
 
+// SineWaveGenerator<int16_t>    sine_wave(32000);
+// GeneratedSoundStream<int16_t> sound_stream(sine_wave);
+// SineWaveGenerator<int16_t>    sine_wave2(32000);
+// GeneratedSoundStream<int16_t> sound_stream2(sine_wave2);
 
-SineWaveGenerator<int16_t>    sine_wave(32000);
-GeneratedSoundStream<int16_t> sound_stream(sine_wave);
-
-SineWaveGenerator<int16_t>    sine_wave2(32000);
-GeneratedSoundStream<int16_t> sound_stream2(sine_wave2);
-
-// ChannelSplitOutput            input_split;                              // splits the stereo input stream into two mono streams
+ChannelSplitOutput            input_split;                              // splits the stereo input stream into two mono streams
 // ChannelsSelectOutput          input_split;
 VolumeStream                  in_vol;                                   // input volume control
 VolumeStream                  out_vol;                                  // output volume control
 // FilteredStream<int16_t, float> filtered(inVol, audio_info.channels);
 InputMerge<int16_t>           output_merge;                             // merges two mono channels into a stereo output
 // StreamCopy                    copier(input_split, i2s_stream);          // copier(output, input) drives data from stream to the splitter
-StreamCopy copier(i2s_stream, output_merge);
+// StreamCopy copier(i2s_stream, output_merge);
+StreamCopy copier(input_split, in_vol);
 
 // example of i2s codec for both input and output: https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-audiokit/streams-audiokit-filter-audiokit/streams-audiokit-filter-audiokit.ino
 
@@ -48,6 +48,7 @@ void setup() {
   pinMode(LED_GRN, OUTPUT);
   pinMode(LED_RED, OUTPUT);
   pinMode(SPARE_0, OUTPUT);
+  pinMode(SPARE_1, OUTPUT);
   Serial.begin(SERIAL_SPEED);
 
   delay(5000);
@@ -86,33 +87,43 @@ void setup() {
   // i2s_config.output_device  = DAC_OUTPUT_LINE1;
   i2s_stream.begin(i2s_config); // this should apply I2C and I2S configuration
 
+  csvStream.begin(info_mono);
+
 /*
   input_split.begin(info_stereo);
   input_split.addOutput(in_vol, 0);
   input_split.addOutput(dummy_1, 1);
+*/ 
 
-
-  input_split.addOutput(in_vol, 0);
-  input_split.begin(info_stereo);
-
-*/
-
-  sine_wave.begin(info_mono, N_B4); // 493.88 Hz
-  sine_wave2.begin(info_mono, N_C4);
-
-/*
-  in_vol.begin(info_mono);
-  in_vol.setVolume(1.0);
-  in_vol.setOutput(out_vol);
-
-  out_vol.begin(info_mono);
-  out_vol.setVolume(1.0);
-  out_vol.setOutput(output_merge);
-*/
   
-  output_merge.add(sound_stream);
-  output_merge.add(sound_stream2);
+  // i2s --> in_vol --> input_split
+  in_vol.setVolume(1.0);
+  in_vol.setStream(i2s_stream);
+  // in_vol.setOutput(input_split);
+  in_vol.begin(info_stereo);
+
+  Serial.println("done creating in_vol");
+
+  // input_split (stereo) --> out_vol (mono)
+  input_split.addOutput(out_vol, 0);
+  input_split.begin(info_stereo);
+  Serial.println("Done creating input_split");
+
+  // sine_wave.begin(info_mono, N_B4); // 493.88 Hz
+  // sine_wave2.begin(info_mono, N_C4);
+
+  // input_split (mono) --> out_vol (mono)
+  out_vol.setVolume(1.0);
+  //out_vol.setStream(sound_stream2);
+  out_vol.setOutput(csvStream);
+  out_vol.begin(info_mono);
+
+  Serial.println("Done creating out_vol");
+
+  // out_vol (mono) --> output_merge (stereo)
+  output_merge.add(out_vol);
   output_merge.begin(info_stereo);
+  Serial.println("Done creating output_merge");
 
   // clockBus.begin(CLOCK_SDA, CLOCK_SCL, 100000);
   /*
@@ -141,26 +152,36 @@ void setup() {
 void loop() { 
   copier.copy();
 
-  if(millis() - t > 1000) {
+  if(millis() - t > 100) {
     AudioDriver *driver = audio_board.getDriver();
     if(counter % 2 == 0) {
-      driver->setMute(false, 0);
-      driver->setMute(true, 1);
+      // driver->setMute(false, 0);
+      // driver->setMute(true, 1);
       digitalWrite(LED_GRN, HIGH);
-      Serial.println("on");
+      // digitalWrite(SPARE_0, HIGH);
+      // digitalWrite(SPARE_1, HIGH);
+      // Serial.println("on");
     }
     else {
-      driver->setMute(true, 0);
-      driver->setMute(false, 1);
+      // driver->setMute(true, 0);
+      // driver->setMute(false, 1);
       digitalWrite(LED_GRN, LOW);
-      Serial.println("off");
+      // digitalWrite(SPARE_0, LOW);
+      // digitalWrite(SPARE_1, LOW);
+      // Serial.println("off");
     }      
     counter++;
     t = millis();
   }
 
-  if(millis() % 2 == 0)
+  
+  if((millis()/10) % 2 == 0) {
     digitalWrite(SPARE_0, HIGH);
-  else 
+    digitalWrite(SPARE_1, HIGH);
+  }
+  else  {
     digitalWrite(SPARE_0, LOW);
+    digitalWrite(SPARE_1, LOW);
+  }
+  
 }
