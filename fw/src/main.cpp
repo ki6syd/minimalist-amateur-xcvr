@@ -109,6 +109,7 @@ void setup() {
 
   tmp.setVolume(1.0);
   tmp.setOutput(output_mixer);
+  tmp.begin(info_mono);
 
   Serial.println("Done creating out_vol");
 
