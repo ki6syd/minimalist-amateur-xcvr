@@ -13,29 +13,27 @@ Si5351 si5351;
 // TwoWire codecBus = TwoWire(1);
 TwoWire                       myWire = TwoWire(0);                      // universal I2C interface
 
-AudioInfo                     info_stereo(22050, 2, 16);                // sampling rate, # channels, bit depth
-AudioInfo                     info_mono(22050, 1, 16);                  // sampling rate, # channels, bit depth
+AudioInfo                     info_stereo(F_AUDIO, 2, 16);                // sampling rate, # channels, bit depth
+// AudioInfo                     info_mono(44100, 1, 16);                  // sampling rate, # channels, bit depth
 DriverPins                    my_pins;                                  // board pins
 AudioBoard                    audio_board(AudioDriverES8388, my_pins);  // audio board
 I2SCodecStream                i2s_stream(audio_board);                  // i2s codec
-CsvOutput<int16_t> csvStream(Serial);
+// CsvOutput<int16_t> csvStream(Serial);
 
-// SineWaveGenerator<int16_t>    sine_wave(32000);
-// GeneratedSoundStream<int16_t> sound_stream(sine_wave);
+SineWaveGenerator<int16_t>    sine_wave(32000);
+GeneratedSoundStream<int16_t> sound_stream(sine_wave);
 // SineWaveGenerator<int16_t>    sine_wave2(32000);
 // GeneratedSoundStream<int16_t> sound_stream2(sine_wave2);
 
-ChannelSplitOutput            input_split;                              // splits the stereo input stream into two mono streams
-// ChannelsSelectOutput          input_split;
-VolumeStream                  in_vol;                                   // input volume control
-VolumeStream                  out_vol;                                  // output volume control
-VolumeStream tmp;
-FilteredStream<int16_t, float> filtered(tmp, info_mono.channels);
-OutputMixer<float>           output_mixer(i2s_stream, 2);                             // merges two mono channels into a stereo output
+// ChannelSplitOutput            input_split;                              // splits the stereo input stream into two mono streams
+// VolumeStream                  in_vol;                                   // input volume control
+// VolumeStream                  out_vol;                                  // output volume control
+// VolumeStream tmp;
+// FilteredStream<int16_t, float> filtered(tmp, info_mono.channels);
+// OutputMixer<float>           output_mixer(i2s_stream, 2);                             // merges two mono channels into a stereo output
 // StreamCopy                    copier(input_split, i2s_stream);          // copier(output, input) drives data from stream to the splitter
 // StreamCopy copier(i2s_stream, output_merge);
-StreamCopy copier_1(input_split, in_vol);
-// StreamCopy copier_1(csvStream, output_merge);
+StreamCopy copier_1(i2s_stream, i2s_stream);
 
 // example of i2s codec for both input and output: https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-audiokit/streams-audiokit-filter-audiokit/streams-audiokit-filter-audiokit.ino
 
@@ -58,8 +56,8 @@ void setup() {
   // wifi_init();
 
   AudioLogger::instance().begin(Serial, AudioLogger::Warning);
-  // LOGLEVEL_AUDIODRIVER = AudioDriverWarning;
-  LOGLEVEL_AUDIODRIVER = AudioDriverDebug;
+  LOGLEVEL_AUDIODRIVER = AudioDriverWarning;
+  // LOGLEVEL_AUDIODRIVER = AudioDriverDebug;
   // LOGLEVEL_AUDIODRIVER = AudioDriverInfo;
   
 
@@ -80,12 +78,23 @@ void setup() {
   Serial.println("I2S begin ..."); 
   auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
   i2s_config.copyFrom(info_stereo);
-  // i2s_config.input_device = ADC_INPUT_LINE1;  // intend dto use RIN1, not sure 
+  i2s_config.input_device = ADC_INPUT_LINE1;  // intend dto use RIN1, not sure 
   // i2s_config.output_device  = DAC_OUTPUT_LINE1;
+  // i2s_config.i2s_format = I2S_STD_FORMAT;
+  // i2s_config.fixed_mclk = F_AUDIO * 256;
+  // i2s_config.sd_active = false;
+  // i2s_config.is_master = true;
+  // i2s_config.use_apll = true;
+  i2s_config.buffer_size = 1024;
+  i2s_config.buffer_count = 2;
+  i2s_config.port_no = 0;
   i2s_stream.begin(i2s_config); // this should apply I2C and I2S configuration
 
-  csvStream.begin(info_stereo);
+  sine_wave.begin(info_stereo, N_B4);
+
+  // csvStream.begin(info_stereo);
   
+  /*
   filtered.setFilter(0, new FIR<float>(coef));
 
   // i2s --> in_vol --> input_split
@@ -114,6 +123,7 @@ void setup() {
   Serial.println("Done creating out_vol");
 
   output_mixer.begin();
+  */
 
   // clockBus.begin(CLOCK_SDA, CLOCK_SCL, 100000);
   /*
@@ -142,6 +152,7 @@ void setup() {
 void loop() { 
   copier_1.copy();
 
+  /*
   if(millis() - t > 100) {
     AudioDriver *driver = audio_board.getDriver();
     if(counter % 2 == 0) {
@@ -173,5 +184,5 @@ void loop() {
     digitalWrite(SPARE_0, LOW);
     digitalWrite(SPARE_1, LOW);
   }
-  
+  */
 }
