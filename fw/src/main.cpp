@@ -24,11 +24,10 @@ I2SCodecStream                i2s_stream(audio_board);                  // i2s c
 // GeneratedSoundStream<int16_t> sound_stream(sine_wave);
 
 ChannelSplitOutput            input_split;                              // splits the stereo input stream into two mono streams
-VolumeStream                  in_vol;                                   // input volume control
 VolumeStream                  out_vol;                                  // output volume control
 // FilteredStream<int16_t, float> filtered(tmp, info_mono.channels);
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);
-StreamCopy copier_1(input_split, in_vol);
+StreamCopy copier_1(input_split, i2s_stream);
 
 
 // example of i2s codec for both input and output: https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-audiokit/streams-audiokit-filter-audiokit/streams-audiokit-filter-audiokit.ino
@@ -89,14 +88,6 @@ void setup() {
 
   // sine_wave.begin(info_mono, N_B4);
   // csvStream.begin(info_stereo);
-
-  // i2s --> in_vol --> input_split
-  in_vol.setVolume(1.0);
-  in_vol.setStream(i2s_stream);
-  in_vol.setOutput(input_split);
-  in_vol.begin(info_stereo);
-
-  Serial.println("done creating in_vol");
 
   // input_split (stereo) --> out_vol (mono)
   input_split.addOutput(out_vol, 1);
