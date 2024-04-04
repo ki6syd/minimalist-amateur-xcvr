@@ -45,6 +45,9 @@ void wifi_init() {
         Serial.println(WiFi.status());
     }
 
+    // lower power
+    WiFi.setTxPower(WIFI_POWER_5dBm );
+
     wifi_scan();
 
 }
