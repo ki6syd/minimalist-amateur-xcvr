@@ -5,6 +5,7 @@
 
 #include "AudioTools.h"
 #include "AudioLibs/I2SCodecStream.h"
+#include "AudioLibs/VBANStream.h"
 
 #include "wifi_conn.h"
 
@@ -18,6 +19,7 @@ AudioInfo                     info_mono(F_AUDIO, 1, 16);                  // sam
 DriverPins                    my_pins;                                  // board pins
 AudioBoard                    audio_board(AudioDriverES8388, my_pins);  // audio board
 I2SCodecStream                i2s_stream(audio_board);                  // i2s codec
+VBANStream vban;
 // CsvOutput<int16_t> csvStream(Serial);
 
 // SineWaveGenerator<int16_t>    sine_wave(32000);
@@ -26,9 +28,8 @@ I2SCodecStream                i2s_stream(audio_board);                  // i2s c
 ChannelSplitOutput            input_split;                              // splits the stereo input stream into two mono streams
 VolumeStream                  out_vol;                                  // output volume control
 FilteredStream<int16_t, float> filtered(out_vol, info_mono.channels);
-ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);
+// ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);
 StreamCopy copier_1(input_split, i2s_stream);
-
 
 // example of i2s codec for both input and output: https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-audiokit/streams-audiokit-filter-audiokit/streams-audiokit-filter-audiokit.ino
 int t = 0;
@@ -457,6 +458,19 @@ void setup() {
   LOGLEVEL_AUDIODRIVER = AudioDriverDebug;
   // LOGLEVEL_AUDIODRIVER = AudioDriverInfo;
   
+  // setup wav server
+  // setup output
+  auto cfg = vban.defaultConfig(TX_MODE);
+  cfg.copyFrom(info_mono);
+  cfg.ssid = WIFI_STA_SSID;
+  cfg.password = WIFI_STA_PASS;
+  cfg.stream_name = "Stream1";
+  // cfg.target_ip = IPAddress{192,168,1,37}; 
+  cfg.throttle_active = true;
+  cfg.throttle_correction_us = -1000; // optimize overload and underrun
+  if (!vban.begin(cfg)) stop();
+  digitalWrite(LED_GRN, HIGH);
+
 
   my_pins.addI2C(PinFunction::CODEC, CODEC_SCL, CODEC_SDA, CODEC_ADDR, CODEC_I2C_SPEED, myWire);
   my_pins.addI2S(PinFunction::CODEC, CODEC_MCLK, CODEC_BCLK, CODEC_WS, CODEC_DO, CODEC_DI);
@@ -483,10 +497,11 @@ void setup() {
 
   // input_split (mono) --> out_vol (mono)
   out_vol.setVolume(1.0);
-  out_vol.setOutput(mono_to_stereo);
+  // out_vol.setOutput(mono_to_stereo);
+  out_vol.setOutput(vban);
   out_vol.begin(info_mono);
 
-  mono_to_stereo.begin(1, 2);
+  // mono_to_stereo.begin(1, 2);
 
   // clockBus.begin(CLOCK_SDA, CLOCK_SCL, 100000);
   /*
