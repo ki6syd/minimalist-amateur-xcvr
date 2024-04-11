@@ -1,0 +1,38 @@
+radio
+    setting struct
+        dial frequency
+        cw audio frequency
+        if filter corner frequencies
+        USB/LSB/FM/AM
+
+    band select relays
+
+
+    some sort of mutex to handle tx/rx/qsk countdown
+
+    
+
+keyer
+    queue of messages
+        cw:
+            speed
+            text
+        ft8
+
+    some sort of flags to handle keyer presses
+
+
+
+audio
+    rx audio source: hf or vhf
+
+    bandwidth
+    global volume
+    rx level 
+    sidetone level
+    sidetone on/off
+
+    some sort of object that tracks whether audio is the rx source vs sidetone 
+
+
+server

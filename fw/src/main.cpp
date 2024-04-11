@@ -22,6 +22,7 @@ DriverPins                    my_pins;                                  // board
 AudioBoard                    audio_board(AudioDriverES8388, my_pins);  // audio board
 I2SCodecStream                i2s_stream(audio_board);                  // i2s codec
 VBANStream                    vban;                                     // audio over wifi
+CsvOutput<int16_t>            test_stream(Serial);
 
 // SineWaveGenerator<int16_t>    sine_wave(32000);
 // GeneratedSoundStream<int16_t> sound_stream(sine_wave);
@@ -29,12 +30,14 @@ VBANStream                    vban;                                     // audio
 ChannelSplitOutput            input_split;                              // splits the stereo input stream into two mono streams
 VolumeStream                  input_hf_sel, input_vhf_sel;              // gives ability to mute left or right channel (HF or VHF)
 VolumeStream                  input_vol;                                // gain on the input, also allows some linking between hf_vhf_mixer and audio_filt
-InputMixer<int16_t>           hf_vhf_mixer;
-VolumeStream                  out_vol;                                  // output volume control
-MultiOutput                   multi_output;                             // splits the final output into audio jack and vban output
-FilteredStream<int16_t, float> audio_filt(out_vol, info_mono.channels);
-ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
+OutputMixer<int16_t>          hf_vhf_mixer(test_stream, 2);
+// VolumeStream                  out_vol;                                  // output volume control
+// MultiOutput                   multi_output;                             // splits the final output into audio jack and vban output
+// FilteredStream<int16_t, float> audio_filt(out_vol, info_mono.channels);
+// ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
 StreamCopy copier_1(input_split, i2s_stream);                           // moves data through the streams. To: input_split, from: i2s_stream
+StreamCopy copier_2(hf_vhf_mixer, input_hf_sel);
+StreamCopy copier_3(hf_vhf_mixer, input_vhf_sel);
 
 TaskHandle_t audioStreamTaskHandle, blinkTaskHandle, spareTaskHandle;
 
@@ -47,6 +50,8 @@ int counter = 0;
 void audioStreamTask(void *param) {
   while(true) {
     copier_1.copyAll();
+    copier_2.copyAll();
+    copier_3.copyAll();
     taskYIELD();
   }
 }
@@ -113,8 +118,8 @@ void setup() {
   if (!vban.begin(cfg)) stop();
   digitalWrite(LED_GRN, HIGH);
 
-  // sine_wave.begin(info_mono, N_B4);
-  // csvStream.begin(info_stereo);
+  // set up test stream
+  test_stream.begin(info_mono);
 
   // input_split (stereo) --> input_hf_sel (mono from right channel), input_vhf_sel (mono from left channel)
   input_split.addOutput(input_vhf_sel, 0);
@@ -124,26 +129,29 @@ void setup() {
 
   // input_hf_sel (mono) --> audio_filt (mono)
   input_hf_sel.setVolume(1.0);
-  // input_hf_sel.setOutput(audio_filt);
+  input_hf_sel.setOutput(hf_vhf_mixer);
   input_hf_sel.begin(info_mono);
 
   
   // input_vhf_sel (mono) --> audio_filt (mono)
   input_vhf_sel.setVolume(1.0);
-  // input_vhf_sel.setOutput(audio_filt);
+  input_vhf_sel.setOutput(hf_vhf_mixer);
   input_vhf_sel.begin(info_mono);
 
+  Serial.println("Creating hf_vhf_mixer");
   // hf + vhf --> hf_vhf_mixer (mono)
-  hf_vhf_mixer.add(input_hf_sel);
-  hf_vhf_mixer.add(input_vhf_sel);
-  hf_vhf_mixer.begin(info_mono);
-  
+  // hf_vhf_mixer.add(input_hf_sel);
+  // hf_vhf_mixer.add(input_vhf_sel);
+  hf_vhf_mixer.begin();
 
+/*
   // input mixer (mono) --> input vol (mono) --> audio_filt (mono);
   input_vol.setVolume(1.0);
-  // input_vol.setStream(hf_vhf_mixer);
+  input_vol.setStream(hf_vhf_mixer);
   input_vol.setOutput(audio_filt);
+  // input_vol.setOutput(test_stream);
   input_vol.begin(info_mono);
+
 
   // audio_filt declaration links it to out_vol (mono)
   audio_filt.setFilter(0, new FIR<float>(coeff_bandpass));
@@ -153,13 +161,14 @@ void setup() {
   out_vol.setOutput(multi_output);
   out_vol.begin(info_mono);
 
-  // multi_output goes to vban (mono) and mono_to_stereo (mono)
+  // multi_output goes to vban (mono), mono_to_stereo (mono), csv
   multi_output.add(vban);
   multi_output.add(mono_to_stereo);
+  multi_output.add(test_stream);
   
   // declaration links it to i2s stream (stereo output)
   mono_to_stereo.begin(1, 2);
-
+*/
 
 
 
@@ -167,7 +176,7 @@ void setup() {
   xTaskCreatePinnedToCore(
     audioStreamTask,
     "Audio Stream Updater Task",
-    4096,
+    16384,
     NULL,
     1, // priority
     &audioStreamTaskHandle,
@@ -225,13 +234,13 @@ void loop() {
       // driver->setMute(false, 0);
       // driver->setMute(true, 1);    // turns off DAC output
       // driver->setInputVolume(0);   // changes PGA
-      audio_filt.setFilter(0, new FIR<float>(coeff_bandpass));  // definitely creating a memory issue by creating new filters repeatedly...
+      // audio_filt.setFilter(0, new FIR<float>(coeff_bandpass));  // definitely creating a memory issue by creating new filters repeatedly...
     }
     else {
       // driver->setMute(true, 0);
       // driver->setMute(false, 1);
       // driver->setInputVolume(100);
-      audio_filt.setFilter(0, new FIR<float>(coeff_lowpass));  // definitely creating a memory issue by creating new filters repeatedly...
+      // audio_filt.setFilter(0, new FIR<float>(coeff_lowpass));  // definitely creating a memory issue by creating new filters repeatedly...
     }      
     counter++;
     t = millis();
