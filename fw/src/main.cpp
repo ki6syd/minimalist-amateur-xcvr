@@ -18,29 +18,29 @@ AudioInfo                     info_mono(F_AUDIO, 1, 16);                // sampl
 DriverPins                    my_pins;                                  // board pins
 AudioBoard                    audio_board(AudioDriverES8388, my_pins);  // audio board
 I2SCodecStream                i2s_stream(audio_board);                  // i2s codec
-// VBANStream                    vban;                                     // audio over wifi
+VBANStream                    vban;                                     // audio over wifi
 CsvOutput<int16_t>            test_stream(Serial);                      // data over serial
 
 SineWaveGenerator<int16_t>    sine_wave(8000);
 GeneratedSoundStream<int16_t> sound_stream(sine_wave);
 
 
-
+/*
 OutputMixer<int16_t> hf_vhf_mixer(i2s_stream, 2);
 StreamCopy copier_1(hf_vhf_mixer, sound_stream);
 StreamCopy copier_2(hf_vhf_mixer, i2s_stream);
-
-/*
-ChannelSplitOutput            input_split;                              // splits the stereo input stream into two mono streams
-VolumeStream                  out_vol, sidetone_vol;                                  // output volume control
-MultiOutput                   multi_output;                             // splits the final output into audio jack, vban output, csv stream
-// OutputMixer<int16_t>          sidetone_mixer(out_vol, 2);               // sums the received audio with sidetone. Could delete if we sum with hf_vhf_mixer (would route sidetone through filter)
-FilteredStream<int16_t, float> audio_filt(out_vol, info_mono.channels); // filter outputting into out_vol volume control
-OutputMixer<int16_t>          hf_vhf_mixer(audio_filt, 3);              // hf, vhf, and sidetone audio mixing into audio_filt
-ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
-StreamCopy copier_1(input_split, i2s_stream);                           // moves data through the streams. To: input_split, from: i2s_stream
-StreamCopy copier_2(sidetone_vol, sound_stream);                      // move sine wave from sound_stream into the sidetone mixer
 */
+
+ChannelSplitOutput            input_split;                              // splits the stereo input stream into two mono streams
+VolumeStream                  out_vol;                                  // output volume control
+MultiOutput                   multi_output;                             // splits the final output into audio jack, vban output, csv stream
+OutputMixer<int16_t>          sidetone_mixer(out_vol, 2);               // sums the received audio with sidetone. Could delete if we sum with hf_vhf_mixer (would route sidetone through filter)
+FilteredStream<int16_t, float> audio_filt(sidetone_mixer, info_mono.channels); // filter outputting into out_vol volume control
+OutputMixer<int16_t>          hf_vhf_mixer(audio_filt, 2);              // hf, vhf, and sidetone audio mixing into audio_filt
+ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
+StreamCopy copier_1(sidetone_mixer, sound_stream);                      // move sine wave from sound_stream into the sidetone mixer
+StreamCopy copier_2(input_split, i2s_stream);                           // moves data through the streams. To: input_split, from: i2s_stream
+
 
 
 TaskHandle_t audioStreamTaskHandle, blinkTaskHandle, spareTaskHandle;
@@ -107,16 +107,13 @@ void setup() {
   i2s_config.port_no = 0;
   i2s_stream.begin(i2s_config); // this should apply I2C and I2S configuration
 
-  // set up test stream
-  test_stream.begin(info_stereo);
+  sine_wave.begin(info_mono, 440);
 
-
-  sine_wave.begin(info_stereo, 440);
+  /*
   hf_vhf_mixer.begin();
-
   hf_vhf_mixer.setWeight(0, 0.5);
   hf_vhf_mixer.setWeight(1, 0.5);
-  /*
+  */
 
   // setup vban output (mono)
   auto cfg = vban.defaultConfig(TX_MODE);
@@ -133,11 +130,14 @@ void setup() {
   // set up test stream
   test_stream.begin(info_mono);
 
+  
+
   // input_split (stereo) --> two (mono) channels of the audio mixer
   input_split.addOutput(hf_vhf_mixer, 0);
   input_split.addOutput(hf_vhf_mixer, 1);
   input_split.begin(info_stereo);
   
+  /*
   // sine wave for sidetone (mono)
   sine_wave.begin(info_mono, N_B4);
   sine_wave.setAmplitude(0.2);
@@ -145,9 +145,12 @@ void setup() {
   sidetone_vol.setStream(sound_stream);
   sidetone_vol.setOutput(hf_vhf_mixer);
   sidetone_vol.begin(info_mono);
+  */
   
   // hf_vhf_mixer (mono) summed with sidetone
   sidetone_mixer.begin();
+  sidetone_mixer.setWeight(0, 0.5);
+  sidetone_mixer.setWeight(1, 0.5);
   
   // hf + vhf --> hf_vhf_mixer (mono). declaration links to audio_filt
   // HF vs VHF select done through setWeight()
@@ -158,6 +161,7 @@ void setup() {
 
   // audio_filt (mono) --> out_vol (mono) --> multi_output (mono)
   out_vol.setVolume(1.0);
+  out_vol.setStream(sidetone_mixer);
   out_vol.setOutput(multi_output);
   out_vol.begin(info_mono);
 
@@ -170,7 +174,7 @@ void setup() {
   // declaration links it to i2s stream (stereo output)
   mono_to_stereo.begin(1, 2);
 
-  */
+  
 
   // run on core 1
   xTaskCreatePinnedToCore(
