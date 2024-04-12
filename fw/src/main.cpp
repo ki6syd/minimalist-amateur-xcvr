@@ -11,22 +11,26 @@
 #include "audio.h"
 
 Si5351 si5351;
-// TwoWire clockBus = TwoWire(0);
-// TwoWire codecBus = TwoWire(1);
 TwoWire codecI2C = TwoWire(1);                      // "Wire" is used in si5351 library. Defined through TwoWire(0), so the other peripheral is still available
-// TwoWire clockI2C = TwoWire(1);
 
 AudioInfo                     info_stereo(F_AUDIO, 2, 16);              // sampling rate, # channels, bit depth
 AudioInfo                     info_mono(F_AUDIO, 1, 16);                // sampling rate, # channels, bit depth
 DriverPins                    my_pins;                                  // board pins
 AudioBoard                    audio_board(AudioDriverES8388, my_pins);  // audio board
 I2SCodecStream                i2s_stream(audio_board);                  // i2s codec
-VBANStream                    vban;                                     // audio over wifi
+// VBANStream                    vban;                                     // audio over wifi
 CsvOutput<int16_t>            test_stream(Serial);                      // data over serial
 
-SineWaveGenerator<int16_t>    sine_wave(0.5);
+SineWaveGenerator<int16_t>    sine_wave(8000);
 GeneratedSoundStream<int16_t> sound_stream(sine_wave);
 
+
+
+OutputMixer<int16_t> hf_vhf_mixer(i2s_stream, 2);
+StreamCopy copier_1(hf_vhf_mixer, sound_stream);
+StreamCopy copier_2(hf_vhf_mixer, i2s_stream);
+
+/*
 ChannelSplitOutput            input_split;                              // splits the stereo input stream into two mono streams
 VolumeStream                  out_vol, sidetone_vol;                                  // output volume control
 MultiOutput                   multi_output;                             // splits the final output into audio jack, vban output, csv stream
@@ -36,6 +40,8 @@ OutputMixer<int16_t>          hf_vhf_mixer(audio_filt, 3);              // hf, v
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
 StreamCopy copier_1(input_split, i2s_stream);                           // moves data through the streams. To: input_split, from: i2s_stream
 StreamCopy copier_2(sidetone_vol, sound_stream);                      // move sine wave from sound_stream into the sidetone mixer
+*/
+
 
 TaskHandle_t audioStreamTaskHandle, blinkTaskHandle, spareTaskHandle;
 
@@ -45,8 +51,8 @@ int counter = 0;
 
 void audioStreamTask(void *param) {
   while(true) {
-    copier_1.copyAll();
-    copier_2.copyAll();
+    copier_1.copy();
+    copier_2.copy();
     taskYIELD();
   }
 }
@@ -101,6 +107,17 @@ void setup() {
   i2s_config.port_no = 0;
   i2s_stream.begin(i2s_config); // this should apply I2C and I2S configuration
 
+  // set up test stream
+  test_stream.begin(info_stereo);
+
+
+  sine_wave.begin(info_stereo, 440);
+  hf_vhf_mixer.begin();
+
+  hf_vhf_mixer.setWeight(0, 0.5);
+  hf_vhf_mixer.setWeight(1, 0.5);
+  /*
+
   // setup vban output (mono)
   auto cfg = vban.defaultConfig(TX_MODE);
   cfg.copyFrom(info_mono);
@@ -128,11 +145,10 @@ void setup() {
   sidetone_vol.setStream(sound_stream);
   sidetone_vol.setOutput(hf_vhf_mixer);
   sidetone_vol.begin(info_mono);
-  /*
+  
   // hf_vhf_mixer (mono) summed with sidetone
   sidetone_mixer.begin();
-  */
-
+  
   // hf + vhf --> hf_vhf_mixer (mono). declaration links to audio_filt
   // HF vs VHF select done through setWeight()
   hf_vhf_mixer.begin();
@@ -154,6 +170,7 @@ void setup() {
   // declaration links it to i2s stream (stereo output)
   mono_to_stereo.begin(1, 2);
 
+  */
 
   // run on core 1
   xTaskCreatePinnedToCore(
@@ -219,9 +236,8 @@ void loop() {
       // driver->setInputVolume(0);   // changes PGA
       // audio_filt.setFilter(0, new FIR<float>(coeff_bandpass));  // definitely creating a memory issue by creating new filters repeatedly...
 
-      hf_vhf_mixer.setWeight(0, 1.0);
-      hf_vhf_mixer.setWeight(1, 0);
-      hf_vhf_mixer.setWeight(2, 0.5);
+      // hf_vhf_mixer.setWeight(0, 1.0);
+      // hf_vhf_mixer.setWeight(1, 0);
     }
     else {
       // driver->setMute(true, 0);
@@ -229,9 +245,8 @@ void loop() {
       // driver->setInputVolume(100);
       // audio_filt.setFilter(0, new FIR<float>(coeff_lowpass));  // definitely creating a memory issue by creating new filters repeatedly...
 
-      hf_vhf_mixer.setWeight(0, 0);
-      hf_vhf_mixer.setWeight(1, 1.0);
-      hf_vhf_mixer.setWeight(2, 0.5);
+      // hf_vhf_mixer.setWeight(0, 0);
+      // hf_vhf_mixer.setWeight(1, 1.0);
     }      
     counter++;
     t = millis();
