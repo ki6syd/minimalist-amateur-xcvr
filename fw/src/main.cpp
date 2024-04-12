@@ -28,14 +28,14 @@ SineWaveGenerator<int16_t>    sine_wave(0.5);
 GeneratedSoundStream<int16_t> sound_stream(sine_wave);
 
 ChannelSplitOutput            input_split;                              // splits the stereo input stream into two mono streams
-VolumeStream                  out_vol;                                  // output volume control
+VolumeStream                  out_vol, sidetone_vol;                                  // output volume control
 MultiOutput                   multi_output;                             // splits the final output into audio jack, vban output, csv stream
-OutputMixer<int16_t>          sidetone_mixer(out_vol, 2);               // sums the received audio with sidetone. Could delete if we sum with hf_vhf_mixer (would route sidetone through filter)
+// OutputMixer<int16_t>          sidetone_mixer(out_vol, 2);               // sums the received audio with sidetone. Could delete if we sum with hf_vhf_mixer (would route sidetone through filter)
 FilteredStream<int16_t, float> audio_filt(out_vol, info_mono.channels); // filter outputting into out_vol volume control
-OutputMixer<int16_t>          hf_vhf_mixer(sidetone_mixer, 2);              // hf and vhf audio mixing into audio_filt
+OutputMixer<int16_t>          hf_vhf_mixer(audio_filt, 3);              // hf, vhf, and sidetone audio mixing into audio_filt
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
 StreamCopy copier_1(input_split, i2s_stream);                           // moves data through the streams. To: input_split, from: i2s_stream
-StreamCopy copier_2(sidetone_mixer, sound_stream);                      // move sine wave from sound_stream into the sidetone mixer
+StreamCopy copier_2(sidetone_vol, sound_stream);                      // move sine wave from sound_stream into the sidetone mixer
 
 TaskHandle_t audioStreamTaskHandle, blinkTaskHandle, spareTaskHandle;
 
@@ -120,17 +120,22 @@ void setup() {
   input_split.addOutput(hf_vhf_mixer, 0);
   input_split.addOutput(hf_vhf_mixer, 1);
   input_split.begin(info_stereo);
+  
+  // sine wave for sidetone (mono)
+  sine_wave.begin(info_mono, N_B4);
+  sine_wave.setAmplitude(0.2);
+  sidetone_vol.setVolume(1.0);
+  sidetone_vol.setStream(sound_stream);
+  sidetone_vol.setOutput(hf_vhf_mixer);
+  sidetone_vol.begin(info_mono);
+  /*
+  // hf_vhf_mixer (mono) summed with sidetone
+  sidetone_mixer.begin();
+  */
 
   // hf + vhf --> hf_vhf_mixer (mono). declaration links to audio_filt
   // HF vs VHF select done through setWeight()
   hf_vhf_mixer.begin();
-
-  // sine wave for sidetone (mono)
-  sine_wave.begin(info_mono, N_B4);
-  sine_wave.setAmplitude(0.2);
-
-  // hf_vhf_mixer (mono) summed with sidetone
-  sidetone_mixer.begin();
 
   // audio_filt declaration links it to out_vol (mono)
   audio_filt.setFilter(0, new FIR<float>(coeff_bandpass));
@@ -216,6 +221,7 @@ void loop() {
 
       hf_vhf_mixer.setWeight(0, 1.0);
       hf_vhf_mixer.setWeight(1, 0);
+      hf_vhf_mixer.setWeight(2, 0.5);
     }
     else {
       // driver->setMute(true, 0);
@@ -225,6 +231,7 @@ void loop() {
 
       hf_vhf_mixer.setWeight(0, 0);
       hf_vhf_mixer.setWeight(1, 1.0);
+      hf_vhf_mixer.setWeight(2, 0.5);
     }      
     counter++;
     t = millis();
