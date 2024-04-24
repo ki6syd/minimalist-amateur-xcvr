@@ -34,5 +34,6 @@
         "wait_for_upload_port": true,
         "require_upload_port": true
       },
-    "vendor": "DIY"
+    "vendor": "DIY",
+    "url": "http://www.ki6syd.com"
   }

@@ -27,6 +27,7 @@ GeneratedSoundStream<int16_t> sound_stream(sine_wave);
 
 ChannelSplitOutput            input_split;                              // splits the stereo input stream into two mono streams
 VolumeStream                  out_vol;                                  // output volume control
+VolumeOutput                  out_vol_meas;                             // measure the volume of the output
 MultiOutput                   multi_output;                             // splits the final output into audio jack, vban output, csv stream
 FilteredStream<int16_t, float> audio_filt(out_vol, info_mono.channels); // filter outputting into out_vol volume control
 OutputMixer<int16_t>          hf_vhf_mixer(audio_filt, 3);              // hf, vhf, and sidetone audio mixing into audio_filt
@@ -66,6 +67,9 @@ void blinkTask(void *param) {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
     digitalWrite(LED_GRN, LOW);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    Serial.print("S-meter: ");
+    Serial.println(out_vol_meas.volume());
   }
 }
 
@@ -75,9 +79,35 @@ void setup() {
   pinMode(LED_RED, OUTPUT);
   pinMode(SPARE_0, OUTPUT);
   pinMode(SPARE_1, OUTPUT);
+  pinMode(BPF_SEL_1, OUTPUT);
+  pinMode(BPF_SEL_2, OUTPUT);
+  pinMode(TX_RX_SEL, OUTPUT);
   Serial.begin(SERIAL_SPEED);
 
   delay(5000);
+
+/*
+  // https://community.platformio.org/t/how-to-use-psram-on-esp32-s3-devkitc-1-under-esp-idf/32127/17
+  if(psramInit())
+  Serial.println("\nPSRAM is correctly initialized");
+  else
+    Serial.println("PSRAM not available");
+  Serial.println(psramFound());
+
+  // check PSRAM
+  Serial.print("Free heap: ");
+  Serial.println(ESP.getFreeHeap());
+  Serial.print("Size PSRAM: ");
+  Serial.println(ESP.getPsramSize());
+  Serial.print("Free PSRAM: ");
+  Serial.println(ESP.getFreePsram());
+
+  Serial.println("allocating to PSRAM...");
+  byte* psram_buffer = (byte*) ps_malloc(1024);
+
+  Serial.print("Free PSRAM: ");
+  Serial.println(ESP.getFreePsram());
+  */
 
   // wifi_init();
 
@@ -114,6 +144,10 @@ void setup() {
   if (!vban.begin(cfg)) stop();
   digitalWrite(LED_GRN, HIGH);
 
+  // OutputVolume sink to measure amplitude
+  out_vol_meas.setAudioInfo(info_mono);
+  out_vol_meas.begin();
+
   // set up test stream
   test_stream.begin(info_mono);
 
@@ -141,7 +175,8 @@ void setup() {
   // multi_output goes to vban (mono), mono_to_stereo (mono), csv
   multi_output.add(vban);
   multi_output.add(mono_to_stereo);
-  multi_output.add(test_stream);
+  // multi_output.add(test_stream);
+  multi_output.add(out_vol_meas);
   
   // take a mono audio stream and make it stereo
   // declaration links it to i2s stream (stereo output)
@@ -193,12 +228,19 @@ void setup() {
   si5351.drive_strength(SI5351_CLK1, SI5351_DRIVE_2MA);
   
   si5351.set_freq(10000000 * 100, SI5351_CLK0);
-  si5351.set_freq(20000000 * 100, SI5351_CLK1);
-  si5351.set_freq(30000000 * 100, SI5351_CLK2);
+  si5351.set_freq(24060000 * 100, SI5351_CLK1);
+  si5351.set_freq(14040000 * 100, SI5351_CLK2);
 
-  si5351.output_enable(SI5351_CLK0, 1);
-  si5351.output_enable(SI5351_CLK1, 1);
-  si5351.output_enable(SI5351_CLK2, 0);
+  si5351.output_enable(SI5351_CLK0, 1); // BFO
+  si5351.output_enable(SI5351_CLK1, 1); // VFO
+  si5351.output_enable(SI5351_CLK2, 0); // TX clock
+
+  // select 20m band
+  digitalWrite(BPF_SEL_1, HIGH);
+  digitalWrite(BPF_SEL_2, LOW);
+
+  // select RX
+  digitalWrite(TX_RX_SEL, LOW);
 
 }
 
