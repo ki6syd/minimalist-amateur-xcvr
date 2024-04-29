@@ -145,6 +145,7 @@ void setup() {
   digitalWrite(LED_GRN, HIGH);
 
   // OutputVolume sink to measure amplitude
+  // note that this is currently consuming out_vol, which means it'll vary with volume control. Either compensate or measure before scaling
   out_vol_meas.setAudioInfo(info_mono);
   out_vol_meas.begin();
 
@@ -224,12 +225,13 @@ void setup() {
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLA);
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLB);
 
+  si5351.set_freq(((uint64_t) 10000000) * 100, SI5351_CLK0);
+  si5351.set_freq(((uint64_t) 24060000) * 100, SI5351_CLK1);
+  si5351.set_freq(((uint64_t) 14040000) * 100, SI5351_CLK2);
+
   si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_2MA);
   si5351.drive_strength(SI5351_CLK1, SI5351_DRIVE_2MA);
-  
-  si5351.set_freq(10000000 * 100, SI5351_CLK0);
-  si5351.set_freq(24060000 * 100, SI5351_CLK1);
-  si5351.set_freq(14040000 * 100, SI5351_CLK2);
+  si5351.drive_strength(SI5351_CLK2, SI5351_DRIVE_2MA);
 
   si5351.output_enable(SI5351_CLK0, 1); // BFO
   si5351.output_enable(SI5351_CLK1, 1); // VFO
