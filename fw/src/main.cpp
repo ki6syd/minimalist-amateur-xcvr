@@ -30,7 +30,7 @@ VolumeStream                  out_vol;                                  // outpu
 VolumeOutput                  out_vol_meas;                             // measure the volume of the output
 MultiOutput                   multi_output;                             // splits the final output into audio jack, vban output, csv stream
 FilteredStream<int16_t, float> audio_filt(out_vol, info_mono.channels); // filter outputting into out_vol volume control
-OutputMixer<int16_t>          hf_vhf_mixer(audio_filt, 3);              // hf, vhf, and sidetone audio mixing into audio_filt
+OutputMixer<int16_t>          hf_vhf_mixer(audio_filt, 3);              // hf, vhf, *and* sidetone audio mixing into audio_filt
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
 StreamCopy copier_1(hf_vhf_mixer, sound_stream);                      // move sine wave from sound_stream into the sidetone mixer
 StreamCopy copier_2(input_split, i2s_stream);                           // moves data through the streams. To: input_split, from: i2s_stream
@@ -86,7 +86,7 @@ void setup() {
 
   delay(5000);
 
-/*
+
   // https://community.platformio.org/t/how-to-use-psram-on-esp32-s3-devkitc-1-under-esp-idf/32127/17
   if(psramInit())
   Serial.println("\nPSRAM is correctly initialized");
@@ -95,8 +95,6 @@ void setup() {
   Serial.println(psramFound());
 
   // check PSRAM
-  Serial.print("Free heap: ");
-  Serial.println(ESP.getFreeHeap());
   Serial.print("Size PSRAM: ");
   Serial.println(ESP.getPsramSize());
   Serial.print("Free PSRAM: ");
@@ -107,7 +105,7 @@ void setup() {
 
   Serial.print("Free PSRAM: ");
   Serial.println(ESP.getFreePsram());
-  */
+  
 
   // wifi_init();
 
@@ -160,12 +158,13 @@ void setup() {
   // hf + vhf --> hf_vhf_mixer (mono). declaration links to audio_filt
   // HF vs VHF select done through setWeight()
   hf_vhf_mixer.begin();
-  hf_vhf_mixer.setWeight(0, 0.5);
-  hf_vhf_mixer.setWeight(1, 0.5);
+  hf_vhf_mixer.setWeight(0, 0);   // input 0: sidetone
+  hf_vhf_mixer.setWeight(1, 0.5);   // input 1, 2: HF and VHF
   hf_vhf_mixer.setWeight(2, 0.5);
 
   // audio_filt declaration links it to out_vol (mono)
-  audio_filt.setFilter(0, new FIR<float>(coeff_bandpass));
+  // audio_filt.setFilter(0, new FIR<float>(coeff_bandpass));
+  audio_filt.setFilter(0, new FIR<float>(coeff_lowpass));
 
   // audio_filt (mono) --> out_vol (mono) --> multi_output (mono)
   out_vol.setVolume(1.0);
@@ -174,7 +173,7 @@ void setup() {
   out_vol.begin(info_mono);
 
   // multi_output goes to vban (mono), mono_to_stereo (mono), csv
-  multi_output.add(vban);
+  // multi_output.add(vban);
   multi_output.add(mono_to_stereo);
   // multi_output.add(test_stream);
   multi_output.add(out_vol_meas);
@@ -226,7 +225,7 @@ void setup() {
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLB);
 
   si5351.set_freq(((uint64_t) 10000000) * 100, SI5351_CLK0);
-  si5351.set_freq(((uint64_t) 24060000) * 100, SI5351_CLK1);
+  si5351.set_freq(((uint64_t) 24060500) * 100, SI5351_CLK1);  // should get rid of that 500hz hack, need to cal oscillator and filter
   si5351.set_freq(((uint64_t) 14040000) * 100, SI5351_CLK2);
 
   si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_2MA);
@@ -254,14 +253,15 @@ void loop() {
       // driver->setMute(false, 0);
       // driver->setMute(true, 1);    // turns off DAC output
       // driver->setInputVolume(0);   // changes PGA
+      driver->setInputVolume(100);
       // audio_filt.setFilter(0, new FIR<float>(coeff_bandpass));  // definitely creating a memory issue by creating new filters repeatedly...
 
-      hf_vhf_mixer.setWeight(0, 1.0);
+      hf_vhf_mixer.setWeight(0, 0);
     }
     else {
       // driver->setMute(true, 0);
       // driver->setMute(false, 1);
-      // driver->setInputVolume(100);
+      driver->setInputVolume(100);
       // audio_filt.setFilter(0, new FIR<float>(coeff_lowpass));  // definitely creating a memory issue by creating new filters repeatedly...
 
       hf_vhf_mixer.setWeight(0, 0);
