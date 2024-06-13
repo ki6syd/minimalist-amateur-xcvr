@@ -7,6 +7,7 @@
 #include "AudioLibs/VBANStream.h"
 
 #include "fir_coeffs_bpf.h"
+#include "fir_coeffs_lpf.h"
 #include "wifi_conn.h"
 #include "audio.h"
 
@@ -35,13 +36,17 @@ ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns
 StreamCopy copier_1(hf_vhf_mixer, sound_stream);                      // move sine wave from sound_stream into the sidetone mixer
 StreamCopy copier_2(input_split, i2s_stream);                           // moves data through the streams. To: input_split, from: i2s_stream
 
-
-
-TaskHandle_t audioStreamTaskHandle, blinkTaskHandle, spareTaskHandle;
-
 // example of i2s codec for both input and output: https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-audiokit/streams-audiokit-filter-audiokit/streams-audiokit-filter-audiokit.ino
+
+
+TaskHandle_t audioStreamTaskHandle, blinkTaskHandle, spareTaskHandle, batterySenseTaskHandle, txPulseTaskHandle;
+
+SemaphoreHandle_t btn_semaphore;
+
 int t = 0;
 int counter = 0;
+int freq_buck = 500e3;
+
 
 void audioStreamTask(void *param) {
   while(true) {
@@ -64,24 +69,67 @@ void spareTask(void *param) {
 void blinkTask(void *param) {
   while(true) {
     digitalWrite(LED_GRN, HIGH);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(500 / portTICK_PERIOD_MS);
     digitalWrite(LED_GRN, LOW);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(500 / portTICK_PERIOD_MS);
 
     Serial.print("S-meter: ");
     Serial.println(out_vol_meas.volume());
   }
 }
 
+void batterySenseTask(void *param) {
+  while(true) {
+    Serial.print("Analog read: ");
+    Serial.println(analogRead(ADC_VDD) * ADC_MAX_VOLT / ADC_VDD_SCALE / ADC_FS_COUNTS);
+
+    Serial.print("Button: ");
+    Serial.println(digitalRead(BOOT_BTN));
+
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+  }
+}
+
+ICACHE_RAM_ATTR void buttonISR() {
+  // detach interrupt here, reattaches after taking semaphore
+  detachInterrupt(digitalPinToInterrupt(BOOT_BTN));
+
+  xSemaphoreGiveFromISR(btn_semaphore, NULL);
+}
+
+
+void txPulseTask(void *param) {
+  while(true) {
+    if(xSemaphoreTake(btn_semaphore, portMAX_DELAY) == pdPASS) {
+      Serial.println("!!Button press println 1!!");
+      vTaskDelay(500 / portTICK_PERIOD_MS);
+      Serial.println("!!Button press println 2!!");
+      attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, FALLING);
+    }
+  }
+}
+
+
+
 void setup() {
   // put your setup code here, to run once:
   pinMode(LED_GRN, OUTPUT);
   pinMode(LED_RED, OUTPUT);
-  pinMode(SPARE_0, OUTPUT);
-  pinMode(SPARE_1, OUTPUT);
   pinMode(BPF_SEL_1, OUTPUT);
   pinMode(BPF_SEL_2, OUTPUT);
   pinMode(TX_RX_SEL, OUTPUT);
+  pinMode(PA_VDD_CTRL, OUTPUT);
+  pinMode(BOOT_BTN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, FALLING);
+
+  digitalWrite(PA_VDD_CTRL, LOW);
+
+  // set up a PWM channel that drives buck converter sync pin
+  // feature for the future: select this frequency based on the dial frequency
+  ledcSetup(PWM_CHANNEL_SYNC, freq_buck, 2);
+  ledcAttachPin(BUCK_SYNC, PWM_CHANNEL_SYNC);
+  ledcWrite(PWM_CHANNEL_SYNC, 2);
+
   Serial.begin(SERIAL_SPEED);
 
   delay(5000);
@@ -163,8 +211,8 @@ void setup() {
   hf_vhf_mixer.setWeight(2, 0.5);
 
   // audio_filt declaration links it to out_vol (mono)
-  // audio_filt.setFilter(0, new FIR<float>(coeff_bandpass));
-  audio_filt.setFilter(0, new FIR<float>(coeff_lowpass));
+  audio_filt.setFilter(0, new FIR<float>(coeff_bpf_400_600));
+  // audio_filt.setFilter(0, new FIR<float>(coeff_lpf_2500));
 
   // audio_filt (mono) --> out_vol (mono) --> multi_output (mono)
   out_vol.setVolume(1.0);
@@ -182,6 +230,8 @@ void setup() {
   // declaration links it to i2s stream (stereo output)
   mono_to_stereo.begin(1, 2);
 
+
+  // note: platformio + arduino puts wifi on core 0
 
   // run on core 1
   xTaskCreatePinnedToCore(
@@ -206,14 +256,27 @@ void setup() {
   );
 
   xTaskCreatePinnedToCore(
-    blinkTask,
-    "LED Blinking Task",
+    batterySenseTask,
+    "VDD Sensing",
+    4096,
+    NULL,
+    2, // priority
+    &batterySenseTaskHandle,
+    0 // core
+  );
+
+  btn_semaphore = xSemaphoreCreateBinary();
+  xTaskCreatePinnedToCore(
+    txPulseTask,
+    "TX pulse generator",
     4096,
     NULL,
     1, // priority
-    &blinkTaskHandle,
-    0 // core
+    &txPulseTaskHandle,
+    1 // core
   );
+
+  
 
   Wire.begin(CLOCK_SDA, CLOCK_SCL);
   
@@ -243,6 +306,10 @@ void setup() {
   // select RX
   digitalWrite(TX_RX_SEL, LOW);
 
+  // select TX
+  digitalWrite(TX_RX_SEL, HIGH);
+  digitalWrite(PA_VDD_CTRL, HIGH);
+
 }
 
 
@@ -252,8 +319,7 @@ void loop() {
     if(counter % 2 == 0) {
       // driver->setMute(false, 0);
       // driver->setMute(true, 1);    // turns off DAC output
-      // driver->setInputVolume(0);   // changes PGA
-      driver->setInputVolume(100);
+      driver->setInputVolume(10);   // changes PGA
       // audio_filt.setFilter(0, new FIR<float>(coeff_bandpass));  // definitely creating a memory issue by creating new filters repeatedly...
 
       hf_vhf_mixer.setWeight(0, 0);
@@ -261,7 +327,7 @@ void loop() {
     else {
       // driver->setMute(true, 0);
       // driver->setMute(false, 1);
-      driver->setInputVolume(100);
+      driver->setInputVolume(80);
       // audio_filt.setFilter(0, new FIR<float>(coeff_lowpass));  // definitely creating a memory issue by creating new filters repeatedly...
 
       hf_vhf_mixer.setWeight(0, 0);
