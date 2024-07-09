@@ -26,7 +26,7 @@ I2SCodecStream                i2s_stream(audio_board);                  // i2s c
 VBANStream                    vban;                                     // audio over wifi
 CsvOutput<int16_t>            test_stream(Serial);                      // data over serial
 
-SineWaveGenerator<int16_t>    sine_wave(8000);
+SineWaveGenerator<int16_t>    sine_wave(80000);
 GeneratedSoundStream<int16_t> sound_stream(sine_wave);
 
 
@@ -76,19 +76,16 @@ void blinkTask(void *param) {
     vTaskDelay(500 / portTICK_PERIOD_MS);
     digitalWrite(LED_GRN, LOW);
     vTaskDelay(500 / portTICK_PERIOD_MS);
-
-    Serial.print("S-meter: ");
-    Serial.println(out_vol_meas.volume());
   }
 }
 
 void batterySenseTask(void *param) {
   while(true) {
-    Serial.print("Analog read: ");
-    Serial.println(analogRead(ADC_VDD) * ADC_MAX_VOLT / ADC_VDD_SCALE / ADC_FS_COUNTS);
+    // Serial.print("Analog read: ");
+    // Serial.println(analogRead(ADC_VDD) * ADC_MAX_VOLT / ADC_VDD_SCALE / ADC_FS_COUNTS);
 
-    Serial.print("Button: ");
-    Serial.println(digitalRead(BOOT_BTN));
+    // Serial.print("S-meter: ");
+    // Serial.println(out_vol_meas.volume());
 
     vTaskDelay(2000 / portTICK_PERIOD_MS);
   }
@@ -121,20 +118,26 @@ void txPulseTask(void *param) {
 
       // change to LOUT1 and ROUT1
       AudioDriver *driver = audio_board.getDriver();
+      Serial.println();
+      Serial.println("Powering up DAC 1");
       driver->setMute(true, 0);
       driver->setMute(false, 1);
 
       // turn on sidetone
       hf_vhf_mixer.setWeight(0, 1.0);
 
+      vTaskDelay(100 / portTICK_PERIOD_MS);
       digitalWrite(VHF_PTT, LOW);
-      vTaskDelay(500 / portTICK_PERIOD_MS);
+      vTaskDelay(1500 / portTICK_PERIOD_MS);
       digitalWrite(VHF_PTT, HIGH);
+      vTaskDelay(100 / portTICK_PERIOD_MS);
 
       // restore previous state
+      Serial.println();
+      Serial.println("Powering up DAC 2");
       driver->setMute(false, 0);
+      driver->setMute(true, 1);
       hf_vhf_mixer.setWeight(0, 0);
-
 
       attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, FALLING);
     }
@@ -273,6 +276,11 @@ void setup() {
   // declaration links it to i2s stream (stereo output)
   mono_to_stereo.begin(1, 2);
 
+  // turn on DAC that goes to headphones. turn off DAC that goes to VHF/HF audio inputs
+  AudioDriver *driver = audio_board.getDriver();
+  driver->setMute(false, 0);
+  driver->setMute(true, 1);
+
 
   // note: platformio + arduino puts wifi on core 0
 
@@ -296,6 +304,17 @@ void setup() {
     2, // priority
     &spareTaskHandle,
     1 // core
+  );
+
+  // run on core 0
+  xTaskCreatePinnedToCore(
+    blinkTask,
+    "Blinky light",
+    4096,
+    NULL,
+    3, // priority
+    &blinkTaskHandle,
+    0 // core
   );
 
   xTaskCreatePinnedToCore(
@@ -397,12 +416,12 @@ void setup() {
 
 
 void loop() {  
-  if(millis() - t > 5000) {
+  if(millis() - t > 2000) {
     AudioDriver *driver = audio_board.getDriver();
     if(counter % 2 == 0) {
       // driver->setMute(false, 0);
       // driver->setMute(true, 1);    // turns off DAC output
-      driver->setInputVolume(10);   // changes PGA
+      // // driver->setInputVolume(10);   // changes PGA
       // audio_filt.setFilter(0, new FIR<float>(coeff_bandpass));  // definitely creating a memory issue by creating new filters repeatedly...
 
       hf_vhf_mixer.setWeight(0, 0);
@@ -410,7 +429,7 @@ void loop() {
     else {
       // driver->setMute(true, 0);
       // driver->setMute(false, 1);
-      driver->setInputVolume(80);
+      // // driver->setInputVolume(80);
       // audio_filt.setFilter(0, new FIR<float>(coeff_lowpass));  // definitely creating a memory issue by creating new filters repeatedly...
 
       hf_vhf_mixer.setWeight(0, 1.0);
