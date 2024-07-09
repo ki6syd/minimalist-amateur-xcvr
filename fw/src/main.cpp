@@ -1,10 +1,12 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include <si5351.h>
+
+#include <HardwareSerial.h>
 
 #include "AudioTools.h"
 #include "AudioLibs/I2SCodecStream.h"
 #include "AudioLibs/VBANStream.h"
+#include <si5351.h>
 
 #include "fir_coeffs_bpf.h"
 #include "fir_coeffs_lpf.h"
@@ -12,7 +14,9 @@
 #include "audio.h"
 
 Si5351 si5351;
+
 TwoWire codecI2C = TwoWire(1);                      // "Wire" is used in si5351 library. Defined through TwoWire(0), so the other peripheral is still available
+HardwareSerial VHFserial(1);
 
 AudioInfo                     info_stereo(F_AUDIO, 2, 16);              // sampling rate, # channels, bit depth
 AudioInfo                     info_mono(F_AUDIO, 1, 16);                // sampling rate, # channels, bit depth
@@ -101,9 +105,37 @@ ICACHE_RAM_ATTR void buttonISR() {
 void txPulseTask(void *param) {
   while(true) {
     if(xSemaphoreTake(btn_semaphore, portMAX_DELAY) == pdPASS) {
-      Serial.println("!!Button press println 1!!");
+      Serial.println("TX Pulsing");
+
+      // HF TX test
+
+      // si5351.output_enable(SI5351_CLK2, 1); // TX clock
+      digitalWrite(PA_VDD_CTRL, HIGH);
+      vTaskDelay(25 / portTICK_PERIOD_MS);      
+      digitalWrite(PA_VDD_CTRL, LOW);
+      vTaskDelay(25 / portTICK_PERIOD_MS);
+      si5351.output_enable(SI5351_CLK2, 0); // TX clock
+
+
+      // VHF TX test
+
+      // change to LOUT1 and ROUT1
+      AudioDriver *driver = audio_board.getDriver();
+      driver->setMute(true, 0);
+      driver->setMute(false, 1);
+
+      // turn on sidetone
+      hf_vhf_mixer.setWeight(0, 1.0);
+
+      digitalWrite(VHF_PTT, LOW);
       vTaskDelay(500 / portTICK_PERIOD_MS);
-      Serial.println("!!Button press println 2!!");
+      digitalWrite(VHF_PTT, HIGH);
+
+      // restore previous state
+      driver->setMute(false, 0);
+      hf_vhf_mixer.setWeight(0, 0);
+
+
       attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, FALLING);
     }
   }
@@ -117,12 +149,20 @@ void setup() {
   pinMode(LED_RED, OUTPUT);
   pinMode(BPF_SEL_1, OUTPUT);
   pinMode(BPF_SEL_2, OUTPUT);
+  pinMode(LPF_SEL_1, OUTPUT);
+  pinMode(LPF_SEL_2, OUTPUT);
   pinMode(TX_RX_SEL, OUTPUT);
   pinMode(PA_VDD_CTRL, OUTPUT);
   pinMode(BOOT_BTN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, FALLING);
+  pinMode(VHF_EN, OUTPUT);
+  pinMode(VHF_PTT, OUTPUT);
 
   digitalWrite(PA_VDD_CTRL, LOW);
+
+  digitalWrite(VHF_EN, HIGH);   // enabled
+  digitalWrite(VHF_PTT, HIGH);  // RX
+
 
   // set up a PWM channel that drives buck converter sync pin
   // feature for the future: select this frequency based on the dial frequency
@@ -130,7 +170,9 @@ void setup() {
   ledcAttachPin(BUCK_SYNC, PWM_CHANNEL_SYNC);
   ledcWrite(PWM_CHANNEL_SYNC, 2);
 
-  Serial.begin(SERIAL_SPEED);
+  Serial.begin(DEBUG_SERIAL_SPEED);
+
+  VHFserial.begin(VHF_SERIAL_SPEED, SERIAL_8N1, VHF_TX_ESP_RX, VHF_RX_ESP_TX);
 
   delay(5000);
 
@@ -168,7 +210,8 @@ void setup() {
   audio_board.begin();
 
   // setup i2s input/output
-  Serial.println("I2S begin ..."); 
+  Serial.println("I2S begin ...");
+  // call to defaultConfig() sets input/output channels. Otherwise need es8388_config_input_device() 
   auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
   i2s_config.copyFrom(info_stereo);
   i2s_config.buffer_size = 512;
@@ -304,11 +347,51 @@ void setup() {
   digitalWrite(BPF_SEL_2, LOW);
 
   // select RX
-  digitalWrite(TX_RX_SEL, LOW);
+  // digitalWrite(TX_RX_SEL, LOW);
 
-  // select TX
+  // select TX on band#2
   digitalWrite(TX_RX_SEL, HIGH);
-  digitalWrite(PA_VDD_CTRL, HIGH);
+  digitalWrite(LPF_SEL_1, HIGH);
+  digitalWrite(LPF_SEL_2, HIGH);  
+
+
+  // set VHFserial timeout (milliseconds)
+  VHFserial.setTimeout(100);
+
+  // send serial commands
+  Serial.println("VHF connecting...");
+  VHFserial.println("AT+DMOCONNECT");
+
+  delay(1000);
+
+  /*
+  Serial.println("VHF Response: ");
+  while(VHFserial.available() > 1) {
+    Serial.print((char) VHFserial.read());
+  }
+  */
+
+  // todo: parametrize length
+  char buf[64];
+  int read_len = VHFserial.readBytes(buf, 64);
+
+  Serial.println("VHF Response: ");
+  for(int i=0; i < read_len; i++) {
+    Serial.print(buf[i]);
+  }
+  // todo: parse this response and make sure it's good.
+
+
+  // set frequency
+  // see: https://www.dorji.com/docs/data/DRA818V.pdf
+  VHFserial.println("AT+DMOSETGROUP=0,146.5800,146.5800,0000,1,0000");
+  delay(1000);
+  Serial.println("VHF Response: ");
+  while(VHFserial.available() > 1) {
+    Serial.print((char) VHFserial.read());
+  }
+
+  Serial.println();
 
 }
 
@@ -330,7 +413,7 @@ void loop() {
       driver->setInputVolume(80);
       // audio_filt.setFilter(0, new FIR<float>(coeff_lowpass));  // definitely creating a memory issue by creating new filters repeatedly...
 
-      hf_vhf_mixer.setWeight(0, 0);
+      hf_vhf_mixer.setWeight(0, 1.0);
     }      
     counter++;
     t = millis();
