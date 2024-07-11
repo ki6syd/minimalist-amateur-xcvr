@@ -26,7 +26,7 @@ I2SCodecStream                i2s_stream(audio_board);                  // i2s c
 VBANStream                    vban;                                     // audio over wifi
 CsvOutput<int16_t>            test_stream(Serial);                      // data over serial
 
-SineWaveGenerator<int16_t>    sine_wave(80000);
+SineWaveGenerator<int16_t>    sine_wave(8000);
 GeneratedSoundStream<int16_t> sound_stream(sine_wave);
 
 
@@ -128,7 +128,15 @@ void txPulseTask(void *param) {
 
       vTaskDelay(100 / portTICK_PERIOD_MS);
       digitalWrite(VHF_PTT, LOW);
-      vTaskDelay(1500 / portTICK_PERIOD_MS);
+      // descending frequency sweep
+      for(uint16_t i=0; i < 50; i++) {
+        sine_wave.setFrequency(700);
+        vTaskDelay(250 / portTICK_PERIOD_MS);
+        sine_wave.setFrequency(1400);
+        vTaskDelay(250 / portTICK_PERIOD_MS);
+      }
+      sine_wave.setFrequency(700);
+      // vTaskDelay(1500 / portTICK_PERIOD_MS);
       digitalWrite(VHF_PTT, HIGH);
       vTaskDelay(100 / portTICK_PERIOD_MS);
 
@@ -301,7 +309,7 @@ void setup() {
     "Red LED spare time task",
     4096,
     NULL,
-    2, // priority
+    4, // priority
     &spareTaskHandle,
     1 // core
   );
@@ -322,7 +330,7 @@ void setup() {
     "VDD Sensing",
     4096,
     NULL,
-    2, // priority
+    3, // priority
     &batterySenseTaskHandle,
     0 // core
   );
@@ -333,7 +341,7 @@ void setup() {
     "TX pulse generator",
     4096,
     NULL,
-    1, // priority
+    2, // priority
     &txPulseTaskHandle,
     1 // core
   );
@@ -421,7 +429,7 @@ void loop() {
     if(counter % 2 == 0) {
       // driver->setMute(false, 0);
       // driver->setMute(true, 1);    // turns off DAC output
-      driver->setInputVolume(10);   // changes PGA
+      // // driver->setInputVolume(10);   // changes PGA
       // audio_filt.setFilter(0, new FIR<float>(coeff_bandpass));  // definitely creating a memory issue by creating new filters repeatedly...
 
       hf_vhf_mixer.setWeight(0, 0);
@@ -432,7 +440,7 @@ void loop() {
       // // driver->setInputVolume(80);
       // audio_filt.setFilter(0, new FIR<float>(coeff_lowpass));  // definitely creating a memory issue by creating new filters repeatedly...
 
-      // hf_vhf_mixer.setWeight(0, 1.0);
+      hf_vhf_mixer.setWeight(0, 1.0);
     }      
     counter++;
     t = millis();
