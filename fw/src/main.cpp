@@ -257,8 +257,8 @@ void setup() {
   hf_vhf_mixer.setWeight(2, 0.5);
 
   // audio_filt declaration links it to out_vol (mono)
-  audio_filt.setFilter(0, new FIR<float>(coeff_bpf_400_600));
-  // audio_filt.setFilter(0, new FIR<float>(coeff_lpf_2500));
+  // audio_filt.setFilter(0, new FIR<float>(coeff_bpf_400_600));
+  audio_filt.setFilter(0, new FIR<float>(coeff_lpf_2500));
 
   // audio_filt (mono) --> out_vol (mono) --> multi_output (mono)
   out_vol.setVolume(1.0);
@@ -403,7 +403,7 @@ void setup() {
 
   // set frequency
   // see: https://www.dorji.com/docs/data/DRA818V.pdf
-  VHFserial.println("AT+DMOSETGROUP=0,146.5800,146.5800,0000,1,0000");
+  VHFserial.println("AT+DMOSETGROUP=0,146.5400,146.5400,0000,1,0000");
   delay(1000);
   Serial.println("VHF Response: ");
   while(VHFserial.available() > 1) {
@@ -421,7 +421,7 @@ void loop() {
     if(counter % 2 == 0) {
       // driver->setMute(false, 0);
       // driver->setMute(true, 1);    // turns off DAC output
-      // // driver->setInputVolume(10);   // changes PGA
+      driver->setInputVolume(10);   // changes PGA
       // audio_filt.setFilter(0, new FIR<float>(coeff_bandpass));  // definitely creating a memory issue by creating new filters repeatedly...
 
       hf_vhf_mixer.setWeight(0, 0);
@@ -432,7 +432,7 @@ void loop() {
       // // driver->setInputVolume(80);
       // audio_filt.setFilter(0, new FIR<float>(coeff_lowpass));  // definitely creating a memory issue by creating new filters repeatedly...
 
-      hf_vhf_mixer.setWeight(0, 1.0);
+      // hf_vhf_mixer.setWeight(0, 1.0);
     }      
     counter++;
     t = millis();
