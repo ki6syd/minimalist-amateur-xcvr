@@ -35,6 +35,7 @@ VolumeStream                  out_vol;                                  // outpu
 VolumeOutput                  out_vol_meas;                             // measure the volume of the output
 MultiOutput                   multi_output;                             // splits the final output into audio jack, vban output, csv stream
 FilteredStream<int16_t, float> audio_filt(out_vol, info_mono.channels); // filter outputting into out_vol volume control
+// todo: would be better to rename from hf_vhf mixer --> in1_in2_mixer. Microphone goes through this mixer when selecting LIN2/RIN2.
 OutputMixer<int16_t>          hf_vhf_mixer(audio_filt, 3);              // hf, vhf, *and* sidetone audio mixing into audio_filt
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
 StreamCopy copier_1(hf_vhf_mixer, sound_stream);                      // move sine wave from sound_stream into the sidetone mixer
@@ -94,6 +95,7 @@ void batterySenseTask(void *param) {
 ICACHE_RAM_ATTR void buttonISR() {
   // detach interrupt here, reattaches after taking semaphore
   detachInterrupt(digitalPinToInterrupt(BOOT_BTN));
+  detachInterrupt(digitalPinToInterrupt(MIC_PTT));
 
   xSemaphoreGiveFromISR(btn_semaphore, NULL);
 }
@@ -123,13 +125,24 @@ void txPulseTask(void *param) {
       driver->setMute(true, 0);
       driver->setMute(false, 1);
 
+      // change to LIN2
+      // HACK: reconfigure the codec with a different input_device
+      // AudioDriver doesn't have a way to set input source besides the i2s_config used at startup. passed through to es8388_init()
+      auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
+      i2s_config.input_device = ADC_INPUT_LINE2;
+      i2s_config.copyFrom(info_stereo);
+      i2s_config.buffer_size = 512;
+      i2s_config.buffer_count = 2;
+      i2s_config.port_no = 0;
+      i2s_stream.begin(i2s_config);
+
       // turn on sidetone
       hf_vhf_mixer.setWeight(0, 1.0);
 
       vTaskDelay(100 / portTICK_PERIOD_MS);
       digitalWrite(VHF_PTT, LOW);
       // descending frequency sweep
-      for(uint16_t i=0; i < 50; i++) {
+      for(uint16_t i=0; i < 20; i++) {
         sine_wave.setFrequency(700);
         vTaskDelay(250 / portTICK_PERIOD_MS);
         sine_wave.setFrequency(1400);
@@ -140,7 +153,7 @@ void txPulseTask(void *param) {
       digitalWrite(VHF_PTT, HIGH);
       vTaskDelay(100 / portTICK_PERIOD_MS);
 
-      // restore previous state
+      // restore previous state (LOUT2 and ROUT2 as output, LIN1 and RIN1 as input)
       Serial.println();
       Serial.println("Powering up DAC 2");
       driver->setMute(false, 0);
@@ -148,6 +161,7 @@ void txPulseTask(void *param) {
       hf_vhf_mixer.setWeight(0, 0);
 
       attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, FALLING);
+      attachInterrupt(digitalPinToInterrupt(MIC_PTT), buttonISR, FALLING);
     }
   }
 }
@@ -166,6 +180,8 @@ void setup() {
   pinMode(PA_VDD_CTRL, OUTPUT);
   pinMode(BOOT_BTN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, FALLING);
+  pinMode(MIC_PTT, INPUT);
+  attachInterrupt(digitalPinToInterrupt(MIC_PTT), buttonISR, FALLING);
   pinMode(VHF_EN, OUTPUT);
   pinMode(VHF_PTT, OUTPUT);
 
@@ -224,6 +240,7 @@ void setup() {
   Serial.println("I2S begin ...");
   // call to defaultConfig() sets input/output channels. Otherwise need es8388_config_input_device() 
   auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
+  // i2s_config.input_device = ADC_INPUT_LINE2;    // TEMPORARY!! for LIN2 test. AudioDriver doesn't have a way to set input source besides the i2s_config used at startup
   i2s_config.copyFrom(info_stereo);
   i2s_config.buffer_size = 512;
   i2s_config.buffer_count = 2;
