@@ -96,6 +96,8 @@ ICACHE_RAM_ATTR void buttonISR() {
   // detach interrupt here, reattaches after taking semaphore
   detachInterrupt(digitalPinToInterrupt(BOOT_BTN));
   detachInterrupt(digitalPinToInterrupt(MIC_PTT));
+  detachInterrupt(digitalPinToInterrupt(KEY_DIT));
+  detachInterrupt(digitalPinToInterrupt(KEY_DAH));
 
   xSemaphoreGiveFromISR(btn_semaphore, NULL);
 }
@@ -162,6 +164,8 @@ void txPulseTask(void *param) {
 
       attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, FALLING);
       attachInterrupt(digitalPinToInterrupt(MIC_PTT), buttonISR, FALLING);
+      attachInterrupt(digitalPinToInterrupt(KEY_DIT), buttonISR, FALLING);
+      attachInterrupt(digitalPinToInterrupt(KEY_DAH), buttonISR, FALLING);
     }
   }
 }
@@ -182,6 +186,10 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, FALLING);
   pinMode(MIC_PTT, INPUT);
   attachInterrupt(digitalPinToInterrupt(MIC_PTT), buttonISR, FALLING);
+  pinMode(KEY_DAH, INPUT);
+  attachInterrupt(digitalPinToInterrupt(KEY_DAH), buttonISR, FALLING);
+  pinMode(KEY_DIT, INPUT);
+  attachInterrupt(digitalPinToInterrupt(KEY_DIT), buttonISR, FALLING);
   pinMode(VHF_EN, OUTPUT);
   pinMode(VHF_PTT, OUTPUT);
 
