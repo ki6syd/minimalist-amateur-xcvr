@@ -50,7 +50,7 @@ SemaphoreHandle_t btn_semaphore;
 
 int t = 0;
 int counter = 0;
-int freq_buck = 500e3;
+int freq_buck = 510e3;
 
 
 void audioStreamTask(void *param) {
@@ -64,9 +64,9 @@ void audioStreamTask(void *param) {
 
 void spareTask(void *param) {
   while(true) {
-    digitalWrite(LED_RED, HIGH);
-    vTaskDelay(1 / portTICK_PERIOD_MS);
     digitalWrite(LED_RED, LOW);
+    vTaskDelay(1 / portTICK_PERIOD_MS);
+    digitalWrite(LED_RED, HIGH);
     taskYIELD();
   }
 }
@@ -110,16 +110,17 @@ void txPulseTask(void *param) {
 
       // HF TX test
 
-      // si5351.output_enable(SI5351_CLK2, 1); // TX clock
+      si5351.output_enable(SI5351_CLK2, 1); // TX clock
       digitalWrite(PA_VDD_CTRL, HIGH);
       vTaskDelay(25 / portTICK_PERIOD_MS);      
+      vTaskDelay(10000 / portTICK_PERIOD_MS);      
       digitalWrite(PA_VDD_CTRL, LOW);
       vTaskDelay(25 / portTICK_PERIOD_MS);
       si5351.output_enable(SI5351_CLK2, 0); // TX clock
 
 
       // VHF TX test
-
+      /*
       // change to LOUT1 and ROUT1
       AudioDriver *driver = audio_board.getDriver();
       Serial.println();
@@ -162,6 +163,10 @@ void txPulseTask(void *param) {
       driver->setMute(true, 1);
       hf_vhf_mixer.setWeight(0, 0);
 
+      */
+
+
+
       attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, FALLING);
       attachInterrupt(digitalPinToInterrupt(MIC_PTT), buttonISR, FALLING);
       attachInterrupt(digitalPinToInterrupt(KEY_DIT), buttonISR, FALLING);
@@ -176,10 +181,12 @@ void setup() {
   // put your setup code here, to run once:
   pinMode(LED_GRN, OUTPUT);
   pinMode(LED_RED, OUTPUT);
+  pinMode(LED_DBG_0, OUTPUT);
+  pinMode(LED_DBG_1, OUTPUT);
+  pinMode(BPF_SEL_0, OUTPUT);
   pinMode(BPF_SEL_1, OUTPUT);
-  pinMode(BPF_SEL_2, OUTPUT);
+  pinMode(LPF_SEL_0, OUTPUT);
   pinMode(LPF_SEL_1, OUTPUT);
-  pinMode(LPF_SEL_2, OUTPUT);
   pinMode(TX_RX_SEL, OUTPUT);
   pinMode(PA_VDD_CTRL, OUTPUT);
   pinMode(BOOT_BTN, INPUT_PULLUP);
@@ -192,12 +199,20 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(KEY_DIT), buttonISR, FALLING);
   pinMode(VHF_EN, OUTPUT);
   pinMode(VHF_PTT, OUTPUT);
+  pinMode(SPARE_0, OUTPUT);
 
   digitalWrite(PA_VDD_CTRL, LOW);
 
-  digitalWrite(VHF_EN, HIGH);   // enabled
+  // digitalWrite(VHF_EN, HIGH);   // enabled
+  digitalWrite(VHF_EN, LOW);
   digitalWrite(VHF_PTT, HIGH);  // RX
 
+  digitalWrite(TX_RX_SEL, LOW); // RX mode
+
+  digitalWrite(SPARE_0, LOW);
+
+  digitalWrite(LED_DBG_0, LOW);
+  digitalWrite(LED_DBG_1, LOW);
 
   // set up a PWM channel that drives buck converter sync pin
   // feature for the future: select this frequency based on the dial frequency
@@ -210,7 +225,7 @@ void setup() {
   VHFserial.begin(VHF_SERIAL_SPEED, SERIAL_8N1, VHF_TX_ESP_RX, VHF_RX_ESP_TX);
 
   delay(5000);
-
+  digitalWrite(SPARE_0, HIGH);
 
   // https://community.platformio.org/t/how-to-use-psram-on-esp32-s3-devkitc-1-under-esp-idf/32127/17
   if(psramInit())
@@ -286,12 +301,13 @@ void setup() {
   // HF vs VHF select done through setWeight()
   hf_vhf_mixer.begin();
   hf_vhf_mixer.setWeight(0, 0);   // input 0: sidetone
-  hf_vhf_mixer.setWeight(1, 0.5);   // input 1, 2: HF and VHF
-  hf_vhf_mixer.setWeight(2, 0.5);
+  hf_vhf_mixer.setWeight(1, 0.5);   // input 1 VHF
+  hf_vhf_mixer.setWeight(2, 0.5);   // input 2 HF
 
   // audio_filt declaration links it to out_vol (mono)
   // audio_filt.setFilter(0, new FIR<float>(coeff_bpf_400_600));
-  audio_filt.setFilter(0, new FIR<float>(coeff_lpf_2500));
+  // audio_filt.setFilter(0, new FIR<float>(coeff_lpf_2500));
+  audio_filt.setFilter(0, new FIR<float>(coeff_bpf_400_2000));  // basically a LPF, but should filter out 60hz noise
 
   // audio_filt (mono) --> out_vol (mono) --> multi_output (mono)
   out_vol.setVolume(1.0);
@@ -313,6 +329,17 @@ void setup() {
   AudioDriver *driver = audio_board.getDriver();
   driver->setMute(false, 0);
   driver->setMute(true, 1);
+
+  // use full analog gain
+  //   driver->setInputVolume(100); // changes PGA
+  driver->setInputVolume(50); // changes PGA
+
+  // only use HF audio (testing purposes only, should do this as part of band selection)
+  hf_vhf_mixer.setWeight(1, 0);   // input 1 VHF
+  hf_vhf_mixer.setWeight(2, 1.0);   // input 2 HF
+
+
+
 
 
   // note: platformio + arduino puts wifi on core 0
@@ -383,7 +410,8 @@ void setup() {
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLB);
 
   si5351.set_freq(((uint64_t) 10000000) * 100, SI5351_CLK0);
-  si5351.set_freq(((uint64_t) 24060500) * 100, SI5351_CLK1);  // should get rid of that 500hz hack, need to cal oscillator and filter
+  si5351.set_freq(((uint64_t) 24074500) * 100, SI5351_CLK1);  // should get rid of that 500hz hack, need to cal oscillator and filter
+  // si5351.set_freq(((uint64_t) 24060500) * 100, SI5351_CLK1);  // should get rid of that 500hz hack, need to cal oscillator and filter
   si5351.set_freq(((uint64_t) 14040000) * 100, SI5351_CLK2);
 
   si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_2MA);
@@ -395,17 +423,18 @@ void setup() {
   si5351.output_enable(SI5351_CLK2, 0); // TX clock
 
   // select 20m band
-  digitalWrite(BPF_SEL_1, HIGH);
-  digitalWrite(BPF_SEL_2, LOW);
+  digitalWrite(BPF_SEL_0, HIGH);
+  digitalWrite(BPF_SEL_1, LOW);
 
   // select RX
-  // digitalWrite(TX_RX_SEL, LOW);
+  digitalWrite(TX_RX_SEL, LOW);
 
   // select TX on band#2
+  /*
   digitalWrite(TX_RX_SEL, HIGH);
-  digitalWrite(LPF_SEL_1, HIGH);
-  digitalWrite(LPF_SEL_2, HIGH);  
-
+  digitalWrite(LPF_SEL_0, HIGH);
+  digitalWrite(LPF_SEL_1, HIGH);  
+  */
 
   // set VHFserial timeout (milliseconds)
   VHFserial.setTimeout(100);
@@ -448,7 +477,7 @@ void setup() {
 }
 
 
-void loop() {  
+void loop() { 
   if(millis() - t > 2000) {
     AudioDriver *driver = audio_board.getDriver();
     if(counter % 2 == 0) {
@@ -457,15 +486,15 @@ void loop() {
       // // driver->setInputVolume(10);   // changes PGA
       // audio_filt.setFilter(0, new FIR<float>(coeff_bandpass));  // definitely creating a memory issue by creating new filters repeatedly...
 
-      hf_vhf_mixer.setWeight(0, 0);
+      // hf_vhf_mixer.setWeight(0, 0);
     }
     else {
       // driver->setMute(true, 0);
       // driver->setMute(false, 1);
-      // // driver->setInputVolume(80);
+      // // driver->setInputVolume(80); // changes PGA
       // audio_filt.setFilter(0, new FIR<float>(coeff_lowpass));  // definitely creating a memory issue by creating new filters repeatedly...
 
-      hf_vhf_mixer.setWeight(0, 1.0);
+      // hf_vhf_mixer.setWeight(0, 1.0);
     }      
     counter++;
     t = millis();
