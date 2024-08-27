@@ -1,65 +1,21 @@
 #include <Arduino.h>
-#include <Wire.h>
-
 #include <HardwareSerial.h>
 
-#include "AudioTools.h"
-#include "AudioLibs/I2SCodecStream.h"
-#include "AudioLibs/VBANStream.h"
-#include <si5351.h>
-
-#include "fir_coeffs_bpf.h"
-#include "fir_coeffs_lpf.h"
 #include "wifi_conn.h"
 #include "audio.h"
+#include <si5351.h>
 
 Si5351 si5351;
 
-TwoWire codecI2C = TwoWire(1);                      // "Wire" is used in si5351 library. Defined through TwoWire(0), so the other peripheral is still available
 HardwareSerial VHFserial(1);
 
-AudioInfo                     info_stereo(F_AUDIO, 2, 16);              // sampling rate, # channels, bit depth
-AudioInfo                     info_mono(F_AUDIO, 1, 16);                // sampling rate, # channels, bit depth
-DriverPins                    my_pins;                                  // board pins
-AudioBoard                    audio_board(AudioDriverES8388, my_pins);  // audio board
-I2SCodecStream                i2s_stream(audio_board);                  // i2s codec
-VBANStream                    vban;                                     // audio over wifi
-CsvOutput<int16_t>            test_stream(Serial);                      // data over serial
-
-SineWaveGenerator<int16_t>    sine_wave(8000);
-GeneratedSoundStream<int16_t> sound_stream(sine_wave);
-
-
-ChannelSplitOutput            input_split;                              // splits the stereo input stream into two mono streams
-VolumeStream                  out_vol;                                  // output volume control
-VolumeOutput                  out_vol_meas;                             // measure the volume of the output
-MultiOutput                   multi_output;                             // splits the final output into audio jack, vban output, csv stream
-FilteredStream<int16_t, float> audio_filt(out_vol, info_mono.channels); // filter outputting into out_vol volume control
-// todo: would be better to rename from hf_vhf mixer --> in1_in2_mixer. Microphone goes through this mixer when selecting LIN2/RIN2.
-OutputMixer<int16_t>          hf_vhf_mixer(audio_filt, 3);              // hf, vhf, *and* sidetone audio mixing into audio_filt
-ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
-StreamCopy copier_1(hf_vhf_mixer, sound_stream);                      // move sine wave from sound_stream into the sidetone mixer
-StreamCopy copier_2(input_split, i2s_stream);                           // moves data through the streams. To: input_split, from: i2s_stream
-
-// example of i2s codec for both input and output: https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-audiokit/streams-audiokit-filter-audiokit/streams-audiokit-filter-audiokit.ino
-
-
 TaskHandle_t audioStreamTaskHandle, blinkTaskHandle, spareTaskHandle, batterySenseTaskHandle, txPulseTaskHandle;
-
 SemaphoreHandle_t btn_semaphore;
 
 int t = 0;
 int counter = 0;
 int freq_buck = 510e3;
 
-
-void audioStreamTask(void *param) {
-  while(true) {
-    copier_1.copy();
-    copier_2.copy();
-    taskYIELD();
-  }
-}
 
 
 void spareTask(void *param) {
@@ -249,96 +205,7 @@ void setup() {
 
   // wifi_init();
 
-  AudioLogger::instance().begin(Serial, AudioLogger::Warning);
-  // LOGLEVEL_AUDIODRIVER = AudioDriverWarning;
-  LOGLEVEL_AUDIODRIVER = AudioDriverDebug;
-  // LOGLEVEL_AUDIODRIVER = AudioDriverInfo;
-
-  my_pins.addI2C(PinFunction::CODEC, CODEC_SCL, CODEC_SDA, CODEC_ADDR, CODEC_I2C_SPEED, codecI2C);
-  my_pins.addI2S(PinFunction::CODEC, CODEC_MCLK, CODEC_BCLK, CODEC_WS, CODEC_DO, CODEC_DI);
-  my_pins.begin();
-  audio_board.begin();
-
-  // setup i2s input/output
-  Serial.println("I2S begin ...");
-  // call to defaultConfig() sets input/output channels. Otherwise need es8388_config_input_device() 
-  auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
-  // i2s_config.input_device = ADC_INPUT_LINE2;    // TEMPORARY!! for LIN2 test. AudioDriver doesn't have a way to set input source besides the i2s_config used at startup
-  i2s_config.copyFrom(info_stereo);
-  i2s_config.buffer_size = 512;
-  i2s_config.buffer_count = 2;
-  i2s_config.port_no = 0;
-  i2s_stream.begin(i2s_config); // this should apply I2C and I2S configuration
-
-  sine_wave.begin(info_mono, 700);
-
-  // setup vban output (mono)
-  auto cfg = vban.defaultConfig(TX_MODE);
-  cfg.copyFrom(info_mono);
-  cfg.ssid = WIFI_STA_SSID;
-  cfg.password = WIFI_STA_PASS;
-  cfg.stream_name = "Stream1";
-  // cfg.target_ip = IPAddress{192,168,1,37}; 
-  cfg.throttle_active = true;
-  cfg.throttle_correction_us = -1000; // optimize overload and underrun
-  if (!vban.begin(cfg)) stop();
-  digitalWrite(LED_GRN, HIGH);
-
-  // OutputVolume sink to measure amplitude
-  // note that this is currently consuming out_vol, which means it'll vary with volume control. Either compensate or measure before scaling
-  out_vol_meas.setAudioInfo(info_mono);
-  out_vol_meas.begin();
-
-  // set up test stream
-  test_stream.begin(info_mono);
-
-  // input_split (stereo) --> two (mono) channels of the audio mixer
-  input_split.addOutput(hf_vhf_mixer, 0);
-  input_split.addOutput(hf_vhf_mixer, 1);
-  input_split.begin(info_stereo);
-  
-  // hf + vhf --> hf_vhf_mixer (mono). declaration links to audio_filt
-  // HF vs VHF select done through setWeight()
-  hf_vhf_mixer.begin();
-  hf_vhf_mixer.setWeight(0, 0);   // input 0: sidetone
-  hf_vhf_mixer.setWeight(1, 0.5);   // input 1 VHF
-  hf_vhf_mixer.setWeight(2, 0.5);   // input 2 HF
-
-  // audio_filt declaration links it to out_vol (mono)
-  // audio_filt.setFilter(0, new FIR<float>(coeff_bpf_400_600));
-  // audio_filt.setFilter(0, new FIR<float>(coeff_lpf_2500));
-  audio_filt.setFilter(0, new FIR<float>(coeff_bpf_400_2000));  // basically a LPF, but should filter out 60hz noise
-
-  // audio_filt (mono) --> out_vol (mono) --> multi_output (mono)
-  out_vol.setVolume(1.0);
-  out_vol.setStream(audio_filt);
-  out_vol.setOutput(multi_output);
-  out_vol.begin(info_mono);
-
-  // multi_output goes to vban (mono), mono_to_stereo (mono), csv
-  // multi_output.add(vban);
-  multi_output.add(mono_to_stereo);
-  // multi_output.add(test_stream);
-  multi_output.add(out_vol_meas);
-  
-  // take a mono audio stream and make it stereo
-  // declaration links it to i2s stream (stereo output)
-  mono_to_stereo.begin(1, 2);
-
-  // turn on DAC that goes to headphones. turn off DAC that goes to VHF/HF audio inputs
-  AudioDriver *driver = audio_board.getDriver();
-  driver->setMute(false, 0);
-  driver->setMute(true, 1);
-
-  // use full analog gain
-  //   driver->setInputVolume(100); // changes PGA
-  driver->setInputVolume(50); // changes PGA
-
-  // only use HF audio (testing purposes only, should do this as part of band selection)
-  hf_vhf_mixer.setWeight(1, 0);   // input 1 VHF
-  hf_vhf_mixer.setWeight(2, 1.0);   // input 2 HF
-
-
+  audio_init();
 
 
 
@@ -346,7 +213,7 @@ void setup() {
 
   // run on core 1
   xTaskCreatePinnedToCore(
-    audioStreamTask,
+    audio_stream_task,
     "Audio Stream Updater Task",
     16384,
     NULL,
@@ -479,8 +346,9 @@ void setup() {
 
 void loop() { 
   if(millis() - t > 2000) {
-    AudioDriver *driver = audio_board.getDriver();
+    // AudioDriver *driver = audio_board.getDriver();
     if(counter % 2 == 0) {
+      audio_en_sidetone(true);
       // driver->setMute(false, 0);
       // driver->setMute(true, 1);    // turns off DAC output
       // // driver->setInputVolume(10);   // changes PGA
@@ -489,6 +357,7 @@ void loop() {
       // hf_vhf_mixer.setWeight(0, 0);
     }
     else {
+      audio_en_sidetone(false);
       // driver->setMute(true, 0);
       // driver->setMute(false, 1);
       // // driver->setInputVolume(80); // changes PGA
