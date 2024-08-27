@@ -24,13 +24,16 @@ typedef enum {
     AUDIO_FILT_SSB
 } audio_filt_t;
 
-extern TaskHandle_t audioStreamTaskHandle;
+extern TaskHandle_t xAudioStreamTaskHandle;
 extern void audio_stream_task (void * pvParameter);
 
 void audio_init();
 void audio_set_mode(audio_mode_t mode);
 void audio_set_filt(audio_filt_t filt);
 void audio_en_sidetone(bool tone);
+void audio_en_rx_audio(bool en);
 void audio_set_volume(float vol);
 void audio_set_sidetone_volume(float vol);
 void audio_set_sidetone_freq(float freq);
+float audio_get_rx_db();
+float audio_get_sidetone_freq();

@@ -26,12 +26,12 @@ VBANStream                    vban;                                     // audio
 CsvOutput<int16_t>            csv_stream(Serial);                      // data over serial
 #endif
 
-SineWaveGenerator<int16_t>    sine_wave; // sine_wave(16000);
+SineWaveGenerator<int16_t>    sine_wave;
 GeneratedSoundStream<int16_t> sound_stream(sine_wave);
 
 ChannelSplitOutput            input_split;                              // splits the stereo input stream into two mono streams
 VolumeStream                  out_vol;                                  // output volume control
-VolumeOutput                  out_vol_meas;                             // measure the volume of the output
+VolumeMeter                   out_vol_meas;                             // measure the volume of the output
 MultiOutput                   multi_output;                             // splits the final output into audio jack, vban output, csv stream
 FilteredStream<int16_t, float> audio_filt(out_vol, info_mono.channels); // filter outputting into out_vol volume control
 OutputMixer<int16_t>          side_l_r_mix(audio_filt, 3);              // sidetone, left, right, audio mixing into audio_filt
@@ -42,7 +42,7 @@ StreamCopy copier_2(input_split, i2s_stream);                           // moves
 // example of i2s codec for both input and output: https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-audiokit/streams-audiokit-filter-audiokit/streams-audiokit-filter-audiokit.ino
 
 float sidetone_vol = 1.0;
-float sidetone_freq = F_SIDETONE;
+float sidetone_freq = F_SIDETONE_DEFAULT;
 
 void audio_init() {
     AudioLogger::instance().begin(Serial, AudioLogger::Warning);
@@ -128,6 +128,7 @@ void audio_stream_task(void *param) {
   while(true) {
     copier_1.copy();
     copier_2.copy();
+    
     taskYIELD();
   }
 }
@@ -186,24 +187,29 @@ void audio_set_filt(audio_filt_t filt) {
     }
 }
 
-// mutes the incoming audio when sidetone is enabled
+// ONLY affects sidetone, does not affect muting of rx audio
 void audio_en_sidetone(bool tone) {
-    if(tone) {
+    if(tone)
         side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, sidetone_vol);
-
-        // mute all input mixer channels, regardless of IQ audio
-        side_l_r_mix.setWeight(MIXER_IDX_LEFT, 0.0);
-        side_l_r_mix.setWeight(MIXER_IDX_RIGHT, 0.0);
-
-    }
-    else {
+    else
         side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, 0);
-        
+
+}
+
+// ONLY affects muting of rx audio, does not affect sidetone
+void audio_en_rx_audio(bool en) {
+    if(en) {
         // unmute input mixer channels. LEFT channel depends on whether IQ audio is in use
         side_l_r_mix.setWeight(MIXER_IDX_RIGHT, 1.0);
 #ifdef AUDIO_PATH_IQ
         side_l_r_mix.setWeight(MIXER_IDX_LEFT, 1.0);
 #endif
+
+    }
+    else {
+        // mute all input mixer channels, regardless of IQ audio
+        side_l_r_mix.setWeight(MIXER_IDX_LEFT, 0.0);
+        side_l_r_mix.setWeight(MIXER_IDX_RIGHT, 0.0);
     }
 }
 
@@ -218,11 +224,16 @@ void audio_set_sidetone_volume(float vol) {
 }
 
 void audio_set_sidetone_freq(float freq) {
-    // enforce 0-4kHz range 
-    if(freq > 0 && freq < 4000)
+    // enforce 0-2kHz range 
+    if(freq > 0 && freq < 2000) {
         sidetone_freq = freq;
-    else
-        return;
+        sine_wave.setFrequency(sidetone_freq);
+    }
+}
+float audio_get_rx_db() {
+    return out_vol_meas.volumeDB();
+}
 
-    sine_wave.setFrequency(sidetone_freq);
+float audio_get_sidetone_freq() {
+    return sidetone_freq;
 }

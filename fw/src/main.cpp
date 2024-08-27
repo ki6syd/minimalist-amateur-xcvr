@@ -3,13 +3,13 @@
 
 #include "wifi_conn.h"
 #include "audio.h"
-#include <si5351.h>
-
-Si5351 si5351;
+#include "radio_hf.h"
 
 HardwareSerial VHFserial(1);
 
-TaskHandle_t audioStreamTaskHandle, blinkTaskHandle, spareTaskHandle, batterySenseTaskHandle, txPulseTaskHandle;
+TaskHandle_t xAudioStreamTaskHandle, xRadioTaskHandle, xSpareTaskHandle0, xSpareTaskHandle1;
+TaskHandle_t blinkTaskHandle, batterySenseTaskHandle, txPulseTaskHandle; 
+
 SemaphoreHandle_t btn_semaphore;
 
 int t = 0;
@@ -17,12 +17,20 @@ int counter = 0;
 int freq_buck = 510e3;
 
 
-
-void spareTask(void *param) {
+// if LED_DBG_x is *not* illuminated, spareTask is starved
+void spare_task_core_0(void *param) {
   while(true) {
-    digitalWrite(LED_RED, LOW);
+    digitalWrite(LED_DBG_0, HIGH);
     vTaskDelay(1 / portTICK_PERIOD_MS);
-    digitalWrite(LED_RED, HIGH);
+    digitalWrite(LED_DBG_0, LOW);
+    taskYIELD();
+  }
+}
+void spare_task_core_1(void *param) {
+  while(true) {
+    digitalWrite(LED_DBG_1, HIGH);
+    vTaskDelay(1 / portTICK_PERIOD_MS);
+    digitalWrite(LED_DBG_1, LOW);
     taskYIELD();
   }
 }
@@ -66,6 +74,7 @@ void txPulseTask(void *param) {
 
       // HF TX test
 
+      /*
       si5351.output_enable(SI5351_CLK2, 1); // TX clock
       digitalWrite(PA_VDD_CTRL, HIGH);
       vTaskDelay(25 / portTICK_PERIOD_MS);      
@@ -73,7 +82,7 @@ void txPulseTask(void *param) {
       digitalWrite(PA_VDD_CTRL, LOW);
       vTaskDelay(25 / portTICK_PERIOD_MS);
       si5351.output_enable(SI5351_CLK2, 0); // TX clock
-
+      */
 
       // VHF TX test
       /*
@@ -139,12 +148,7 @@ void setup() {
   pinMode(LED_RED, OUTPUT);
   pinMode(LED_DBG_0, OUTPUT);
   pinMode(LED_DBG_1, OUTPUT);
-  pinMode(BPF_SEL_0, OUTPUT);
-  pinMode(BPF_SEL_1, OUTPUT);
-  pinMode(LPF_SEL_0, OUTPUT);
-  pinMode(LPF_SEL_1, OUTPUT);
-  pinMode(TX_RX_SEL, OUTPUT);
-  pinMode(PA_VDD_CTRL, OUTPUT);
+
   pinMode(BOOT_BTN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, FALLING);
   pinMode(MIC_PTT, INPUT);
@@ -157,13 +161,12 @@ void setup() {
   pinMode(VHF_PTT, OUTPUT);
   pinMode(SPARE_0, OUTPUT);
 
-  digitalWrite(PA_VDD_CTRL, LOW);
+  
 
   // digitalWrite(VHF_EN, HIGH);   // enabled
   digitalWrite(VHF_EN, LOW);
   digitalWrite(VHF_PTT, HIGH);  // RX
 
-  digitalWrite(TX_RX_SEL, LOW); // RX mode
 
   digitalWrite(SPARE_0, LOW);
 
@@ -207,10 +210,9 @@ void setup() {
 
   audio_init();
 
-
+  radio_init();
 
   // note: platformio + arduino puts wifi on core 0
-
   // run on core 1
   xTaskCreatePinnedToCore(
     audio_stream_task,
@@ -218,18 +220,39 @@ void setup() {
     16384,
     NULL,
     1, // priority
-    &audioStreamTaskHandle,
+    &xAudioStreamTaskHandle,
     1 // core
+  );
+
+  xTaskCreatePinnedToCore(
+    radio_task,
+    "Radio Task",
+    16384,
+    NULL,
+    1, // priority
+    &xRadioTaskHandle,
+    1 // core
+  );
+
+  // run on core 0
+  xTaskCreatePinnedToCore(
+    spare_task_core_0,
+    "Debug LED spare time task",
+    4096,
+    NULL,
+    4, // priority
+    &xSpareTaskHandle0,
+    0 // core
   );
 
   // run on core 1
   xTaskCreatePinnedToCore(
-    spareTask,
-    "Red LED spare time task",
+    spare_task_core_1,
+    "Debug LED spare time task",
     4096,
     NULL,
     4, // priority
-    &spareTaskHandle,
+    &xSpareTaskHandle1,
     1 // core
   );
 
@@ -265,36 +288,6 @@ void setup() {
     1 // core
   );
 
-  
-
-  Wire.begin(CLOCK_SDA, CLOCK_SCL);
-  
-  Serial.print("[SI5351] Status: ");
-  Serial.println(si5351.si5351_read(SI5351_DEVICE_STATUS));
-  si5351.init(SI5351_CRYSTAL_LOAD_8PF , 26000000 , 0);
-  
-  si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLA);
-  si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLB);
-
-  si5351.set_freq(((uint64_t) 10000000) * 100, SI5351_CLK0);
-  si5351.set_freq(((uint64_t) 24074500) * 100, SI5351_CLK1);  // should get rid of that 500hz hack, need to cal oscillator and filter
-  // si5351.set_freq(((uint64_t) 24060500) * 100, SI5351_CLK1);  // should get rid of that 500hz hack, need to cal oscillator and filter
-  si5351.set_freq(((uint64_t) 14040000) * 100, SI5351_CLK2);
-
-  si5351.drive_strength(SI5351_CLK0, SI5351_DRIVE_2MA);
-  si5351.drive_strength(SI5351_CLK1, SI5351_DRIVE_2MA);
-  si5351.drive_strength(SI5351_CLK2, SI5351_DRIVE_2MA);
-
-  si5351.output_enable(SI5351_CLK0, 1); // BFO
-  si5351.output_enable(SI5351_CLK1, 1); // VFO
-  si5351.output_enable(SI5351_CLK2, 0); // TX clock
-
-  // select 20m band
-  digitalWrite(BPF_SEL_0, HIGH);
-  digitalWrite(BPF_SEL_1, LOW);
-
-  // select RX
-  digitalWrite(TX_RX_SEL, LOW);
 
   // select TX on band#2
   /*
@@ -349,21 +342,30 @@ void loop() {
     // AudioDriver *driver = audio_board.getDriver();
     if(counter % 2 == 0) {
       audio_en_sidetone(true);
+      audio_en_rx_audio(false);
       // driver->setMute(false, 0);
       // driver->setMute(true, 1);    // turns off DAC output
       // // driver->setInputVolume(10);   // changes PGA
       // audio_filt.setFilter(0, new FIR<float>(coeff_bandpass));  // definitely creating a memory issue by creating new filters repeatedly...
 
       // hf_vhf_mixer.setWeight(0, 0);
+
+      radio_key_on();
     }
     else {
       audio_en_sidetone(false);
+      audio_en_rx_audio(true);
       // driver->setMute(true, 0);
       // driver->setMute(false, 1);
       // // driver->setInputVolume(80); // changes PGA
       // audio_filt.setFilter(0, new FIR<float>(coeff_lowpass));  // definitely creating a memory issue by creating new filters repeatedly...
 
       // hf_vhf_mixer.setWeight(0, 1.0);
+
+      radio_set_dial_freq(12345);
+
+      radio_key_off();
+
     }      
     counter++;
     t = millis();
