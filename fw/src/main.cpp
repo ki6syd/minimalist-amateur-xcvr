@@ -216,7 +216,10 @@ void setup() {
   radio_init();
 
   radio_set_dial_freq(14060000);
-  
+  digitalWrite(BPF_SEL_0, HIGH);
+  digitalWrite(BPF_SEL_1, LOW);
+  digitalWrite(TX_RX_SEL, LOW);     // RX mode
+
 
   // run on core 0
   xTaskCreatePinnedToCore(
