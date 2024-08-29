@@ -11,6 +11,9 @@
 #define MIXER_IDX_LEFT          1
 #define MIXER_IDX_RIGHT         2
 
+// constant used in math [dB]
+#define PGA_GAIN                24
+
 TwoWire codecI2C = TwoWire(1);  // "Wire" is used in si5351 library. Defined through TwoWire(0), so the other peripheral is still available
 
 AudioInfo                     info_stereo(F_AUDIO, 2, 16);              // sampling rate, # channels, bit depth
@@ -43,6 +46,9 @@ StreamCopy copier_2(input_split, i2s_stream);                           // moves
 
 float sidetone_vol = 1.0;
 float sidetone_freq = F_SIDETONE_DEFAULT;
+bool sidetone_en = false;
+bool pga_en = false;
+float global_vol = 0;
 
 void audio_init() {
     AudioLogger::instance().begin(Serial, AudioLogger::Warning);
@@ -96,7 +102,7 @@ void audio_init() {
     side_l_r_mix.setWeight(MIXER_IDX_RIGHT, 0);         // input 2: INx-R codec channel
 
     // audio_filt declaration has already linked it to out_vol (mono)
-    audio_set_filt(AUDIO_FILT_SSB);
+    audio_set_filt(AUDIO_FILT_CW);
 
     // audio_filt (mono) --> out_vol (mono) --> multi_output (mono)
     audio_set_volume(0.1);          // start at 10% global volume
@@ -119,16 +125,28 @@ void audio_init() {
     mono_to_stereo.begin(1, 2);
 
     // use full analog gain in the codec
-    AudioDriver *driver = audio_board.getDriver();
-    driver->setInputVolume(100); // changes PGA
+    audio_en_pga(true);
+    audio_en_sidetone(false);
+    audio_en_rx_audio(true);
 
+    // note: platformio + arduino puts wifi on core 0
+    // run on core 1
+    xTaskCreatePinnedToCore(
+        audio_stream_task,
+        "Audio Stream Updater Task",
+        16384,
+        NULL,
+        1, // priority
+        &xAudioStreamTaskHandle,
+        1 // core
+    );
 }
 
 void audio_stream_task(void *param) {
   while(true) {
     copier_1.copy();
     copier_2.copy();
-    
+
     taskYIELD();
   }
 }
@@ -187,8 +205,32 @@ void audio_set_filt(audio_filt_t filt) {
     }
 }
 
+
+void audio_en_pga(bool gain) {
+    AudioDriver *driver = audio_board.getDriver();
+
+    // TODO: fix the bug in pschatzmann's library that makes 100 % volume output weird gains ("Debug:   input volume: 100 -> gain -2113876796")
+    if(gain) {
+        // driver->setInputVolume(80); // changes PGA in the codec
+        driver->setInputVolume(100); // changes PGA in the codec
+    }
+    else
+        driver->setInputVolume(0);
+
+    pga_en = gain;
+    
+
+   // hack follows
+   /*
+   pga_en = true;
+   driver->setInputVolume(0);
+   */
+}
+
 // ONLY affects sidetone, does not affect muting of rx audio
 void audio_en_sidetone(bool tone) {
+    sidetone_en = tone;
+
     if(tone)
         side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, sidetone_vol);
     else
@@ -214,12 +256,14 @@ void audio_en_rx_audio(bool en) {
 }
 
 void audio_set_volume(float vol) {
-    if(vol >= 0.0 && vol <= 1.0)
+    if(vol >= 0.0 && vol <= 1.0) {
+        global_vol = vol;
         out_vol.setVolume(vol);
+    }
 }
 
 void audio_set_sidetone_volume(float vol) {
-    if(vol >= 0.0 && vol <= 1.0)
+    if(vol >= 0.0 && vol <= 1.0) 
         sidetone_vol = vol;
 }
 
@@ -230,8 +274,24 @@ void audio_set_sidetone_freq(float freq) {
         sine_wave.setFrequency(sidetone_freq);
     }
 }
+
+// compensate for volume control here
+// TODO: measure before applying volume control
 float audio_get_rx_db() {
-    return out_vol_meas.volumeDB();
+    if(sidetone_en)
+        return -1001;
+    else {
+        float volume_dB = out_vol_meas.volumeDB();
+        
+        // correct for volume
+        volume_dB += 20 * log10(1 / global_vol);
+
+        // correct for PGA
+        if(pga_en)
+            volume_dB -= PGA_GAIN;
+
+        return volume_dB;
+    }
 }
 
 float audio_get_sidetone_freq() {

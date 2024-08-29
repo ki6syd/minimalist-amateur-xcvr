@@ -30,6 +30,7 @@ extern void audio_stream_task (void * pvParameter);
 void audio_init();
 void audio_set_mode(audio_mode_t mode);
 void audio_set_filt(audio_filt_t filt);
+void audio_en_pga(bool gain);
 void audio_en_sidetone(bool tone);
 void audio_en_rx_audio(bool en);
 void audio_set_volume(float vol);

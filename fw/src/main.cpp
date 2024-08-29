@@ -49,10 +49,11 @@ void batterySenseTask(void *param) {
     // Serial.print("Analog read: ");
     // Serial.println(analogRead(ADC_VDD) * ADC_MAX_VOLT / ADC_VDD_SCALE / ADC_FS_COUNTS);
 
-    // Serial.print("S-meter: ");
+    Serial.print("S-meter: ");
     // Serial.println(out_vol_meas.volume());
+    Serial.println(audio_get_rx_db());
 
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 }
 
@@ -209,30 +210,13 @@ void setup() {
   // wifi_init();
 
   audio_init();
+  audio_set_sidetone_volume(0.1);
+  audio_set_volume(1.0);
 
   radio_init();
 
-  // note: platformio + arduino puts wifi on core 0
-  // run on core 1
-  xTaskCreatePinnedToCore(
-    audio_stream_task,
-    "Audio Stream Updater Task",
-    16384,
-    NULL,
-    1, // priority
-    &xAudioStreamTaskHandle,
-    1 // core
-  );
-
-  xTaskCreatePinnedToCore(
-    radio_task,
-    "Radio Task",
-    16384,
-    NULL,
-    1, // priority
-    &xRadioTaskHandle,
-    1 // core
-  );
+  radio_set_dial_freq(14060000);
+  
 
   // run on core 0
   xTaskCreatePinnedToCore(
@@ -341,8 +325,8 @@ void loop() {
   if(millis() - t > 2000) {
     // AudioDriver *driver = audio_board.getDriver();
     if(counter % 2 == 0) {
-      audio_en_sidetone(true);
-      audio_en_rx_audio(false);
+      // audio_en_sidetone(true);
+      // audio_en_rx_audio(false);
       // driver->setMute(false, 0);
       // driver->setMute(true, 1);    // turns off DAC output
       // // driver->setInputVolume(10);   // changes PGA
@@ -353,8 +337,9 @@ void loop() {
       radio_key_on();
     }
     else {
-      audio_en_sidetone(false);
-      audio_en_rx_audio(true);
+      // audio_en_sidetone(false);
+      // audio_en_rx_audio(true);
+
       // driver->setMute(true, 0);
       // driver->setMute(false, 1);
       // // driver->setInputVolume(80); // changes PGA
