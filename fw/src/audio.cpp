@@ -52,7 +52,7 @@ float global_vol = 0;
 
 void audio_init() {
     AudioLogger::instance().begin(Serial, AudioLogger::Warning);
-    LOGLEVEL_AUDIODRIVER = AudioDriverDebug;    // AudioDriverInfo  // AudioDriverWarning
+    LOGLEVEL_AUDIODRIVER = AudioDriverWarning;    // AudioDriverInfo  // AudioDriverWarning // AudioDriverDebug
 
     my_pins.addI2C(PinFunction::CODEC, CODEC_SCL, CODEC_SDA, CODEC_ADDR, CODEC_I2C_SPEED, codecI2C);
     my_pins.addI2S(PinFunction::CODEC, CODEC_MCLK, CODEC_BCLK, CODEC_WS, CODEC_DO, CODEC_DI);
@@ -276,13 +276,21 @@ void audio_set_sidetone_freq(float freq) {
 }
 
 // compensate for volume control here
-// TODO: measure before applying volume control
-float audio_get_rx_db() {
+// TODO: change audio chain to measure before applying volume control
+float audio_get_rx_db(uint16_t num_to_avg, uint16_t delay_ms) {
     if(sidetone_en)
         return -1001;
     else {
-        float volume_dB = out_vol_meas.volumeDB();
-        
+        float volume_dB = 0;
+        for(uint16_t i = 0; i < num_to_avg; i++) {
+            volume_dB += out_vol_meas.volumeDB();
+
+            // only delay between samples if we are averaging
+            if(num_to_avg > 0)
+                vTaskDelay(delay_ms / portTICK_PERIOD_MS);
+        }
+        volume_dB /= num_to_avg;
+
         // correct for volume
         volume_dB += 20 * log10(1 / global_vol);
 

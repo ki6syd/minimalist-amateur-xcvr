@@ -7,7 +7,7 @@
 
 HardwareSerial VHFserial(1);
 
-TaskHandle_t xAudioStreamTaskHandle, xRadioTaskHandle, xSpareTaskHandle0, xSpareTaskHandle1;
+TaskHandle_t xAudioStreamTaskHandle, xSpareTaskHandle0, xSpareTaskHandle1;
 TaskHandle_t blinkTaskHandle, batterySenseTaskHandle, txPulseTaskHandle; 
 
 SemaphoreHandle_t btn_semaphore;
@@ -215,10 +215,14 @@ void setup() {
 
   radio_init();
 
+  /*
+
   radio_set_dial_freq(14060000);
   digitalWrite(BPF_SEL_0, HIGH);
   digitalWrite(BPF_SEL_1, LOW);
   digitalWrite(TX_RX_SEL, LOW);     // RX mode
+
+  */
 
 
   // run on core 0

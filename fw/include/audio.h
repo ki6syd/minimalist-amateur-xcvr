@@ -36,5 +36,5 @@ void audio_en_rx_audio(bool en);
 void audio_set_volume(float vol);
 void audio_set_sidetone_volume(float vol);
 void audio_set_sidetone_freq(float freq);
-float audio_get_rx_db();
+float audio_get_rx_db(uint16_t num_to_avg=1, uint16_t delay_ms=0);
 float audio_get_sidetone_freq();

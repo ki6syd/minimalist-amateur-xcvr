@@ -12,29 +12,42 @@
 #define SI5351_IDX_TX     SI5351_CLK2
 
 // #define CAL_FREQ_ON_STARTUP
-#define CAL_IF_FILT_ON_STARTUP
-#define CAL_BPF_FILT_ON_STARTUP
+// #define CAL_IF_FILT_ON_STARTUP
+// #define CAL_BPF_FILT_ON_STARTUP
 #define CAL_GRAPHICS
 
 Si5351 si5351;
 
 QueueHandle_t xRadioQueue;
 
+TaskHandle_t xRadioTaskHandle;
+TimerHandle_t xQskTimer = NULL;
+
+
 radio_audio_bw_t bw = BW_CW;
 radio_rxtx_mode_t rxtx_mode = MODE_RX;
+radio_band_t band = BAND_HF_2;
 
 uint64_t freq_dial = 14040000;
-uint64_t freq_xtal_lower = 10000000;
-uint64_t freq_xtal_upper = 10003000;
+uint64_t freq_xtal_lower = 9997800;
+uint64_t freq_xtal_upper = 10002600;
 uint64_t freq_vfo = 0;
 uint64_t freq_bfo = 0;
 
 void radio_si5351_init();
 void radio_calc_clocks();
 void radio_set_clocks(uint64_t freq_bfo, uint64_t freq_vfo, uint64_t freq_rf);
+void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode);
+void radio_set_band(radio_band_t new_band);
+
+void radio_task (void * pvParameter);
+void radio_qsk_timer_callback(TimerHandle_t timer);
+
+// calibration related functions
+void radio_sweep_analyze(radio_filt_sweep_t sweep, float *data, radio_filt_properties_t *properties);
 void radio_cal_tx_10MHz();
-void radio_cal_if_filt();
-void radio_cal_bpf_filt();
+void radio_cal_if_filt(radio_filt_sweep_t sweep, radio_filt_properties_t *properties);
+void radio_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_properties_t *properties);
 
 void radio_init() {
   pinMode(BPF_SEL_0, OUTPUT);
@@ -46,10 +59,6 @@ void radio_init() {
 
   digitalWrite(PA_VDD_CTRL, LOW);   // VDD off
   digitalWrite(TX_RX_SEL, LOW);     // RX mode
-  
-  // select 20m band
-  digitalWrite(BPF_SEL_0, LOW);
-  digitalWrite(BPF_SEL_1, HIGH);
 
   radio_si5351_init();
 
@@ -66,6 +75,18 @@ void radio_init() {
     &xRadioTaskHandle,
     1 // core
   );
+
+  Serial.println("radio task started");
+
+  // create the QSK timer
+  xQskTimer = xTimerCreate(
+    "QskTimer",
+    ( 500 / portTICK_PERIOD_MS),
+    pdFALSE,                          // one shot timer
+    0,
+    radio_qsk_timer_callback          // callback function
+  );
+  xTimerStart(xQskTimer, 0);
 }
 
 void radio_si5351_init() {
@@ -87,7 +108,17 @@ void radio_si5351_init() {
   radio_cal_tx_10MHz();
 #endif
 #ifdef CAL_IF_FILT_ON_STARTUP
-  radio_cal_if_filt();
+  radio_filt_sweep_t if_sweep = {
+    .f_center = 10000000,
+    .f_span = 20000,
+    .num_steps = 100,
+    .num_to_avg = 5,
+    .rolloff = 3
+    };
+  radio_filt_properties_t if_properties;
+  radio_cal_if_filt(if_sweep, &if_properties);
+  freq_xtal_lower = if_properties.f_lower;
+  freq_xtal_upper = if_properties.f_upper;
 #endif
 
   freq_dial = 14060000;
@@ -96,7 +127,24 @@ void radio_si5351_init() {
 
   // do this routine only after calibrating the crystal frequencies
 #ifdef CAL_BPF_FILT_ON_STARTUP
-  radio_cal_bpf_filt();
+  radio_filt_properties_t bpf_properties;
+  radio_filt_sweep_t bpf_sweep = {
+    .f_center = 14000000,
+    .f_span = 4000000,
+    .num_steps = 50,
+    .num_to_avg = 3,
+    .rolloff = 6
+    };
+  radio_cal_bpf_filt(BAND_HF_2, bpf_sweep, &bpf_properties);
+
+  // bpf_sweep.f_center = 14000000;
+  // radio_cal_bpf_filt(BAND_HF_2, bpf_sweep, &bpf_properties);
+
+/*
+  bpf_sweep.f_center = 21000000;
+  radio_cal_bpf_filt(BAND_HF_3, bpf_sweep, &bpf_properties);
+*/
+
 #endif
 
   si5351.output_enable(SI5351_IDX_BFO, 1);
@@ -104,6 +152,7 @@ void radio_si5351_init() {
   si5351.output_enable(SI5351_IDX_TX, 0);
 
 }
+
 
 void radio_task(void *param) {
   radio_state_t tmp;
@@ -122,8 +171,8 @@ void radio_task(void *param) {
       // TODO: setting the clocks would have enabled some. Need to go back to RX mode
     }
 
-    // Check for notification about key up or key down
-    // Don't clear on entry. Clear on exit. Don't wait, the task will yield at the end
+    // Check for notification about key up or key down request
+    // Don't clear flag on entry. Clear on exit. Don't wait, the task will yield at the end
     // example: https://freertos.org/Documentation/02-Kernel/02-Kernel-features/03-Direct-to-task-notifications/04-As-event-group
     if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, 0) == pdTRUE) {
       if(notifiedValue == NOTIFY_KEY_OFF)
@@ -137,6 +186,12 @@ void radio_task(void *param) {
     taskYIELD();
   }
 }
+
+void radio_qsk_timer_callback(TimerHandle_t timer) {
+  digitalWrite(LED_RED, HIGH);
+  Serial.println("Timer expired ***********");
+}
+
 
 void radio_key_on() {
   xTaskNotify(xRadioTaskHandle, NOTIFY_KEY_ON, eSetBits);
@@ -194,6 +249,208 @@ void radio_set_clocks(uint64_t freq_bfo, uint64_t freq_vfo, uint64_t freq_rf) {
   */
 }
 
+void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
+  switch(new_mode) {
+    case MODE_RX:
+    case MODE_QSK_COUNTDOWN:
+    case MODE_TX:
+
+      break;
+    case MODE_SELF_TEST:
+      rxtx_mode = new_mode;
+      return;
+  }
+}
+
+// this function does NOT care whether transmit is active currently. Blindly sets the correct relays/mux based on the band selection
+// mode change safety is handled by dial frequency updates
+void radio_set_band(radio_band_t new_band) {
+  if(rxtx_mode == MODE_RX || rxtx_mode == MODE_QSK_COUNTDOWN) {
+    digitalWrite(TX_RX_SEL, LOW);
+    switch(new_band) {
+      case BAND_HF_1:
+        digitalWrite(BPF_SEL_0, HIGH);
+        digitalWrite(BPF_SEL_1, LOW);
+        break;
+      case BAND_HF_2:
+        digitalWrite(BPF_SEL_0, HIGH);
+        digitalWrite(BPF_SEL_1, LOW);
+        break;
+      case BAND_HF_3:
+        digitalWrite(BPF_SEL_0, LOW);
+        digitalWrite(BPF_SEL_1, HIGH);
+        break;
+      case BAND_SELF_TEST:
+        digitalWrite(BPF_SEL_0, HIGH);
+        digitalWrite(BPF_SEL_1, HIGH);
+        break;
+      default:
+        Serial.print("Invalid band request: ");
+        Serial.println(new_band);
+        return;
+      digitalWrite(LPF_SEL_0, LOW);
+      digitalWrite(LPF_SEL_1, LOW);
+    }
+  }
+  else if(rxtx_mode == MODE_SELF_TEST) {
+    // want to engage both BPF and LPF pathways properly
+    digitalWrite(TX_RX_SEL, LOW);
+    // turn this off, just to be safe in selftest mode
+    digitalWrite(PA_VDD_CTRL, LOW);
+    switch(new_band) {
+      case BAND_HF_1:
+        digitalWrite(BPF_SEL_0, LOW);
+        digitalWrite(BPF_SEL_1, LOW);
+        digitalWrite(LPF_SEL_0, LOW);
+        digitalWrite(LPF_SEL_1, HIGH);
+        break;
+      case BAND_HF_2:
+        digitalWrite(BPF_SEL_0, HIGH);
+        digitalWrite(BPF_SEL_1, LOW);
+        digitalWrite(LPF_SEL_0, HIGH);
+        digitalWrite(LPF_SEL_1, LOW);
+        break;
+      case BAND_HF_3:
+        digitalWrite(BPF_SEL_0, LOW);
+        digitalWrite(BPF_SEL_1, HIGH);
+        digitalWrite(LPF_SEL_0, HIGH);
+        digitalWrite(LPF_SEL_1, HIGH);
+        break;
+      case BAND_SELF_TEST:
+        digitalWrite(BPF_SEL_0, HIGH);
+        digitalWrite(BPF_SEL_1, HIGH);
+        digitalWrite(LPF_SEL_0, LOW);
+        digitalWrite(LPF_SEL_1, LOW);
+        break;
+      default:
+        Serial.print("Invalid band request: ");
+        Serial.println(new_band);
+        return;
+    }
+  }
+  else if(rxtx_mode == MODE_TX) {
+    digitalWrite(TX_RX_SEL, HIGH);
+    switch(new_band) {
+      case BAND_HF_1:
+        digitalWrite(BPF_SEL_0, HIGH);
+        digitalWrite(BPF_SEL_1, HIGH);
+        digitalWrite(LPF_SEL_0, LOW);
+        digitalWrite(LPF_SEL_1, HIGH);
+        break;
+      case BAND_HF_2:
+        digitalWrite(BPF_SEL_0, HIGH);
+        digitalWrite(BPF_SEL_1, LOW);
+        digitalWrite(LPF_SEL_0, HIGH);
+        digitalWrite(LPF_SEL_1, LOW);
+        break;
+      case BAND_HF_3:
+        digitalWrite(BPF_SEL_0, HIGH);
+        digitalWrite(BPF_SEL_1, HIGH);
+        digitalWrite(LPF_SEL_0, HIGH);
+        digitalWrite(LPF_SEL_1, HIGH);
+        break;
+      case BAND_SELF_TEST:
+        digitalWrite(BPF_SEL_0, HIGH);
+        digitalWrite(BPF_SEL_1, HIGH);
+        digitalWrite(LPF_SEL_0, LOW);
+        digitalWrite(LPF_SEL_1, LOW);
+        break;
+      default:
+        Serial.print("Invalid band request: ");
+        Serial.println(new_band);
+        return;
+    }
+  }
+  band = new_band;
+}
+
+
+// inputs: sweep setup, dataset
+// outputs: analyzed properties
+void radio_sweep_analyze(radio_filt_sweep_t sweep, float *data, radio_filt_properties_t *properties) {
+  uint64_t step_size = sweep.f_span / sweep.num_steps;
+
+  // graphics
+#ifdef CAL_GRAPHICS
+  for(uint16_t i=0; i < sweep.num_steps; i++) {
+    int64_t dF = (int64_t) step_size * ((int64_t) i - sweep.num_steps/2);
+    Serial.print("dF: ");
+    Serial.print(dF);
+
+    // hack: add a tab if needed
+    if(dF >= 0 && dF < 1000)
+      Serial.print("\t");
+
+    Serial.print("\t\tVol: ");
+    Serial.print(data[i]);
+    Serial.print("\t\t");
+
+    uint16_t bar_size = (uint16_t) abs(data[i]);
+    for(uint16_t j = 0; j < bar_size; j++) {
+      Serial.print(".");
+    }
+    Serial.println();
+  }
+#endif
+
+  // find center of filter (highest signal)
+  uint16_t idx_max = 0;
+  float meas_max = -1000;
+  for(uint16_t i = 0; i < sweep.num_steps; i++) {
+    if(data[i] > meas_max) {
+      meas_max = data[i];
+      idx_max = i;
+    }
+  }
+  properties->f_center = sweep.f_center - ((int16_t) sweep.num_steps/2 - idx_max);
+
+  Serial.print("idx_max: ");
+  Serial.print(idx_max);
+  Serial.print("\tfreq_max: ");
+  Serial.print(properties->f_center);
+  Serial.print("\tmeas_max: ");
+  Serial.println(meas_max);
+
+  // find lower corner
+  uint16_t idx_lower = 0;
+  float meas_lower = meas_max;
+  for(uint16_t i=idx_max; i > 0; i--) {
+    if(abs(meas_max - data[i]) > sweep.rolloff) {
+      idx_lower = i;
+      meas_lower = data[i];
+      break;
+    }
+  }
+  properties->f_lower = sweep.f_center - (sweep.num_steps/2 - idx_lower) * step_size;
+
+  Serial.print("idx_lower: ");
+  Serial.print(idx_lower);
+  Serial.print("\tfreq_lower: ");
+  Serial.print(properties->f_lower);
+  Serial.print("\tmeas_lower: ");
+  Serial.println(meas_lower);
+
+
+  // find upper corner
+  uint16_t idx_upper = 0;
+  float meas_upper = meas_max;
+  for(uint16_t i=idx_max; i < sweep.num_steps; i++) {
+    if(abs(meas_max - data[i]) > sweep.rolloff) {
+      idx_upper = i;
+      meas_upper = data[i];
+      break;
+    }
+  }
+  properties->f_upper = sweep.f_center + (idx_upper - sweep.num_steps/2) * step_size;
+
+  Serial.print("idx_upper: ");
+  Serial.print(idx_upper);
+  Serial.print("\tfreq_upper: ");
+  Serial.print(properties->f_upper);
+  Serial.print("\tmeas_upper: ");
+  Serial.println(meas_upper);
+}
+
 // turn on TX for 5 seconds so nearby radio can listen for 10MHz carrier
 void radio_cal_tx_10MHz() {
   si5351.set_freq(((uint64_t) 10000000) * 100, SI5351_IDX_TX);
@@ -205,15 +462,9 @@ void radio_cal_tx_10MHz() {
 
 // stop the VFO, enable BFO, sweep TX-CLK injection and observe amplitude
 // assumes that si5351 crystal is already calibrated
-void radio_cal_if_filt() {
+void radio_cal_if_filt(radio_filt_sweep_t sweep, radio_filt_properties_t *properties) {
   Serial.println("\n\nCalibrating Crystal filter...");
   digitalWrite(LED_RED, HIGH);
-
-  // turn on TX-CLK, turn off other clocks
-  si5351.set_freq(((uint64_t) 10000000) * 100, SI5351_IDX_BFO);
-  si5351.output_enable(SI5351_IDX_BFO, 1);
-  si5351.output_enable(SI5351_IDX_VFO, 0);
-  si5351.output_enable(SI5351_IDX_TX, 1);
 
   audio_en_pga(false);
   audio_en_sidetone(false);
@@ -221,109 +472,34 @@ void radio_cal_if_filt() {
   audio_en_rx_audio(true);
   audio_set_filt(AUDIO_FILT_SSB);
   
-  // pipe TX-CLK into the RX pathway
-  digitalWrite(BPF_SEL_0, HIGH);
-  digitalWrite(BPF_SEL_1, HIGH);
+  radio_set_band(BAND_SELF_TEST);
+  radio_set_rxtx_mode(MODE_SELF_TEST);
+
+  // turn on TX-CLK, turn off other clocks
+  si5351.output_enable(SI5351_IDX_BFO, 1);
+  si5351.output_enable(SI5351_IDX_VFO, 0);
+  si5351.output_enable(SI5351_IDX_TX, 1);
 
   // wait to let audio settle
   vTaskDelay(500 / portTICK_PERIOD_MS);
 
   // sweep TX-CLK
-  int16_t step_size = 200;
-  int16_t num_steps = 100;
-  uint64_t center_freq = 10000000;
-  uint16_t num_avg = 5;
-  float filter_rolloff = 3;    // dB determining when the filter has rolled off
-  float measurements[num_steps];
-  for(int16_t i = 0; i < num_steps; i++)
+  int16_t step_size = sweep.f_span / sweep.num_steps;
+  float measurements[sweep.num_steps];
+  for(int16_t i = 0; i < sweep.num_steps; i++)
   {
-    uint64_t f_tx = center_freq + (uint64_t) step_size * (i - num_steps/2);
+    uint64_t f_tx = sweep.f_center + (uint64_t) step_size * (i - sweep.num_steps/2);
     si5351.set_freq(f_tx * 100, SI5351_IDX_TX);
     si5351.set_freq(((uint64_t) f_tx + audio_get_sidetone_freq()) * 100, SI5351_IDX_BFO);
-    vTaskDelay(5 / portTICK_PERIOD_MS);
+    vTaskDelay(10 / portTICK_PERIOD_MS);
 
-    // measure average volume
-    float avg_vol = 0;
-    
-    for(int16_t j = 0; j < num_avg; j++) {
-      avg_vol += audio_get_rx_db();
-      vTaskDelay(1 / portTICK_PERIOD_MS);
-    }
-    avg_vol /= num_avg;
-    measurements[i] = avg_vol;
-
-    // graphics
-#ifdef CAL_GRAPHICS
-    Serial.print("dF: ");
-    Serial.print(step_size * (i - num_steps/2));
-    Serial.print("\t\tVol: ");
-    Serial.print(avg_vol);
-    Serial.print("\t\t");
-
-    uint16_t bar_size = (uint16_t) abs(measurements[i]);
-    for(uint16_t j = 0; j < bar_size; j++) {
-      Serial.print(".");
-    }
-    Serial.println();
-#endif
+    measurements[i] = audio_get_rx_db(sweep.num_to_avg, 1);
   }
 
-  // find center of filter (highest signal)
-  uint16_t idx_max = 0;
-  float meas_max = -1000;
-  for(uint16_t i = 0; i < num_steps; i++) {
-    if(measurements[i] > meas_max) {
-      meas_max = measurements[i];
-      idx_max = i;
-    }
-  }
-
-  Serial.print("idx_max: ");
-  Serial.print(idx_max);
-  Serial.print("\tmeas_max: ");
-  Serial.println(meas_max);
-
-  // find lower corner
-  uint16_t idx_lower = 0;
-  float meas_lower = meas_max;
-  for(uint16_t i=idx_max; i > 0; i--) {
-    if(abs(meas_max - measurements[i]) > filter_rolloff) {
-      idx_lower = i;
-      meas_lower = measurements[i];
-      break;
-    }
-  }
-  Serial.print("idx_lower: ");
-  Serial.print(idx_lower);
-  Serial.print("\tfreq_lower: ");
-  Serial.print(center_freq - (num_steps/2 - idx_lower) * step_size);
-  Serial.print("\tmeas_lower: ");
-  Serial.println(meas_lower);
-
-
-  // find upper corner
-  uint16_t idx_upper = 0;
-  float meas_upper = meas_max;
-  for(uint16_t i=idx_max; i < num_steps; i++) {
-    if(abs(meas_max - measurements[i]) > filter_rolloff) {
-      idx_upper = i;
-      meas_upper = measurements[i];
-      break;
-    }
-  }
-  Serial.print("idx_upper: ");
-  Serial.print(idx_upper);
-  Serial.print("\tfreq_upper: ");
-  Serial.print(center_freq + (idx_upper - num_steps/2) * step_size);
-  Serial.print("\tmeas_upper: ");
-  Serial.println(meas_upper);
+  radio_sweep_analyze(sweep, measurements, properties);
 
   // TODO: logic to broaden the search if the upper or lower index are at the edges of the sweep
   // TODO: logic to enable/disable PGA if it's always railed
-
-  // TODO: sanity check the detected upper/lower crystal frequencies before assigning
-  freq_xtal_lower = center_freq - (num_steps/2 - idx_lower) * step_size;
-  freq_xtal_upper = center_freq + (idx_upper - num_steps/2) * step_size;
 
   digitalWrite(LED_RED, LOW);
   audio_set_filt(AUDIO_FILT_CW);
@@ -332,30 +508,12 @@ void radio_cal_if_filt() {
   audio_en_rx_audio(true);
 }
 
-
-void radio_cal_bpf_filt() {
+void radio_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_properties_t *properties) {
   Serial.println("\n\nCalibrating Bandpass filter...");
   digitalWrite(LED_RED, HIGH);
 
-  // select TX on band # 2 (20m)
-  // TODO: band selection by enum
-  digitalWrite(PA_VDD_CTRL, LOW);   // VDD off
-  vTaskDelay(500 / portTICK_PERIOD_MS);
-  
-  digitalWrite(LPF_SEL_0, HIGH);
-  digitalWrite(LPF_SEL_1, LOW);  
-
-  digitalWrite(TX_RX_SEL, LOW);
-
-
-  // select band # 2
-  digitalWrite(BPF_SEL_0, HIGH);
-  digitalWrite(BPF_SEL_1, LOW);
-
-  // turn on all clocks for this self-test
-  si5351.output_enable(SI5351_IDX_BFO, 1);
-  si5351.output_enable(SI5351_IDX_VFO, 1);
-  si5351.output_enable(SI5351_IDX_TX, 1);
+  radio_set_band(band);
+  radio_set_rxtx_mode(MODE_SELF_TEST);
 
   audio_en_pga(false);
   audio_en_sidetone(false);
@@ -363,55 +521,28 @@ void radio_cal_bpf_filt() {
   audio_en_rx_audio(true);
   audio_set_filt(AUDIO_FILT_SSB);
 
+  // turn on all clocks for this self-test
+  si5351.output_enable(SI5351_IDX_BFO, 1);
+  si5351.output_enable(SI5351_IDX_VFO, 1);
+  si5351.output_enable(SI5351_IDX_TX, 1);
+
   // wait to let audio settle
   vTaskDelay(500 / portTICK_PERIOD_MS);
 
-  // sweep dial frequency
-  int64_t step_size = 25000;
-  int64_t num_steps = 100;
-  uint64_t center_freq = 14000000;
-  uint16_t num_avg = 3;
-  float measurements[num_steps];
-  for(int64_t i = 0; i < num_steps; i++)
+  int64_t step_size = ((int64_t) sweep.f_span) / sweep.num_steps;
+  float measurements[sweep.num_steps];
+  for(uint16_t i = 0; i < sweep.num_steps; i++)
   {
-    int64_t dF = step_size * (i - num_steps/2);
-    Serial.println(dF);
-    freq_dial = (uint64_t) center_freq + dF;
+    int64_t dF = step_size * (((int64_t) i) - (int64_t) sweep.num_steps/2);
+    freq_dial = (uint64_t) sweep.f_center + dF;
     radio_calc_clocks();
     radio_set_clocks(freq_bfo, freq_vfo, freq_dial);
     vTaskDelay(10 / portTICK_PERIOD_MS);
 
-    // measure average volume
-    float avg_vol = 0;
-    
-    for(int16_t j = 0; j < num_avg; j++) {
-      avg_vol += audio_get_rx_db();
-      vTaskDelay(1 / portTICK_PERIOD_MS);
-    }
-    avg_vol /= num_avg;
-    measurements[i] = avg_vol;
-
-    // graphics
-#ifdef CAL_GRAPHICS
-    Serial.print("dF: ");
-    Serial.print(step_size * (i - num_steps/2));
-    Serial.print("\t\tVol: ");
-    Serial.print(avg_vol);
-    Serial.print("\t\t");
-
-    uint16_t bar_size = (uint16_t) abs(measurements[i]);
-    for(uint16_t j = 0; j < bar_size; j++) {
-      Serial.print(".");
-    }
-    Serial.println();
-#endif
+    measurements[i] = audio_get_rx_db(sweep.num_to_avg, 10);
   }
 
-
-
-  digitalWrite(TX_RX_SEL, LOW);
-  digitalWrite(LPF_SEL_0, LOW);
-  digitalWrite(LPF_SEL_1, LOW); 
+  radio_sweep_analyze(sweep, measurements, properties);
 
   digitalWrite(LED_RED, LOW);
   audio_set_filt(AUDIO_FILT_CW);
