@@ -23,7 +23,6 @@ QueueHandle_t xRadioQueue;
 TaskHandle_t xRadioTaskHandle;
 TimerHandle_t xQskTimer = NULL;
 
-
 radio_audio_bw_t bw = BW_CW;
 radio_rxtx_mode_t rxtx_mode = MODE_RX;
 radio_band_t band = BAND_HF_2;
@@ -62,6 +61,8 @@ void radio_init() {
 
   radio_si5351_init();
 
+  radio_set_rxtx_mode(MODE_RX);
+
   // create the message queue
   xRadioQueue = xQueueCreate(10, sizeof(radio_state_t));
 
@@ -75,8 +76,6 @@ void radio_init() {
     &xRadioTaskHandle,
     1 // core
   );
-
-  Serial.println("radio task started");
 
   // create the QSK timer
   xQskTimer = xTimerCreate(
@@ -129,27 +128,21 @@ void radio_si5351_init() {
 #ifdef CAL_BPF_FILT_ON_STARTUP
   radio_filt_properties_t bpf_properties;
   radio_filt_sweep_t bpf_sweep = {
-    .f_center = 14000000,
+    .f_center = 7000,
     .f_span = 4000000,
     .num_steps = 50,
     .num_to_avg = 3,
     .rolloff = 6
     };
+  radio_cal_bpf_filt(BAND_HF_1, bpf_sweep, &bpf_properties);
+
+  bpf_sweep.f_center = 14000000;
   radio_cal_bpf_filt(BAND_HF_2, bpf_sweep, &bpf_properties);
 
-  // bpf_sweep.f_center = 14000000;
-  // radio_cal_bpf_filt(BAND_HF_2, bpf_sweep, &bpf_properties);
-
-/*
   bpf_sweep.f_center = 21000000;
   radio_cal_bpf_filt(BAND_HF_3, bpf_sweep, &bpf_properties);
-*/
 
 #endif
-
-  si5351.output_enable(SI5351_IDX_BFO, 1);
-  si5351.output_enable(SI5351_IDX_VFO, 1);
-  si5351.output_enable(SI5351_IDX_TX, 0);
 
 }
 
@@ -175,21 +168,39 @@ void radio_task(void *param) {
     // Don't clear flag on entry. Clear on exit. Don't wait, the task will yield at the end
     // example: https://freertos.org/Documentation/02-Kernel/02-Kernel-features/03-Direct-to-task-notifications/04-As-event-group
     if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, 0) == pdTRUE) {
-      if(notifiedValue == NOTIFY_KEY_OFF)
+      if(notifiedValue == NOTIFY_KEY_OFF) {
         Serial.println("Key off");
-      if(notifiedValue == NOTIFY_KEY_ON)
-        Serial.println("Key on");
-    }
+        // initiate mode change
+        radio_set_rxtx_mode(MODE_RX);
+        
+        // delay so VDD can discharge
+        vTaskDelay(25 / portTICK_PERIOD_MS);
 
-    // check if QSK timer has expired
+        // turn off sidetone, LED, TX power amp rail
+        audio_en_sidetone(false);
+        digitalWrite(LED_RED, LOW);
+        digitalWrite(PA_VDD_CTRL, LOW);
+      }
+      if(notifiedValue == NOTIFY_KEY_ON) {
+        Serial.println("Key on");
+        // initiate mode change
+        radio_set_rxtx_mode(MODE_RX);
+
+        // turn off sidetone, LED, TX power amp rail
+        audio_en_sidetone(true);
+        digitalWrite(LED_RED, HIGH);
+        // digitalWrite(PA_VDD_CTRL, HIGH);
+      }
+    }
     
     taskYIELD();
   }
 }
 
+// when the QSK timer expires, transition into RX mode
 void radio_qsk_timer_callback(TimerHandle_t timer) {
-  digitalWrite(LED_RED, HIGH);
-  Serial.println("Timer expired ***********");
+  radio_set_rxtx_mode(MODE_RX);
+  Serial.println("QSK Timer expired ***********");
 }
 
 
@@ -250,10 +261,71 @@ void radio_set_clocks(uint64_t freq_bfo, uint64_t freq_vfo, uint64_t freq_rf) {
 }
 
 void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
+  // quit immediately if there was no change requested
+  if(new_mode == rxtx_mode)
+    return;
+
   switch(new_mode) {
     case MODE_RX:
+      // stop QSK counter, in case it was still running
+      xTimerStop(xQskTimer, 0);
+
+      // update mode so the next function calls assume TX
+      rxtx_mode = MODE_RX;
+
+      // set up clocks
+      si5351.output_enable(SI5351_IDX_BFO, 1);
+      si5351.output_enable(SI5351_IDX_VFO, 1);
+      si5351.output_enable(SI5351_IDX_TX, 0);
+
+      // change over relays if needed. Add some settling time
+      // TODO: rework the radio_set_band(band) fundtion so it is "radio_set_relays(freq)" and looks up band from dial freq
+      radio_set_band(band);
+      vTaskDelay(5 / portTICK_PERIOD_MS);
+
+      // enable RX audio
+      audio_en_pga(true);
+      audio_en_rx_audio(true);
+      audio_en_sidetone(false);
+
+      break;
     case MODE_QSK_COUNTDOWN:
+      // restart QSK counter upon entry to QSK_COUNTDOWN mode
+      xTimerReset(xQskTimer, 0);
+
+      // update mode 
+      rxtx_mode = MODE_QSK_COUNTDOWN;
+
+      // mute all audio sources
+      audio_en_pga(false);
+      audio_en_rx_audio(true);
+
+      // no need to update clocks, was just in TX
+      // no need to update relays when mode changes to QSK, was just in TX
+
+      break;
+
     case MODE_TX:
+      // stop QSK counter
+      xTimerStop(xQskTimer, 0);
+
+      // update mode so the next function calls assume TX
+      rxtx_mode = MODE_TX;
+
+      // turn off RX audio
+      // TX power amp rail, sidetone, and TX LED are handled elsewhere
+      audio_en_pga(false);
+      audio_en_rx_audio(false);
+
+      // change over relays if needed. Add some settling time
+      // TODO: rework the radio_set_band(band) fundtion so it is "radio_set_relays(freq)" and looks up band from dial freq
+      radio_set_band(band);
+      vTaskDelay(5 / portTICK_PERIOD_MS);
+
+      // set up clocks. TX clock always running in TX mode
+      si5351.output_enable(SI5351_IDX_BFO, 0);
+      si5351.output_enable(SI5351_IDX_VFO, 0);
+      si5351.output_enable(SI5351_IDX_TX, 1);
 
       break;
     case MODE_SELF_TEST:

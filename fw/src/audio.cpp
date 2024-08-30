@@ -205,26 +205,18 @@ void audio_set_filt(audio_filt_t filt) {
     }
 }
 
-
+// TODO: make this thread safe. Other modules could try to initiate i2c writes via this function
 void audio_en_pga(bool gain) {
     AudioDriver *driver = audio_board.getDriver();
 
     // TODO: fix the bug in pschatzmann's library that makes 100 % volume output weird gains ("Debug:   input volume: 100 -> gain -2113876796")
     if(gain) {
-        // driver->setInputVolume(80); // changes PGA in the codec
         driver->setInputVolume(100); // changes PGA in the codec
     }
     else
         driver->setInputVolume(0);
 
     pga_en = gain;
-    
-
-   // hack follows
-   /*
-   pga_en = true;
-   driver->setInputVolume(0);
-   */
 }
 
 // ONLY affects sidetone, does not affect muting of rx audio
