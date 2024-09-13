@@ -121,7 +121,10 @@ void setup() {
   ledcAttachPin(BUCK_SYNC, PWM_CHANNEL_SYNC);
   ledcWrite(PWM_CHANNEL_SYNC, 2);
 
-  Serial.begin(DEBUG_SERIAL_SPEED);
+  // only start the HWCDC if something is connected
+  // fixes bad behavior where audio output from codec was corrupt if USB unplugged
+  if(Serial.isConnected())
+    Serial.begin(DEBUG_SERIAL_SPEED);
 
   VHFserial.begin(VHF_SERIAL_SPEED, SERIAL_8N1, VHF_TX_ESP_RX, VHF_RX_ESP_TX);
 
