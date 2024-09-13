@@ -46,8 +46,10 @@ OutputMixer<int16_t>          side_l_r_mix(audio_filt, 3);              // sidet
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
 StreamCopy copier_1(side_l_r_mix, sound_stream);                      // move sine wave from sound_stream into the sidetone mixer
 StreamCopy copier_2(input_split, i2s_stream);                           // moves data through the streams. To: input_split, from: i2s_stream
+#ifdef AUDIO_PATH_IQ
 FilteredStream<int16_t, float> hilbert_n45deg(input_l_vol, info_mono.channels);
 FilteredStream<int16_t, float> hilbert_p45deg(input_r_vol, info_mono.channels);
+#endif
 
 // example of i2s codec for both input and output: https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-audiokit/streams-audiokit-filter-audiokit/streams-audiokit-filter-audiokit.ino
 
@@ -98,20 +100,23 @@ void audio_init() {
 
     // input_split (stereo) --> two (mono) volume control pathways
     // note that the indices of side_l_r_mix are set by the declaration above, then the following two lines
+    // omit the input_x_vol controls if we are not using IQ data
+#ifdef AUDIO_PATH_IQ
     input_split.addOutput(input_l_vol, 0);
     input_split.addOutput(input_r_vol, 1);
-    // input_split.addOutput(side_l_r_mix, 0);
-    // input_split.addOutput(side_l_r_mix, 1);
+#else
+    input_split.addOutput(side_l_r_mix, 0);
+    input_split.addOutput(side_l_r_mix, 1);
+#endif
     input_split.begin(info_stereo);
 
 
+#ifdef AUDIO_PATH_IQ
     // l/r volume pathways feed into hilbert transforms
     input_l_vol.setOutput(hilbert_n45deg);
-    // input_l_vol.setOutput(side_l_r_mix);
     input_l_vol.begin(info_mono);
     input_l_vol.setVolume(0);
     input_r_vol.setOutput(hilbert_p45deg);
-    // input_r_vol.setOutput(side_l_r_mix);
     input_r_vol.begin(info_mono);
     input_r_vol.setVolume(1.0);
 
@@ -120,7 +125,7 @@ void audio_init() {
     hilbert_n45deg.setOutput(side_l_r_mix);
     hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
     hilbert_p45deg.setOutput(side_l_r_mix);
-
+#endif
 
 
     // left + right + sidetone --> side_l_r_mix (mono). declaration links to audio_filt
@@ -240,6 +245,7 @@ void audio_set_filt(audio_filt_t filt) {
 
 // debug fuction just to see the phase shift toggling
 void audio_test(bool swap) {
+#ifdef AUDIO_PATH_IQ
     if(swap) {
         hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
         hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
@@ -248,6 +254,7 @@ void audio_test(bool swap) {
         hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
         hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
     }
+#endif
 }
 
 // TODO: make this thread safe. Other modules could try to initiate i2c writes via this function

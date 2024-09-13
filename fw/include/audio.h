@@ -6,7 +6,9 @@
 // #define AUDIO_EN_OUT_VBAN
 // #define AUDIO_EN_OUT_CSV
 
+#ifdef RX_ARCHITECTURE_QSD
 #define AUDIO_PATH_IQ
+#endif
 
 // audio_mode_t: defines DSP pathway configuration, it is *unrelated* to the concept of TX, RX, QSK. 
 // "CW" refers to direct TX carrier generation (not baseband audio input). _RXTX_CW could be using SSB bandwidth filtering
