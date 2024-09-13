@@ -59,9 +59,23 @@ bool sidetone_en = false;
 bool pga_en = false;
 float global_vol = 0;
 
-void audio_stream_task (void * pvParameter);
+void audio_task (void * pvParameter);
 
 void audio_init() {
+    // note: platformio + arduino puts wifi on core 0
+    // run on core 1
+    xTaskCreatePinnedToCore(
+        audio_task,
+        "Audio Stream Updater Task",
+        16384,
+        NULL,
+        TASK_PRIORITY_LOWEST, // priority
+        &xAudioStreamTaskHandle,
+        1 // core
+    );
+}
+
+void audio_task(void *param) {
     AudioLogger::instance().begin(Serial, AudioLogger::Warning);
     LOGLEVEL_AUDIODRIVER = AudioDriverWarning;    // AudioDriverInfo  // AudioDriverWarning // AudioDriverDebug
 
@@ -163,27 +177,13 @@ void audio_init() {
     audio_en_sidetone(false);
     audio_en_rx_audio(true);
 
-    // note: platformio + arduino puts wifi on core 0
-    // run on core 1
-    xTaskCreatePinnedToCore(
-        audio_stream_task,
-        "Audio Stream Updater Task",
-        16384,
-        NULL,
-        TASK_PRIORITY_LOWEST, // priority
-        &xAudioStreamTaskHandle,
-        1 // core
-    );
-}
-
-void audio_stream_task(void *param) {
-  while(true) {
+    while(true) {
     copier_1.copy();
     copier_2.copy();
 
     // this is a LOWEST priority task, yield to another LOWEST priority task
     taskYIELD();
-  }
+    }
 }
 
 // TODO: think about thread safety with this function. It's the only one in the file that accesses the hardware
