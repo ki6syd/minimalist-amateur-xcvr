@@ -49,9 +49,8 @@ void batterySenseTask(void *param) {
     // Serial.print("Analog read: ");
     // Serial.println(analogRead(ADC_VDD) * ADC_MAX_VOLT / ADC_VDD_SCALE / ADC_FS_COUNTS);
 
-    Serial.print("S-meter: ");
-    // Serial.println(out_vol_meas.volume());
-    Serial.println(audio_get_rx_db());
+    // Serial.print("S-meter: ");
+    // Serial.println(audio_get_rx_db());
 
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
@@ -71,7 +70,10 @@ ICACHE_RAM_ATTR void buttonISR() {
 void txPulseTask(void *param) {
   while(true) {
     if(xSemaphoreTake(btn_semaphore, portMAX_DELAY) == pdPASS) {
-      Serial.println("TX Pulsing");
+      if(digitalRead(BOOT_BTN) == LOW)
+        radio_key_on();
+      if(digitalRead(BOOT_BTN) == HIGH)
+        radio_key_off();
 
       // HF TX test
 
@@ -133,7 +135,7 @@ void txPulseTask(void *param) {
 
 
 
-      attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, FALLING);
+      attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, CHANGE);
       attachInterrupt(digitalPinToInterrupt(MIC_PTT), buttonISR, FALLING);
       attachInterrupt(digitalPinToInterrupt(KEY_DIT), buttonISR, FALLING);
       attachInterrupt(digitalPinToInterrupt(KEY_DAH), buttonISR, FALLING);
@@ -211,7 +213,7 @@ void setup() {
 
   audio_init();
   audio_set_sidetone_volume(0.1);
-  audio_set_volume(1.0);
+  audio_set_volume(0.1);
 
   radio_init();
 
@@ -329,7 +331,7 @@ void setup() {
 
 
 void loop() { 
-  if(millis() - t > 2000) {
+  if(millis() - t > 5000) {
     // AudioDriver *driver = audio_board.getDriver();
     if(counter % 2 == 0) {
       // audio_en_sidetone(true);
@@ -341,7 +343,7 @@ void loop() {
 
       // hf_vhf_mixer.setWeight(0, 0);
 
-      radio_key_on();
+      // radio_key_on();
     }
     else {
       // audio_en_sidetone(false);
@@ -356,7 +358,7 @@ void loop() {
 
       radio_set_dial_freq(12345);
 
-      radio_key_off();
+      // radio_key_off();
 
     }      
     counter++;

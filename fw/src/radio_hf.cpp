@@ -6,6 +6,7 @@
 
 #define NOTIFY_KEY_ON     0
 #define NOTIFY_KEY_OFF    1
+#define NOTIFY_QSK_EXPIRE 2
 
 #define SI5351_IDX_BFO    SI5351_CLK0
 #define SI5351_IDX_VFO    SI5351_CLK1
@@ -164,17 +165,14 @@ void radio_task(void *param) {
       // TODO: setting the clocks would have enabled some. Need to go back to RX mode
     }
 
-    // Check for notification about key up or key down request
+    // look for flags
     // Don't clear flag on entry. Clear on exit. Don't wait, the task will yield at the end
     // example: https://freertos.org/Documentation/02-Kernel/02-Kernel-features/03-Direct-to-task-notifications/04-As-event-group
     if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, 0) == pdTRUE) {
       if(notifiedValue == NOTIFY_KEY_OFF) {
         Serial.println("Key off");
         // initiate mode change
-        radio_set_rxtx_mode(MODE_RX);
-        
-        // delay so VDD can discharge
-        vTaskDelay(25 / portTICK_PERIOD_MS);
+        radio_set_rxtx_mode(MODE_QSK_COUNTDOWN);
 
         // turn off sidetone, LED, TX power amp rail
         audio_en_sidetone(false);
@@ -184,12 +182,15 @@ void radio_task(void *param) {
       if(notifiedValue == NOTIFY_KEY_ON) {
         Serial.println("Key on");
         // initiate mode change
-        radio_set_rxtx_mode(MODE_RX);
+        radio_set_rxtx_mode(MODE_TX);
 
         // turn off sidetone, LED, TX power amp rail
         audio_en_sidetone(true);
         digitalWrite(LED_RED, HIGH);
-        // digitalWrite(PA_VDD_CTRL, HIGH);
+        // digitalWrite(PA_VDD_CTRL, HIGH); // comment out for testing
+      }
+      if(notifiedValue == NOTIFY_QSK_EXPIRE) {
+        radio_set_rxtx_mode(MODE_RX);
       }
     }
     
@@ -198,9 +199,9 @@ void radio_task(void *param) {
 }
 
 // when the QSK timer expires, transition into RX mode
+// TODO: test this
 void radio_qsk_timer_callback(TimerHandle_t timer) {
-  radio_set_rxtx_mode(MODE_RX);
-  Serial.println("QSK Timer expired ***********");
+  xTaskNotify(xRadioTaskHandle, NOTIFY_QSK_EXPIRE, eSetBits);
 }
 
 
@@ -261,9 +262,16 @@ void radio_set_clocks(uint64_t freq_bfo, uint64_t freq_vfo, uint64_t freq_rf) {
 }
 
 void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
-  // quit immediately if there was no change requested
+  // return immediately if there was no change requested
   if(new_mode == rxtx_mode)
     return;
+
+  // intervene on invalid request: going from TX direct to RX
+  if(rxtx_mode == MODE_TX && new_mode == MODE_RX)
+    new_mode = MODE_QSK_COUNTDOWN;
+
+  Serial.print("Mode change: ");
+  Serial.println(new_mode);
 
   switch(new_mode) {
     case MODE_RX:
@@ -291,8 +299,9 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
       break;
     case MODE_QSK_COUNTDOWN:
       // restart QSK counter upon entry to QSK_COUNTDOWN mode
-      xTimerReset(xQskTimer, 0);
-
+      if(xTimerReset(xQskTimer, 0) != pdPASS) {
+        Serial.println("**** failed to restart qsk timer");
+      }
       // update mode 
       rxtx_mode = MODE_QSK_COUNTDOWN;
 
@@ -302,6 +311,10 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
 
       // no need to update clocks, was just in TX
       // no need to update relays when mode changes to QSK, was just in TX
+
+      // delay so VDD can discharge
+      // implemented on entry to QSK_COUNTDOWN to guarantee that we can't immediately transition to RX 
+      vTaskDelay(25 / portTICK_PERIOD_MS);
 
       break;
 
@@ -435,7 +448,6 @@ void radio_set_band(radio_band_t new_band) {
   }
   band = new_band;
 }
-
 
 // inputs: sweep setup, dataset
 // outputs: analyzed properties
