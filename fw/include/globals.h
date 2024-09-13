@@ -1,0 +1,5 @@
+#pragma once
+
+#define TASK_PRIORITY_HIGHEST   5
+#define TASK_PRIORITY_NORMAL    3
+#define TASK_PRIORITY_LOWEST    1

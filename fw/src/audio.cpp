@@ -1,3 +1,4 @@
+#include "globals.h"
 #include "audio.h"
 #include "fir_coeffs_bpf.h"
 
@@ -136,7 +137,7 @@ void audio_init() {
         "Audio Stream Updater Task",
         16384,
         NULL,
-        1, // priority
+        TASK_PRIORITY_LOWEST, // priority
         &xAudioStreamTaskHandle,
         1 // core
     );
@@ -147,6 +148,7 @@ void audio_stream_task(void *param) {
     copier_1.copy();
     copier_2.copy();
 
+    // this is a LOWEST priority task, yield to another LOWEST priority task
     taskYIELD();
   }
 }

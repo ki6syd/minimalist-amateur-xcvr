@@ -1,12 +1,14 @@
+#include "globals.h"
 #include "radio_hf.h"
 #include "audio.h"
 
 #include <Arduino.h>
 #include <si5351.h>
 
-#define NOTIFY_KEY_ON     0
-#define NOTIFY_KEY_OFF    1
-#define NOTIFY_QSK_EXPIRE 2
+#define NOTIFY_KEY_ON         0
+#define NOTIFY_KEY_OFF        1
+#define NOTIFY_QSK_EXPIRE     2
+#define NOTIFY_FREQ_CHANGE    3
 
 #define SI5351_IDX_BFO    SI5351_CLK0
 #define SI5351_IDX_VFO    SI5351_CLK1
@@ -39,6 +41,7 @@ void radio_calc_clocks();
 void radio_set_clocks(uint64_t freq_bfo, uint64_t freq_vfo, uint64_t freq_rf);
 void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode);
 void radio_set_band(radio_band_t new_band);
+bool radio_freq_valid(uint64_t freq);
 
 void radio_task (void * pvParameter);
 void radio_qsk_timer_callback(TimerHandle_t timer);
@@ -73,7 +76,7 @@ void radio_init() {
     "Radio Task",
     16384,
     NULL,
-    1, // priority
+    TASK_PRIORITY_HIGHEST, // priority
     &xRadioTaskHandle,
     1 // core
   );
@@ -155,6 +158,7 @@ void radio_task(void *param) {
   while(true) {
 
     // look for frequency/mode change requests
+    // wait for zero ticks, don't want to block here
     if(xQueueReceive(xRadioQueue, (void *) &tmp, 0) == pdTRUE) {
       Serial.print("Queue message: ");
       Serial.println(tmp.dial_freq);
@@ -194,7 +198,9 @@ void radio_task(void *param) {
       }
     }
     
-    taskYIELD();
+    // block, let another task run
+    // implemented as a delay because we have *both* a queue and task notification that this loop checks, unsure which would unblock first
+    vTaskDelay(1 / portTICK_PERIOD_MS);
   }
 }
 
@@ -214,14 +220,18 @@ void radio_key_off() {
 }
 
 // helper function to REQUEST a frequency change. Adds to the queue.
-// TODO: enforce frequency limits based on band
 void radio_set_dial_freq(uint64_t freq) {
+  if(!radio_freq_valid(freq))
+    return;
+
   radio_state_t tmp = { .dial_freq = freq, .bw = radio_get_bw()};
 
   if(xQueueSend(xRadioQueue, (void *) &tmp, 0) != pdTRUE) {
     // TODO: consider replacing this debug statement with returning false
     Serial.println("Unable to change frequency, queue full");
   }
+
+  xTaskNotify(xRadioTaskHandle, notify_todo, eSetBits);
 }
 
 uint64_t radio_get_dial_freq() {
@@ -447,6 +457,19 @@ void radio_set_band(radio_band_t new_band) {
     }
   }
   band = new_band;
+}
+
+// 
+// TODO: load frequency limits for each band from NVM
+bool radio_freq_valid(uint64_t freq) {
+  if(freq > 7000000 && freq < 7250000)
+    return true;
+  if(freq > 14000000 && freq < 14300000)
+    return true;
+  if(freq > 21000000 && freq < 21300000)
+    return true;
+
+  return false;
 }
 
 // inputs: sweep setup, dataset

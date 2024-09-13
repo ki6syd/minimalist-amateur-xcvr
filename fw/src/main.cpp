@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <HardwareSerial.h>
 
+#include "globals.h"
 #include "wifi_conn.h"
 #include "audio.h"
 #include "radio_hf.h"
@@ -217,23 +218,13 @@ void setup() {
 
   radio_init();
 
-  /*
-
-  radio_set_dial_freq(14060000);
-  digitalWrite(BPF_SEL_0, HIGH);
-  digitalWrite(BPF_SEL_1, LOW);
-  digitalWrite(TX_RX_SEL, LOW);     // RX mode
-
-  */
-
-
   // run on core 0
   xTaskCreatePinnedToCore(
     spare_task_core_0,
     "Debug LED spare time task",
     4096,
     NULL,
-    4, // priority
+    TASK_PRIORITY_LOWEST, // priority
     &xSpareTaskHandle0,
     0 // core
   );
@@ -244,7 +235,7 @@ void setup() {
     "Debug LED spare time task",
     4096,
     NULL,
-    4, // priority
+    TASK_PRIORITY_LOWEST, // priority
     &xSpareTaskHandle1,
     1 // core
   );
@@ -255,7 +246,7 @@ void setup() {
     "Blinky light",
     4096,
     NULL,
-    3, // priority
+    TASK_PRIORITY_LOWEST + 1, // priority
     &blinkTaskHandle,
     0 // core
   );
@@ -265,7 +256,7 @@ void setup() {
     "VDD Sensing",
     4096,
     NULL,
-    3, // priority
+    TASK_PRIORITY_NORMAL, // priority
     &batterySenseTaskHandle,
     0 // core
   );
@@ -276,7 +267,7 @@ void setup() {
     "TX pulse generator",
     4096,
     NULL,
-    2, // priority
+    TASK_PRIORITY_HIGHEST, // priority
     &txPulseTaskHandle,
     1 // core
   );
@@ -356,7 +347,7 @@ void loop() {
 
       // hf_vhf_mixer.setWeight(0, 1.0);
 
-      radio_set_dial_freq(12345);
+      radio_set_dial_freq(14060000);
 
       // radio_key_off();
 
