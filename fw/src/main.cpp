@@ -8,7 +8,7 @@
 
 HardwareSerial VHFserial(1);
 
-TaskHandle_t xAudioStreamTaskHandle, xSpareTaskHandle0, xSpareTaskHandle1;
+TaskHandle_t xSpareTaskHandle0, xSpareTaskHandle1;
 TaskHandle_t blinkTaskHandle, batterySenseTaskHandle, txPulseTaskHandle; 
 
 SemaphoreHandle_t btn_semaphore;
@@ -47,7 +47,7 @@ void blinkTask(void *param) {
 
 void batterySenseTask(void *param) {
   while(true) {
-    // Serial.print("Analog read: ");
+    // Serial.print("VDD read: ");
     // Serial.println(analogRead(ADC_VDD) * ADC_MAX_VOLT / ADC_VDD_SCALE / ADC_FS_COUNTS);
 
     // Serial.print("S-meter: ");
@@ -76,65 +76,6 @@ void txPulseTask(void *param) {
       if(digitalRead(BOOT_BTN) == HIGH)
         radio_key_off();
 
-      // HF TX test
-
-      /*
-      si5351.output_enable(SI5351_CLK2, 1); // TX clock
-      digitalWrite(PA_VDD_CTRL, HIGH);
-      vTaskDelay(25 / portTICK_PERIOD_MS);      
-      vTaskDelay(10000 / portTICK_PERIOD_MS);      
-      digitalWrite(PA_VDD_CTRL, LOW);
-      vTaskDelay(25 / portTICK_PERIOD_MS);
-      si5351.output_enable(SI5351_CLK2, 0); // TX clock
-      */
-
-      // VHF TX test
-      /*
-      // change to LOUT1 and ROUT1
-      AudioDriver *driver = audio_board.getDriver();
-      Serial.println();
-      Serial.println("Powering up DAC 1");
-      driver->setMute(true, 0);
-      driver->setMute(false, 1);
-
-      // change to LIN2
-      // HACK: reconfigure the codec with a different input_device
-      // AudioDriver doesn't have a way to set input source besides the i2s_config used at startup. passed through to es8388_init()
-      auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
-      i2s_config.input_device = ADC_INPUT_LINE2;
-      i2s_config.copyFrom(info_stereo);
-      i2s_config.buffer_size = 512;
-      i2s_config.buffer_count = 2;
-      i2s_config.port_no = 0;
-      i2s_stream.begin(i2s_config);
-
-      // turn on sidetone
-      hf_vhf_mixer.setWeight(0, 1.0);
-
-      vTaskDelay(100 / portTICK_PERIOD_MS);
-      digitalWrite(VHF_PTT, LOW);
-      // descending frequency sweep
-      for(uint16_t i=0; i < 20; i++) {
-        sine_wave.setFrequency(700);
-        vTaskDelay(250 / portTICK_PERIOD_MS);
-        sine_wave.setFrequency(1400);
-        vTaskDelay(250 / portTICK_PERIOD_MS);
-      }
-      sine_wave.setFrequency(700);
-      // vTaskDelay(1500 / portTICK_PERIOD_MS);
-      digitalWrite(VHF_PTT, HIGH);
-      vTaskDelay(100 / portTICK_PERIOD_MS);
-
-      // restore previous state (LOUT2 and ROUT2 as output, LIN1 and RIN1 as input)
-      Serial.println();
-      Serial.println("Powering up DAC 2");
-      driver->setMute(false, 0);
-      driver->setMute(true, 1);
-      hf_vhf_mixer.setWeight(0, 0);
-
-      */
-
-
 
       attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, CHANGE);
       attachInterrupt(digitalPinToInterrupt(MIC_PTT), buttonISR, FALLING);
@@ -154,7 +95,7 @@ void setup() {
   pinMode(LED_DBG_1, OUTPUT);
 
   pinMode(BOOT_BTN, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, CHANGE);
   pinMode(MIC_PTT, INPUT);
   attachInterrupt(digitalPinToInterrupt(MIC_PTT), buttonISR, FALLING);
   pinMode(KEY_DAH, INPUT);
@@ -165,12 +106,9 @@ void setup() {
   pinMode(VHF_PTT, OUTPUT);
   pinMode(SPARE_0, OUTPUT);
 
-  
-
   // digitalWrite(VHF_EN, HIGH);   // enabled
   digitalWrite(VHF_EN, LOW);
   digitalWrite(VHF_PTT, HIGH);  // RX
-
 
   digitalWrite(SPARE_0, LOW);
 
@@ -188,7 +126,6 @@ void setup() {
   VHFserial.begin(VHF_SERIAL_SPEED, SERIAL_8N1, VHF_TX_ESP_RX, VHF_RX_ESP_TX);
 
   delay(5000);
-  digitalWrite(SPARE_0, HIGH);
 
   // https://community.platformio.org/t/how-to-use-psram-on-esp32-s3-devkitc-1-under-esp-idf/32127/17
   if(psramInit())
@@ -213,8 +150,8 @@ void setup() {
   // wifi_init();
 
   audio_init();
-  audio_set_sidetone_volume(0.1);
-  audio_set_volume(0.1);
+  audio_set_sidetone_volume(AUDIO_SIDE_DEFAULT);
+  audio_set_volume(AUDIO_VOL_DEFAULT);
 
   radio_init();
 
@@ -272,14 +209,6 @@ void setup() {
     1 // core
   );
 
-
-  // select TX on band#2
-  /*
-  digitalWrite(TX_RX_SEL, HIGH);
-  digitalWrite(LPF_SEL_0, HIGH);
-  digitalWrite(LPF_SEL_1, HIGH);  
-  */
-
   // set VHFserial timeout (milliseconds)
   VHFserial.setTimeout(100);
 
@@ -288,13 +217,6 @@ void setup() {
   VHFserial.println("AT+DMOCONNECT");
 
   delay(1000);
-
-  /*
-  Serial.println("VHF Response: ");
-  while(VHFserial.available() > 1) {
-    Serial.print((char) VHFserial.read());
-  }
-  */
 
   // todo: parametrize length
   char buf[64];
@@ -320,36 +242,16 @@ void setup() {
 
 }
 
-
+// code in loop() is just for testing, don't want to actually do anything here
 void loop() { 
-  if(millis() - t > 5000) {
-    // AudioDriver *driver = audio_board.getDriver();
+  if(millis() - t > 1000) {
     if(counter % 2 == 0) {
-      // audio_en_sidetone(true);
-      // audio_en_rx_audio(false);
-      // driver->setMute(false, 0);
-      // driver->setMute(true, 1);    // turns off DAC output
-      // // driver->setInputVolume(10);   // changes PGA
-      // audio_filt.setFilter(0, new FIR<float>(coeff_bandpass));  // definitely creating a memory issue by creating new filters repeatedly...
-
-      // hf_vhf_mixer.setWeight(0, 0);
-
-      // radio_key_on();
+      audio_test(true);
     }
     else {
-      // audio_en_sidetone(false);
-      // audio_en_rx_audio(true);
-
-      // driver->setMute(true, 0);
-      // driver->setMute(false, 1);
-      // // driver->setInputVolume(80); // changes PGA
-      // audio_filt.setFilter(0, new FIR<float>(coeff_lowpass));  // definitely creating a memory issue by creating new filters repeatedly...
-
-      // hf_vhf_mixer.setWeight(0, 1.0);
-
       radio_set_dial_freq(14060000);
 
-      // radio_key_off();
+      audio_test(false);
 
     }      
     counter++;

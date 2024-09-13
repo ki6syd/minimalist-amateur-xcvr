@@ -1,6 +1,7 @@
 #include "globals.h"
 #include "audio.h"
 #include "fir_coeffs_bpf.h"
+#include "fir_coeffs_hilbert.h"
 
 #include <Wire.h>
 #include "AudioTools.h"
@@ -16,6 +17,8 @@
 #define PGA_GAIN                24
 
 TwoWire codecI2C = TwoWire(1);  // "Wire" is used in si5351 library. Defined through TwoWire(0), so the other peripheral is still available
+
+TaskHandle_t xAudioStreamTaskHandle;
 
 AudioInfo                     info_stereo(F_AUDIO, 2, 16);              // sampling rate, # channels, bit depth
 AudioInfo                     info_mono(F_AUDIO, 1, 16);                // sampling rate, # channels, bit depth
@@ -35,6 +38,7 @@ GeneratedSoundStream<int16_t> sound_stream(sine_wave);
 
 ChannelSplitOutput            input_split;                              // splits the stereo input stream into two mono streams
 VolumeStream                  out_vol;                                  // output volume control
+VolumeStream                  input_l_vol, input_r_vol;
 VolumeMeter                   out_vol_meas;                             // measure the volume of the output
 MultiOutput                   multi_output;                             // splits the final output into audio jack, vban output, csv stream
 FilteredStream<int16_t, float> audio_filt(out_vol, info_mono.channels); // filter outputting into out_vol volume control
@@ -42,6 +46,8 @@ OutputMixer<int16_t>          side_l_r_mix(audio_filt, 3);              // sidet
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
 StreamCopy copier_1(side_l_r_mix, sound_stream);                      // move sine wave from sound_stream into the sidetone mixer
 StreamCopy copier_2(input_split, i2s_stream);                           // moves data through the streams. To: input_split, from: i2s_stream
+FilteredStream<int16_t, float> hilbert_n45deg(input_l_vol, info_mono.channels);
+FilteredStream<int16_t, float> hilbert_p45deg(input_r_vol, info_mono.channels);
 
 // example of i2s codec for both input and output: https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-audiokit/streams-audiokit-filter-audiokit/streams-audiokit-filter-audiokit.ino
 
@@ -50,6 +56,8 @@ float sidetone_freq = F_SIDETONE_DEFAULT;
 bool sidetone_en = false;
 bool pga_en = false;
 float global_vol = 0;
+
+void audio_stream_task (void * pvParameter);
 
 void audio_init() {
     AudioLogger::instance().begin(Serial, AudioLogger::Warning);
@@ -88,25 +96,45 @@ void audio_init() {
     csv_stream.begin(info_mono);
 #endif
 
-    // input_split (stereo) --> two (mono) channels of the audio mixer
+    // input_split (stereo) --> two (mono) volume control pathways
     // note that the indices of side_l_r_mix are set by the declaration above, then the following two lines
-    input_split.addOutput(side_l_r_mix, 0);
-    input_split.addOutput(side_l_r_mix, 1);
+    input_split.addOutput(input_l_vol, 0);
+    input_split.addOutput(input_r_vol, 1);
+    // input_split.addOutput(side_l_r_mix, 0);
+    // input_split.addOutput(side_l_r_mix, 1);
     input_split.begin(info_stereo);
 
-    // hf + vhf --> side_l_r_mix (mono). declaration links to audio_filt
+
+    // l/r volume pathways feed into hilbert transforms
+    input_l_vol.setOutput(hilbert_n45deg);
+    // input_l_vol.setOutput(side_l_r_mix);
+    input_l_vol.begin(info_mono);
+    input_l_vol.setVolume(0);
+    input_r_vol.setOutput(hilbert_p45deg);
+    // input_r_vol.setOutput(side_l_r_mix);
+    input_r_vol.begin(info_mono);
+    input_r_vol.setVolume(1.0);
+
+    // hilbert transforms feed into the sidetone+left+right mixer
+    hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
+    hilbert_n45deg.setOutput(side_l_r_mix);
+    hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
+    hilbert_p45deg.setOutput(side_l_r_mix);
+
+
+
+    // left + right + sidetone --> side_l_r_mix (mono). declaration links to audio_filt
     // HF, VHF, sidetone all set to zero weight. audio_set_mode() will properly apply weights.
-    // HF vs VHF select done through setWeight()
     side_l_r_mix.begin();
     side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, 0);      // input 0: sidetone from sound_stream
     side_l_r_mix.setWeight(MIXER_IDX_LEFT, 0);          // input 1: INx-L codec channel
     side_l_r_mix.setWeight(MIXER_IDX_RIGHT, 0);         // input 2: INx-R codec channel
 
     // audio_filt declaration has already linked it to out_vol (mono)
-    audio_set_filt(AUDIO_FILT_CW);
+    audio_set_filt(AUDIO_FILT_DEFAULT);
 
     // audio_filt (mono) --> out_vol (mono) --> multi_output (mono)
-    audio_set_volume(0.1);          // start at 10% global volume
+    audio_set_volume(AUDIO_VOL_DEFAULT);
     out_vol.setStream(audio_filt);
     out_vol.setOutput(multi_output);
     out_vol.begin(info_mono);
@@ -162,8 +190,8 @@ void audio_set_mode(audio_mode_t mode) {
     Serial.println("Configuring codec...");
     auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
     i2s_config.copyFrom(info_stereo);
-    i2s_config.buffer_size = 512;
-    i2s_config.buffer_count = 2;
+    i2s_config.buffer_size = 1024;
+    i2s_config.buffer_count = 4;
     i2s_config.port_no = 0;
 
     AudioDriver *driver = audio_board.getDriver();
@@ -194,16 +222,31 @@ void audio_set_mode(audio_mode_t mode) {
     }
 }
 
+// changes the audio FIR in use
+// TODO: definitely creating a memory issue by creating new filters repeatedly...
 void audio_set_filt(audio_filt_t filt) {
     switch(filt) {
         case AUDIO_FILT_CW:
-            audio_filt.setFilter(0, new FIR<float>(coeff_bpf_400_600));
+            // audio_filt.setFilter(0, new FIR<float>(coeff_bpf_400_600));
+            audio_filt.setFilter(0, new FIR<float>(coeff_bpf_300_700));
             break;
 
         case AUDIO_FILT_SSB:
             // basically a LPF, but should filter out some amount of 60hz noise
             audio_filt.setFilter(0, new FIR<float>(coeff_bpf_400_2000));
             break;
+    }
+}
+
+// debug fuction just to see the phase shift toggling
+void audio_test(bool swap) {
+    if(swap) {
+        hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
+        hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
+    }
+    else {
+        hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
+        hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
     }
 }
 

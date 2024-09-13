@@ -156,19 +156,6 @@ void radio_task(void *param) {
   uint32_t notifiedValue;
 
   while(true) {
-
-    // look for frequency/mode change requests
-    // wait for zero ticks, don't want to block here
-    if(xQueueReceive(xRadioQueue, (void *) &tmp, 0) == pdTRUE) {
-      Serial.print("Queue message: ");
-      Serial.println(tmp.dial_freq);
-
-      // freq_dial = tmp.dial_freq;
-      // radio_calc_clocks();
-      // radio_set_clocks(freq_bfo, freq_vfo, freq_dial);
-      // TODO: setting the clocks would have enabled some. Need to go back to RX mode
-    }
-
     // look for flags
     // Don't clear flag on entry. Clear on exit. Don't wait, the task will yield at the end
     // example: https://freertos.org/Documentation/02-Kernel/02-Kernel-features/03-Direct-to-task-notifications/04-As-event-group
@@ -196,10 +183,21 @@ void radio_task(void *param) {
       if(notifiedValue == NOTIFY_QSK_EXPIRE) {
         radio_set_rxtx_mode(MODE_RX);
       }
+      if(notifiedValue == NOTIFY_FREQ_CHANGE) {
+        // wait for zero ticks, don't want to block here
+        if(xQueueReceive(xRadioQueue, (void *) &tmp, 0) == pdTRUE) {
+          Serial.print("Queue message: ");
+          Serial.println(tmp.dial_freq);
+
+          // freq_dial = tmp.dial_freq;
+          // radio_calc_clocks();
+          // radio_set_clocks(freq_bfo, freq_vfo, freq_dial);
+          // TODO: setting the clocks would have enabled some. Need to go back to RX mode
+        }
+      }
     }
-    
-    // block, let another task run
-    // implemented as a delay because we have *both* a queue and task notification that this loop checks, unsure which would unblock first
+
+    // todo why was notifywait not blocking
     vTaskDelay(1 / portTICK_PERIOD_MS);
   }
 }
@@ -231,7 +229,7 @@ void radio_set_dial_freq(uint64_t freq) {
     Serial.println("Unable to change frequency, queue full");
   }
 
-  xTaskNotify(xRadioTaskHandle, notify_todo, eSetBits);
+  xTaskNotify(xRadioTaskHandle, NOTIFY_FREQ_CHANGE, eSetBits);
 }
 
 uint64_t radio_get_dial_freq() {
@@ -575,7 +573,7 @@ void radio_cal_if_filt(radio_filt_sweep_t sweep, radio_filt_properties_t *proper
 
   audio_en_pga(false);
   audio_en_sidetone(false);
-  audio_set_volume(0.1);  // can mute for quiet startup
+  audio_set_volume(AUDIO_VOL_DURING_CAL);  // can mute for quiet startup
   audio_en_rx_audio(true);
   audio_set_filt(AUDIO_FILT_SSB);
   
@@ -609,9 +607,9 @@ void radio_cal_if_filt(radio_filt_sweep_t sweep, radio_filt_properties_t *proper
   // TODO: logic to enable/disable PGA if it's always railed
 
   digitalWrite(LED_RED, LOW);
-  audio_set_filt(AUDIO_FILT_CW);
-  audio_en_pga(true);
-  audio_set_volume(0.1);
+  audio_set_filt(AUDIO_FILT_DEFAULT);
+  audio_en_pga(AUDIO_PGA_DEFAULT);
+  audio_set_volume(AUDIO_VOL_DEFAULT);
   audio_en_rx_audio(true);
 }
 
@@ -624,7 +622,7 @@ void radio_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_
 
   audio_en_pga(false);
   audio_en_sidetone(false);
-  audio_set_volume(0.1);  // can mute for quiet startup
+  audio_set_volume(AUDIO_VOL_DURING_CAL);  // can mute for quiet startup
   audio_en_rx_audio(true);
   audio_set_filt(AUDIO_FILT_SSB);
 
@@ -652,8 +650,8 @@ void radio_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_
   radio_sweep_analyze(sweep, measurements, properties);
 
   digitalWrite(LED_RED, LOW);
-  audio_set_filt(AUDIO_FILT_CW);
-  audio_en_pga(true);
-  audio_set_volume(0.1);
+  audio_set_filt(AUDIO_FILT_DEFAULT);
+  audio_en_pga(AUDIO_PGA_DEFAULT);
+  audio_set_volume(AUDIO_VOL_DEFAULT);
   audio_en_rx_audio(true);
 }

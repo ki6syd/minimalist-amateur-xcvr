@@ -44,9 +44,6 @@ typedef struct {
     uint64_t f_upper;
 } radio_filt_properties_t;
 
-// extern TaskHandle_t xRadioTaskHandle;
-// extern void radio_task (void * pvParameter);
-
 void radio_init();
 void radio_key_on();
 void radio_key_off();

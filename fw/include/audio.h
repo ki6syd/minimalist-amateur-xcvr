@@ -6,7 +6,7 @@
 // #define AUDIO_EN_OUT_VBAN
 // #define AUDIO_EN_OUT_CSV
 
-// #define AUDIO_PATH_IQ
+#define AUDIO_PATH_IQ
 
 // audio_mode_t: defines DSP pathway configuration, it is *unrelated* to the concept of TX, RX, QSK. 
 // "CW" refers to direct TX carrier generation (not baseband audio input). _RXTX_CW could be using SSB bandwidth filtering
@@ -24,9 +24,6 @@ typedef enum {
     AUDIO_FILT_SSB
 } audio_filt_t;
 
-extern TaskHandle_t xAudioStreamTaskHandle;
-extern void audio_stream_task (void * pvParameter);
-
 void audio_init();
 void audio_set_mode(audio_mode_t mode);
 void audio_set_filt(audio_filt_t filt);
@@ -38,3 +35,5 @@ void audio_set_sidetone_volume(float vol);
 void audio_set_sidetone_freq(float freq);
 float audio_get_rx_db(uint16_t num_to_avg=1, uint16_t delay_ms=0);
 float audio_get_sidetone_freq();
+
+void audio_test(bool swap); // delete me later - used for debug only
