@@ -14,4 +14,4 @@
 #define AUDIO_PGA_DEFAULT       true
 
 // signals that the radio and audio modules should expect quadrature sampling detector (QSD) as BFO
-#define RX_ARCHITECTURE_QSD
+// #define RX_ARCHITECTURE_QSD

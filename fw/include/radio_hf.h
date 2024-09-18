@@ -44,7 +44,7 @@ typedef struct {
     uint64_t f_upper;
 } radio_filt_properties_t;
 
-void radio_init();
+void radio_hf_init();
 void radio_key_on();
 void radio_key_off();
 void radio_set_dial_freq(uint64_t freq);

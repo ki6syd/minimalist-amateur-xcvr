@@ -52,7 +52,7 @@ void radio_cal_tx_10MHz();
 void radio_cal_if_filt(radio_filt_sweep_t sweep, radio_filt_properties_t *properties);
 void radio_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_properties_t *properties);
 
-void radio_init() {
+void radio_hf_init() {
   pinMode(BPF_SEL_0, OUTPUT);
   pinMode(BPF_SEL_1, OUTPUT);
   pinMode(LPF_SEL_0, OUTPUT);
@@ -189,10 +189,11 @@ void radio_task(void *param) {
           Serial.print("Queue message: ");
           Serial.println(tmp.dial_freq);
 
-          // freq_dial = tmp.dial_freq;
-          // radio_calc_clocks();
-          // radio_set_clocks(freq_bfo, freq_vfo, freq_dial);
-          // TODO: setting the clocks would have enabled some. Need to go back to RX mode
+          freq_dial = tmp.dial_freq;
+          radio_calc_clocks();
+          radio_set_clocks(freq_bfo, freq_vfo, freq_dial);
+
+          // TODO: unpack any bandwidth changes from tmp.bw
         }
       }
     }
@@ -217,7 +218,7 @@ void radio_key_off() {
   xTaskNotify(xRadioTaskHandle, NOTIFY_KEY_OFF, eSetBits);
 }
 
-// helper function to REQUEST a frequency change. Adds to the queue.
+// helper function to REQUEST a frequency change
 void radio_set_dial_freq(uint64_t freq) {
   if(!radio_freq_valid(freq))
     return;
@@ -259,14 +260,12 @@ void radio_set_clocks(uint64_t freq_bfo, uint64_t freq_vfo, uint64_t freq_rf) {
   si5351.set_freq(freq_vfo * 100, SI5351_IDX_VFO);
   si5351.set_freq(freq_rf * 100, SI5351_IDX_TX);
 
-  /*
   Serial.print("bfo: ");
   Serial.print(freq_bfo);
   Serial.print("\tvfo: ");
   Serial.print(freq_vfo);
   Serial.print("\ttx: ");
   Serial.println(freq_rf);
-  */
 }
 
 void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
