@@ -120,15 +120,15 @@ void io_init() {
       1 // core
   );
 
-  // run on core 0
+  
   xTaskCreatePinnedToCore(
       blink_task,
       "Blinky light",
       4096,
       NULL,
-      TASK_PRIORITY_LOWEST + 1, // priority
+      TASK_PRIORITY_BLINK, // priority
       &xBlinkTaskHandle,
-      0 // core
+      TASK_CORE_BLINK // core
   );
 
   btn_semaphore = xSemaphoreCreateBinary();

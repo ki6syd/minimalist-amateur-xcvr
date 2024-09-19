@@ -25,9 +25,9 @@ void power_init() {
         "VDD Sensing",
         4096,
         NULL,
-        TASK_PRIORITY_LOWEST + 1, // priority
+        TASK_PRIORITY_POWER, // priority
         &xBatterySenseTaskHandle,
-        0 // core
+        TASK_CORE_POWER // core
     );
 }
 
@@ -35,7 +35,7 @@ void power_init() {
 void battery_sense_task(void *param) {
   while(true) {
     Serial.print("VDD read: ");
-    Serial.println(analogRead(ADC_VDD) * ADC_MAX_VOLT / ADC_VDD_SCALE / ADC_FS_COUNTS);
+    Serial.println((float) analogRead(ADC_VDD) * ADC_MAX_VOLT / ADC_VDD_SCALE / ADC_FS_COUNTS);
 
     // Serial.print("S-meter: ");
     // Serial.println(audio_get_rx_db());

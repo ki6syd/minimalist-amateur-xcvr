@@ -70,15 +70,15 @@ void radio_hf_init() {
   // create the message queue
   xRadioQueue = xQueueCreate(10, sizeof(radio_state_t));
 
-  // note: platformio + arduino puts wifi on core 0
+  
   xTaskCreatePinnedToCore(
     radio_task,
     "Radio Task",
     16384,
     NULL,
-    TASK_PRIORITY_HIGHEST, // priority
+    TASK_PRIORITY_RADIO, // priority
     &xRadioTaskHandle,
-    1 // core
+    TASK_CORE_RADIO // core
   );
 
   // create the QSK timer

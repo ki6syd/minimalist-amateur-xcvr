@@ -69,7 +69,7 @@ void audio_init() {
         "Audio Stream Updater Task",
         16384,
         NULL,
-        TASK_PRIORITY_LOWEST, // priority
+        TASK_PRIORITY_AUDIO, // priority
         &xAudioStreamTaskHandle,
         1 // core
     );
