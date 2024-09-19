@@ -2,6 +2,8 @@
 #include "power.h"
 
 #include <Arduino.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 #define POWER_BUCK_FSW      510e3
 

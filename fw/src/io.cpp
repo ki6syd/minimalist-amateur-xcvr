@@ -3,6 +3,8 @@
 #include "radio_hf.h"
 
 #include <Arduino.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 TaskHandle_t xBlinkTaskHandle, xSpareTaskHandle0, xSpareTaskHandle1, xTxPulseTaskHandle;
 SemaphoreHandle_t btn_semaphore;
@@ -72,7 +74,7 @@ void io_init() {
   // delay gives time to see serial port messages on monitor
   delay(5000);
 
-  // helps avoid some sort of overflow when serial is not connected
+  // helps avoid some sort of overflow when USB is not connected
   if(!Serial.isPlugged() && !Serial.isConnected())
     Serial.end();
 

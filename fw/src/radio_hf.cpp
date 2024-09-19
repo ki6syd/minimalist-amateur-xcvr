@@ -260,12 +260,12 @@ void radio_set_clocks(uint64_t freq_bfo, uint64_t freq_vfo, uint64_t freq_rf) {
   si5351.set_freq(freq_vfo * 100, SI5351_IDX_VFO);
   si5351.set_freq(freq_rf * 100, SI5351_IDX_TX);
 
-  Serial.print("bfo: ");
-  Serial.print(freq_bfo);
-  Serial.print("\tvfo: ");
-  Serial.print(freq_vfo);
-  Serial.print("\ttx: ");
-  Serial.println(freq_rf);
+  // Serial.print("bfo: ");
+  // Serial.print(freq_bfo);
+  // Serial.print("\tvfo: ");
+  // Serial.print(freq_vfo);
+  // Serial.print("\ttx: ");
+  // Serial.println(freq_rf);
 }
 
 void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {

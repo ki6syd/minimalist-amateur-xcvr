@@ -3,6 +3,7 @@
 #include "audio.h"
 
 #include <Arduino.h>
+#include <HardwareSerial.h>
 
 HardwareSerial VHFserial(1);
 

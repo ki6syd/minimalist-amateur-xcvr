@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <HardwareSerial.h>
 
 #include "globals.h"
 #include "io.h"
@@ -16,7 +15,7 @@ void setup() {
   power_init();
   io_init();  
   Serial.println("initializing");
-  // wifi_init();
+  wifi_init();
 
   Serial.println("initializing audio");
   audio_init();
