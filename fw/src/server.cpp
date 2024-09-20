@@ -36,7 +36,14 @@ static const server_handler_t handlers[] = {
     {API_V1,    HTTP_PUT,   "sidetone",         handler_sidetone_set},
     {API_V1,    HTTP_GET,   "rxBandwidth",      handler_bandwidth_get},
     {API_V1,    HTTP_PUT,   "rxBandwidth",      handler_bandwidth_set},
-    {API_V1,    HTTP_GET,   "mac",              handler_mac_get}
+    {API_V1,    HTTP_GET,   "cwSpeed",          handler_keyer_speed_get},
+    {API_V1,    HTTP_PUT,   "cwSpeed",          handler_keyer_speed_set},
+    {API_V1,    HTTP_GET,   "inputVoltage",     handler_input_voltage_get},
+    {API_V1,    HTTP_GET,   "sMeter",           handler_smeter_get},
+    {API_V1,    HTTP_GET,   "githash",          handler_githash_get},
+    {API_V1,    HTTP_GET,   "mac",              handler_mac_get},
+    {API_V1,    HTTP_GET,   "ip",               handler_ip_get},
+    {API_V1,    HTTP_GET,   "api",              handler_api_get}
 };
 
 

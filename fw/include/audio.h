@@ -38,6 +38,7 @@ bool audio_set_sidetone_volume(float vol);
 bool audio_set_sidetone_freq(float freq);
 float audio_get_sidetone_volume();
 float audio_get_rx_db(uint16_t num_to_avg=1, uint16_t delay_ms=0);
+float audio_get_s_meter();
 float audio_get_sidetone_freq();
 float audio_get_volume();
 

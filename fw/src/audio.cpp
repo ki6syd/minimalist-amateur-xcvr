@@ -60,8 +60,10 @@ bool sidetone_en = false;
 bool pga_en = false;
 float global_vol = 0;
 audio_filt_t cur_filt = AUDIO_FILT_DEFAULT;
+float last_volume_dB = 0;
 
 void audio_task (void * pvParameter);
+void audio_measure_volume();
 
 void audio_init() {
     // note: platformio + arduino puts wifi on core 0
@@ -180,11 +182,14 @@ void audio_task(void *param) {
     audio_en_rx_audio(true);
 
     while(true) {
-    copier_1.copy();
-    copier_2.copy();
+        copier_1.copy();
+        copier_2.copy();
 
-    // this is a LOWEST priority task, yield to another LOWEST priority task
-    taskYIELD();
+        // update this variable so other modules can more readily consume it
+        last_volume_dB = audio_get_rx_db();
+
+        // this is a LOWEST priority task, yield to another LOWEST priority task
+        taskYIELD();
     }
 }
 
@@ -368,6 +373,11 @@ float audio_get_rx_db(uint16_t num_to_avg, uint16_t delay_ms) {
 
         return volume_dB;
     }
+}
+
+// TODO: report this in terms of S-units
+float audio_get_s_meter() {
+    return last_volume_dB;
 }
 
 float audio_get_sidetone_freq() {

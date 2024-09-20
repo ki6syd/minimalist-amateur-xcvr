@@ -10,12 +10,14 @@
 #define TASK_PRIORITY_RADIO     TASK_PRIORITY_HIGHEST
 #define TASK_PRIORITY_POWER     (TASK_PRIORITY_LOWEST + 1)
 #define TASK_PRIORITY_BLINK     (TASK_PRIORITY_LOWEST + 1)
+#define TASK_PRIORITY_INFO      TASK_PRIORITY_LOWEST
 
 // note: platformio + arduino puts wifi on core 0. server callbacks likely to happen on core 0
 #define TASK_CORE_AUDIO         1
 #define TASK_CORE_RADIO         1
 #define TASK_CORE_POWER         0
 #define TASK_CORE_BLINK         0
+#define TASK_CORE_INFO          1
 
 
 // audio settings used at startup
@@ -26,6 +28,8 @@
 #define AUDIO_PGA_DEFAULT       true
 
 #define FILE_SYSTEM             LittleFS
+
+#define API_IMPLEMENTED         "v1"
 
 // signals that the radio and audio modules should expect quadrature sampling detector (QSD) as BFO
 // #define RX_ARCHITECTURE_QSD

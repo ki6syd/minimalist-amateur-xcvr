@@ -12,9 +12,10 @@
 
 // #define WIFI_SCAN
 
+IPAddress ip;
 
 void wifi_init() {
-    IPAddress ip;
+    
     IPAddress gateway;
     IPAddress subnet(255, 255, 255, 0);
 
@@ -104,6 +105,10 @@ void wifi_scan() {
     Serial.println(WiFi.channel(i));
     Serial.println("\n");
   }
+}
+
+String wifi_get_ip() {
+    return ip.toString();
 }
 
 // returns the MAC address as a formatted string

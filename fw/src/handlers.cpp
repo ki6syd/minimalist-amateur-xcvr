@@ -3,7 +3,9 @@
 #include "radio_hf.h"
 #include "audio.h"
 #include "keyer.h"
+#include "power.h"
 #include "wifi_conn.h"
+#include "git-version.h"
 
 #include <ESPAsyncWebServer.h>
 #include <Arduino.h>
@@ -109,10 +111,30 @@ void handler_keyer_speed_set(AsyncWebServerRequest *request) {
     if(keyer_set_speed(speed_request))
         request->send(201, "text/plain", "OK");
     else {
-        request->send(400, "text/plain", "Sidetone level out of range");
+        request->send(400, "text/plain", "Keyer speed out of range");
     }
+}
+
+void handler_input_voltage_get(AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", String(power_get_input_volt()));
+}
+
+void handler_smeter_get(AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", String(audio_get_s_meter()));
 }
 
 void handler_mac_get(AsyncWebServerRequest *request) {
     request->send(200, "text/plain", wifi_get_mac());
+}
+
+void handler_githash_get(AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", GIT_VERSION);
+}
+
+void handler_ip_get(AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", wifi_get_ip());
+}
+
+void handler_api_get(AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", API_IMPLEMENTED);
 }

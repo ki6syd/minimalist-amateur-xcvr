@@ -14,6 +14,10 @@
 int t = 0;
 int counter = 0;
 
+TaskHandle_t xInfoTaskHandle;
+
+void info_task(void *pvParameter);
+
 void setup() {
   power_init();
   io_init();  
@@ -31,6 +35,16 @@ void setup() {
   keyer_init();
 
   // todo: signal that setup is complete with some sort of semaphore
+
+  xTaskCreatePinnedToCore(
+        info_task,
+        "Information Task",
+        4096,
+        NULL,
+        TASK_PRIORITY_INFO, // priority
+        &xInfoTaskHandle,
+        TASK_CORE_INFO // core
+    );
 }
 
 // code in loop() is just for testing, don't want to actually do anything here
@@ -50,4 +64,24 @@ void loop() {
     counter++;
     t = millis();
   } 
+}
+
+void info_task(void *param) {
+  while(true) {
+    Serial.println("\n\n----------INFORMATION----------");
+
+    Serial.print("Input voltage: ");
+    Serial.println(power_get_input_volt());
+
+    Serial.print("S-meter: ");
+    Serial.println(audio_get_s_meter());
+
+    Serial.print("IP Address: ");
+    Serial.println(wifi_get_ip());
+
+    Serial.print("MAC Address: ");
+    Serial.println(wifi_get_mac());
+
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+  }
 }
