@@ -9,6 +9,7 @@
 #include "audio.h"
 #include "radio_hf.h"
 #include "radio_vhf.h"
+#include "keyer.h"
 
 int t = 0;
 int counter = 0;
@@ -26,6 +27,8 @@ void setup() {
 
   radio_hf_init();
   radio_vhf_init();
+
+  keyer_init();
 
   // todo: signal that setup is complete with some sort of semaphore
 }

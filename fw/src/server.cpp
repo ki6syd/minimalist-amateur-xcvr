@@ -1,9 +1,11 @@
 #include "server.h"
 #include "handlers.h"
 #include "globals.h"
+#include "radio_hf.h"   // won't be needed after ESP-NOW handler moved into handlers.h
 
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
+#include <esp_now.h>
 #include "LittleFS.h"
 #include <ArduinoJSON.h>
 
@@ -23,22 +25,36 @@ typedef struct {
 
 String api_prefix = "/api/v";
 AsyncWebServer server(80);
+AsyncEventSource events("/events");
+
 static const server_handler_t handlers[] = {
     {API_V1,    HTTP_GET,   "frequency",        handler_frequency_get},
-    {API_V1,    HTTP_GET,   "volume",           handler_volume_get}
+    {API_V1,    HTTP_PUT,   "frequency",        handler_frequency_set},
+    {API_V1,    HTTP_GET,   "volume",           handler_volume_get},
+    {API_V1,    HTTP_PUT,   "volume",           handler_volume_set},
+    {API_V1,    HTTP_GET,   "sidetone",         handler_sidetone_get},
+    {API_V1,    HTTP_PUT,   "sidetone",         handler_sidetone_set},
+    {API_V1,    HTTP_GET,   "rxBandwidth",      handler_bandwidth_get},
+    {API_V1,    HTTP_PUT,   "rxBandwidth",      handler_bandwidth_set},
+    {API_V1,    HTTP_GET,   "mac",              handler_mac_get}
 };
 
 
-bool server_request_handler(AsyncWebServerRequest *request);
+bool server_http_handler(AsyncWebServerRequest *request);
 void server_print_request(AsyncWebServerRequest *request);
+void server_espnow_handler(const uint8_t * mac, const uint8_t *incomingData, int len);
 
 
-void handle_frequency(WebRequestMethodComposite request_type, AsyncWebServerRequest *request) {
-    if(request_type == HTTP_GET) {
-        request->send(200, "text/plain", String(14000));
-        digitalWrite(LED_RED, HIGH);
-    }
-}
+// Structure example to receive data
+// Must match the sender structure
+typedef struct struct_message {
+    char action[32];
+    uint32_t counter;
+} struct_message;
+// Create a struct_message called myData
+struct_message myData;
+
+uint32_t last_counter_val = 0;
 
 void server_init() {
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -50,7 +66,7 @@ void server_init() {
     // not *only* for handling unknown requests
     // using this as a catch-all so we don't need an extreme number of .on() callback registrations
     server.onNotFound([](AsyncWebServerRequest *request){
-        if(!server_request_handler(request)) {
+        if(!server_http_handler(request)) {
             Serial.printf("NOT_FOUND: ");
             Serial.printf(" http://%s%s\n", request->host().c_str(), request->url().c_str());
             server_print_request(request);
@@ -59,6 +75,9 @@ void server_init() {
     });
 
     server.begin();
+
+    // register ESP-NOW callback
+    esp_now_register_recv_cb(esp_now_recv_cb_t(server_espnow_handler));
 }
 
 void server_print_request(AsyncWebServerRequest *request) {
@@ -106,7 +125,7 @@ void server_print_request(AsyncWebServerRequest *request) {
 }
 
 // returns true if the request was properly handled
-bool server_request_handler(AsyncWebServerRequest *request) {
+bool server_http_handler(AsyncWebServerRequest *request) {
     WebRequestMethodComposite request_type = request->method();
     String full_url = request->url();
 
@@ -135,4 +154,25 @@ bool server_request_handler(AsyncWebServerRequest *request) {
 
     // no handler found
     return false;
+}
+
+// callback function that will be executed when data is received
+// TODO: use the handler mapping from above, ESP-NOW can implement the same API
+void server_espnow_handler(const uint8_t * mac, const uint8_t *incomingData, int len) {
+    memcpy(&myData, incomingData, sizeof(myData));
+
+    // check for duplicates before proceeding
+    if(myData.counter != last_counter_val) {
+        last_counter_val = myData.counter;
+
+        Serial.println(myData.action);
+        
+        // hack for testing: "dit" keys on, "dah" keys off
+        if(strcmp(myData.action, "dit")) {
+            radio_key_on();
+        }
+        else if(strcmp(myData.action, "dah")) {
+            radio_key_off();
+        }
+    }
 }

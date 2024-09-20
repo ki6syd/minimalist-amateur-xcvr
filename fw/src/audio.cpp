@@ -3,6 +3,7 @@
 #include "fir_coeffs_bpf.h"
 #include "fir_coeffs_hilbert.h"
 
+#include <Arduino.h>
 #include <Wire.h>
 #include "AudioTools.h"
 #include "AudioLibs/I2SCodecStream.h"
@@ -58,6 +59,7 @@ float sidetone_freq = F_SIDETONE_DEFAULT;
 bool sidetone_en = false;
 bool pga_en = false;
 float global_vol = 0;
+audio_filt_t cur_filt = AUDIO_FILT_DEFAULT;
 
 void audio_task (void * pvParameter);
 
@@ -229,7 +231,7 @@ void audio_set_mode(audio_mode_t mode) {
 
 // changes the audio FIR in use
 // TODO: definitely creating a memory issue by creating new filters repeatedly...
-void audio_set_filt(audio_filt_t filt) {
+bool audio_set_filt(audio_filt_t filt) {
     switch(filt) {
         case AUDIO_FILT_CW:
             // audio_filt.setFilter(0, new FIR<float>(coeff_bpf_400_600));
@@ -240,7 +242,15 @@ void audio_set_filt(audio_filt_t filt) {
             // basically a LPF, but should filter out some amount of 60hz noise
             audio_filt.setFilter(0, new FIR<float>(coeff_bpf_400_2000));
             break;
+        default:
+            return false;
     }
+    cur_filt = filt;
+    return true;
+}
+
+audio_filt_t audio_get_filt() {
+    return cur_filt;
 }
 
 // debug fuction just to see the phase shift toggling
@@ -299,24 +309,38 @@ void audio_en_rx_audio(bool en) {
     }
 }
 
-void audio_set_volume(float vol) {
+bool audio_set_volume(float vol) {
     if(vol >= 0.0 && vol <= 1.0) {
         global_vol = vol;
         out_vol.setVolume(vol);
+        return true;
     }
+    return false;
 }
 
-void audio_set_sidetone_volume(float vol) {
-    if(vol >= 0.0 && vol <= 1.0) 
+bool audio_set_sidetone_volume(float vol) {
+    if(vol >= 0.0 && vol <= 1.0) {
         sidetone_vol = vol;
+
+        // call to audio_en_sidetone() with its current state will adjust weights
+        audio_en_sidetone(sidetone_en);
+        return true;
+    }
+    return false;
 }
 
-void audio_set_sidetone_freq(float freq) {
+float audio_get_sidetone_volume() {
+    return sidetone_vol;
+}
+
+bool audio_set_sidetone_freq(float freq) {
     // enforce 0-2kHz range 
     if(freq > 0 && freq < 2000) {
         sidetone_freq = freq;
         sine_wave.setFrequency(sidetone_freq);
+        return true;
     }
+    return false;
 }
 
 // compensate for volume control here
@@ -348,4 +372,8 @@ float audio_get_rx_db(uint16_t num_to_avg, uint16_t delay_ms) {
 
 float audio_get_sidetone_freq() {
     return sidetone_freq;
+}
+
+float audio_get_volume() {
+    return global_vol;
 }

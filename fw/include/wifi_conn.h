@@ -5,3 +5,4 @@
 
 void wifi_init();
 void wifi_scan();
+String wifi_get_mac();

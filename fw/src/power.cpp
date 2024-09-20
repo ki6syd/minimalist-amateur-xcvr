@@ -20,18 +20,18 @@ void power_init() {
     ledcAttachPin(BUCK_SYNC, PWM_CHANNEL_SYNC);
     ledcWrite(PWM_CHANNEL_SYNC, 2);
 
-    xTaskCreatePinnedToCore(
-        battery_sense_task,
-        "VDD Sensing",
-        4096,
-        NULL,
-        TASK_PRIORITY_POWER, // priority
-        &xBatterySenseTaskHandle,
-        TASK_CORE_POWER // core
-    );
+    // xTaskCreatePinnedToCore(
+    //     battery_sense_task,
+    //     "VDD Sensing",
+    //     4096,
+    //     NULL,
+    //     TASK_PRIORITY_POWER, // priority
+    //     &xBatterySenseTaskHandle,
+    //     TASK_CORE_POWER // core
+    // );
 }
 
-
+// TODO: force transition in radio module if battery power drops too low
 void battery_sense_task(void *param) {
   while(true) {
     Serial.print("VDD read: ");

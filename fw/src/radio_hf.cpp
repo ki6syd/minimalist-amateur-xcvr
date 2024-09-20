@@ -194,6 +194,7 @@ void radio_task(void *param) {
           radio_set_clocks(freq_bfo, freq_vfo, freq_dial);
 
           // TODO: unpack any bandwidth changes from tmp.bw
+          // radio_set_clocks() needs to know the audio filter ?
         }
       }
     }
@@ -219,18 +220,20 @@ void radio_key_off() {
 }
 
 // helper function to REQUEST a frequency change
-void radio_set_dial_freq(uint64_t freq) {
+bool radio_set_dial_freq(uint64_t freq) {
   if(!radio_freq_valid(freq))
-    return;
+    return false;
 
   radio_state_t tmp = { .dial_freq = freq, .bw = radio_get_bw()};
 
   if(xQueueSend(xRadioQueue, (void *) &tmp, 0) != pdTRUE) {
-    // TODO: consider replacing this debug statement with returning false
     Serial.println("Unable to change frequency, queue full");
+    return false;
   }
 
   xTaskNotify(xRadioTaskHandle, NOTIFY_FREQ_CHANGE, eSetBits);
+
+  return true;
 }
 
 uint64_t radio_get_dial_freq() {

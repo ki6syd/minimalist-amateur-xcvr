@@ -28,14 +28,17 @@ typedef enum {
 
 void audio_init();
 void audio_set_mode(audio_mode_t mode);
-void audio_set_filt(audio_filt_t filt);
+bool audio_set_filt(audio_filt_t filt);
+audio_filt_t audio_get_filt();
 void audio_en_pga(bool gain);
 void audio_en_sidetone(bool tone);
 void audio_en_rx_audio(bool en);
-void audio_set_volume(float vol);
-void audio_set_sidetone_volume(float vol);
-void audio_set_sidetone_freq(float freq);
+bool audio_set_volume(float vol);
+bool audio_set_sidetone_volume(float vol);
+bool audio_set_sidetone_freq(float freq);
+float audio_get_sidetone_volume();
 float audio_get_rx_db(uint16_t num_to_avg=1, uint16_t delay_ms=0);
 float audio_get_sidetone_freq();
+float audio_get_volume();
 
 void audio_test(bool swap); // delete me later - used for debug only
