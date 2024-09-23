@@ -5,6 +5,7 @@
 #include "keyer.h"
 #include "power.h"
 #include "wifi_conn.h"
+#include "time_keeping.h"
 #include "git-version.h"
 
 #include <ESPAsyncWebServer.h>
@@ -17,6 +18,22 @@ bool handler_require_param(AsyncWebServerRequest *request, String param_name) {
         return false;
     }
     return true;
+}
+
+void handler_time_get(AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", String(time_ms()));
+}
+
+void handler_time_set(AsyncWebServerRequest *request) {
+    if(!handler_require_param(request, "timeNow"))
+        return;
+
+    uint64_t new_time = request->getParam("timeNow")->value().toInt();
+    if(time_update(new_time))
+        request->send(201, "text/plain", "OK");
+    else {
+        request->send(400, "text/plain", "Frequency out of range");
+    }
 }
 
 void handler_frequency_get(AsyncWebServerRequest *request) {

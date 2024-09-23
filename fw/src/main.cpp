@@ -10,6 +10,7 @@
 #include "radio_hf.h"
 #include "radio_vhf.h"
 #include "keyer.h"
+#include "time_keeping.h"
 
 int t = 0;
 int counter = 0;
@@ -33,6 +34,7 @@ void setup() {
   radio_vhf_init();
 
   keyer_init();
+  time_init();
 
   // todo: signal that setup is complete with some sort of semaphore
 
@@ -45,6 +47,7 @@ void setup() {
         &xInfoTaskHandle,
         TASK_CORE_INFO // core
     );
+
 }
 
 // code in loop() is just for testing, don't want to actually do anything here

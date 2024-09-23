@@ -11,6 +11,7 @@
 #define TASK_PRIORITY_POWER     (TASK_PRIORITY_LOWEST + 1)
 #define TASK_PRIORITY_BLINK     (TASK_PRIORITY_LOWEST + 1)
 #define TASK_PRIORITY_INFO      TASK_PRIORITY_LOWEST
+#define TASK_PRIORITY_FS        TASK_PRIORITY_LOWEST
 
 // note: platformio + arduino puts wifi on core 0. server callbacks likely to happen on core 0
 #define TASK_CORE_AUDIO         1
@@ -18,6 +19,7 @@
 #define TASK_CORE_POWER         0
 #define TASK_CORE_BLINK         0
 #define TASK_CORE_INFO          1
+#define TASK_CORE_FS            1
 
 
 // audio settings used at startup

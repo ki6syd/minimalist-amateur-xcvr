@@ -2,6 +2,7 @@
 #include "handlers.h"
 #include "globals.h"
 #include "radio_hf.h"   // won't be needed after ESP-NOW handler moved into handlers.h
+#include "file_system.h"
 
 #include <Arduino.h>
 #include <ESPAsyncWebServer.h>
@@ -27,7 +28,10 @@ String api_prefix = "/api/v";
 AsyncWebServer server(80);
 AsyncEventSource events("/events");
 
+
 static const server_handler_t handlers[] = {
+    {API_V1,    HTTP_GET,   "time",             handler_time_get},
+    {API_V1,    HTTP_PUT,   "time",             handler_time_set},
     {API_V1,    HTTP_GET,   "frequency",        handler_frequency_get},
     {API_V1,    HTTP_PUT,   "frequency",        handler_frequency_set},
     {API_V1,    HTTP_GET,   "volume",           handler_volume_get},
@@ -85,7 +89,11 @@ void server_init() {
 
     // register ESP-NOW callback
     esp_now_register_recv_cb(esp_now_recv_cb_t(server_espnow_handler));
+
+    // start the web-based file browser now that the server is up
+    fs_start_browser();
 }
+
 
 void server_print_request(AsyncWebServerRequest *request) {
     if(request->method() == HTTP_GET)

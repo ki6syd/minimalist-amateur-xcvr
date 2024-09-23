@@ -1,6 +1,8 @@
 #pragma once
 #include <ESPAsyncWebServer.h>
 
+void handler_time_get(AsyncWebServerRequest *request);
+void handler_time_set(AsyncWebServerRequest *request);
 void handler_frequency_get(AsyncWebServerRequest *request);
 void handler_frequency_set(AsyncWebServerRequest *request);
 void handler_volume_get(AsyncWebServerRequest *request);
