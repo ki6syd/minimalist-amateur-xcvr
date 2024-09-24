@@ -31,6 +31,8 @@ radio_audio_bw_t bw = BW_CW;
 radio_rxtx_mode_t rxtx_mode = MODE_RX;
 radio_band_t band = BAND_HF_2;
 
+radio_band_capability_t band_capability[NUMBER_BANDS];
+
 uint64_t freq_dial = 14040000;
 uint64_t freq_xtal_lower = 9997800;
 uint64_t freq_xtal_upper = 10002600;
@@ -54,6 +56,9 @@ void radio_cal_if_filt(radio_filt_sweep_t sweep, radio_filt_properties_t *proper
 void radio_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_properties_t *properties);
 
 void radio_hf_init() {
+  // find out what bands are enabled by looking at hardware file
+  fs_load_bands(HARDWARE_FILE, band_capability);
+
   pinMode(BPF_SEL_0, OUTPUT);
   pinMode(BPF_SEL_1, OUTPUT);
   pinMode(LPF_SEL_0, OUTPUT);

@@ -29,6 +29,8 @@
 #define AUDIO_VOL_DURING_CAL    0.1
 #define AUDIO_PGA_DEFAULT       true
 
+#define NUMBER_BANDS        4
+
 #define FILE_SYSTEM             LittleFS
 
 #define API_IMPLEMENTED         "v1"

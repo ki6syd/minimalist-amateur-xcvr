@@ -11,18 +11,23 @@ typedef enum {
     MODE_SELF_TEST
 } radio_rxtx_mode_t;
 
+// TODO: pull this enum into a radio.h module, and add VHF
 // band numbering in schematic is 1-indexed. Control GPIOs are 0-indexed.
 typedef enum {
     BAND_HF_1,
     BAND_HF_2,
     BAND_HF_3,
-    BAND_SELF_TEST
+    BAND_VHF,
+    BAND_SELF_TEST,
+    BAND_UNKNOWN
 } radio_band_t;
 
 // TODO: break out SSB into LSB and USB (at a later date). Assuming LSB below 10MHz for now.
+// TODO: break apart the concept of audio bandwidth and RF mode
 typedef enum {
     BW_CW,
-    BW_SSB
+    BW_SSB,
+    BW_FM
 } radio_audio_bw_t;
 
 typedef struct {
@@ -43,6 +48,17 @@ typedef struct {
     uint64_t f_center;
     uint64_t f_upper;
 } radio_filt_properties_t;
+
+// TODO: stop conflating audio_bw and RF mode
+typedef struct {
+    radio_band_t band_name;
+    uint64_t min_freq;
+    uint64_t max_freq;
+    uint16_t num_rx_bandwidths;
+    uint16_t num_tx_bandwidths;
+    radio_audio_bw_t rx_bandwidths[8];
+    radio_audio_bw_t tx_bandwidths[8];
+} radio_band_capability_t;
 
 void radio_hf_init();
 void radio_key_on();
