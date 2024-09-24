@@ -33,5 +33,8 @@
 
 #define API_IMPLEMENTED         "v1"
 
+#define PREFERENCE_FILE         "/preferences.json"
+#define HARDWARE_FILE           "/hardware.json"
+
 // signals that the radio and audio modules should expect quadrature sampling detector (QSD) as BFO
 // #define RX_ARCHITECTURE_QSD

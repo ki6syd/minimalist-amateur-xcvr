@@ -1,6 +1,7 @@
 #include "wifi_conn.h"
+#include "file_system.h"
+#include "globals.h"
 
-// #include <ESP8266WiFi.h>
 #include <WiFi.h>
 #include <esp_wifi.h>
 #include <AsyncTCP.h>
@@ -15,7 +16,6 @@
 IPAddress ip;
 
 void wifi_init() {
-    
     IPAddress gateway;
     IPAddress subnet(255, 255, 255, 0);
 
@@ -76,7 +76,7 @@ void wifi_init() {
     esp_wifi_set_ps(WIFI_PS_NONE);
 
     // start MDNS
-    if (MDNS.begin("radio")) {
+    if (MDNS.begin(fs_load_setting(PREFERENCE_FILE, "mdns_hostname"))) {
         MDNS.addService("http", "tcp", 80);
     }
 

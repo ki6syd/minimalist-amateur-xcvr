@@ -1,0 +1,35 @@
+{
+	"hardware_rev": "max-4b_v2.1",
+	"serial_number": "1",
+	"xtal_freq_hz": "25999740",
+	"bands": [
+		{
+			"band_num": "1",
+			"min_freq": "7000000",
+			"max_freq": "7300000",
+			"rx_modes": ["ssb", "cw"],
+			"tx_modes": ["cw"]
+		},
+		{
+			"band_num": "2",
+			"min_freq": "14000000",
+			"max_freq": "14350000",
+			"rx_modes": ["ssb", "cw"],
+			"tx_modes": ["cw"]
+		},
+		{
+			"band_num": "3",
+			"min_freq": "21000000",
+			"max_freq": "21450000",
+			"rx_modes": ["ssb", "cw"],
+			"tx_modes": ["cw"]
+		},
+		{
+			"band_num": "4",
+			"min_freq": "144000000",
+			"max_freq": "148000000",
+			"rx_modes": ["fm", "cw"],
+			"tx_modes": ["fm", "cw"]
+		}
+	]
+}

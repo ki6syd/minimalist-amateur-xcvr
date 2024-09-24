@@ -9,6 +9,8 @@
 TaskHandle_t xBlinkTaskHandle, xSpareTaskHandle0, xSpareTaskHandle1, xTxPulseTaskHandle;
 SemaphoreHandle_t btn_semaphore;
 
+blink_type_t blink_mode = BLINK_NORMAL;
+
 void spare_task_core_0(void *pvParameter);
 void spare_task_core_1(void *pvParameter);
 void blink_task(void *pvParameter);
@@ -51,6 +53,8 @@ const char *HWCDC_Status() {
 
 
 void io_init() {
+  blink_mode = BLINK_STARTUP;
+  
   pinMode(LED_GRN, OUTPUT);
   pinMode(LED_RED, OUTPUT);
   pinMode(LED_DBG_0, OUTPUT);
@@ -143,6 +147,11 @@ void io_init() {
   );
 }
 
+void io_set_blink_mode(blink_type_t mode) {
+  // TODO: check that it's a valid input
+  blink_mode = mode;
+}
+
 // if LED_DBG_x is *not* illuminated, spareTask is starved
 void spare_task_core_0(void *param) {
   while(true) {
@@ -162,14 +171,29 @@ void spare_task_core_1(void *param) {
 }
 
 void blink_task(void *param) {
+  uint16_t on_duration, off_duration;
   while(true) {
+    switch(blink_mode) {
+      case BLINK_NORMAL:
+        on_duration = 500;
+        off_duration = 500;
+        break;
+      case BLINK_STARTUP:
+        on_duration = 100;
+        off_duration = 100;
+        break;
+      case BLINK_ERROR:
+        on_duration = 2000;
+        off_duration = 2000;
+        break;
+    }
+
     digitalWrite(LED_GRN, HIGH);
-    vTaskDelay(500 / portTICK_PERIOD_MS);
+    vTaskDelay(on_duration / portTICK_PERIOD_MS);
     digitalWrite(LED_GRN, LOW);
-    vTaskDelay(500 / portTICK_PERIOD_MS);
+    vTaskDelay(off_duration / portTICK_PERIOD_MS);
   }
 }
-
 
 void tx_pulse_task(void *param) {
   while(true) {

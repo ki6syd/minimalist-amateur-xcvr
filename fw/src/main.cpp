@@ -20,9 +20,9 @@ TaskHandle_t xInfoTaskHandle;
 void info_task(void *pvParameter);
 
 void setup() {
-  power_init();
-  io_init();  
   fs_init();
+  power_init();
+  io_init();
   wifi_init();
   server_init();
 
@@ -36,7 +36,10 @@ void setup() {
   keyer_init();
   time_init();
 
+  
+
   // todo: signal that setup is complete with some sort of semaphore
+  io_set_blink_mode(BLINK_NORMAL);
 
   xTaskCreatePinnedToCore(
         info_task,

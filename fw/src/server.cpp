@@ -45,8 +45,11 @@ static const server_handler_t handlers[] = {
     {API_V1,    HTTP_GET,   "inputVoltage",     handler_input_voltage_get},
     {API_V1,    HTTP_GET,   "sMeter",           handler_smeter_get},
     {API_V1,    HTTP_GET,   "githash",          handler_githash_get},
+    {API_V1,    HTTP_GET,   "heap",             handler_heap_get},
     {API_V1,    HTTP_GET,   "mac",              handler_mac_get},
     {API_V1,    HTTP_GET,   "ip",               handler_ip_get},
+    {API_V1,    HTTP_GET,   "hwRevision",       handler_revision_get},
+    {API_V1,    HTTP_GET,   "unitSerial",       handler_serial_get},
     {API_V1,    HTTP_GET,   "api",              handler_api_get}
 };
 

@@ -7,6 +7,7 @@
 #include "wifi_conn.h"
 #include "time_keeping.h"
 #include "git-version.h"
+#include "file_system.h"
 
 #include <ESPAsyncWebServer.h>
 #include <Arduino.h>
@@ -148,8 +149,21 @@ void handler_githash_get(AsyncWebServerRequest *request) {
     request->send(200, "text/plain", GIT_VERSION);
 }
 
+void handler_heap_get(AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", String(xPortGetFreeHeapSize()));
+}
+
 void handler_ip_get(AsyncWebServerRequest *request) {
     request->send(200, "text/plain", wifi_get_ip());
+}
+
+// TODO: terrible idea to access the file system in this handler...
+void handler_revision_get(AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", fs_load_setting(HARDWARE_FILE, "hardware_rev"));
+}
+
+void handler_serial_get(AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", fs_load_setting(HARDWARE_FILE, "serial_number"));
 }
 
 void handler_api_get(AsyncWebServerRequest *request) {

@@ -1,6 +1,7 @@
 #include "globals.h"
 #include "radio_hf.h"
 #include "audio.h"
+#include "file_system.h"
 
 #include <Arduino.h>
 #include <si5351.h>
@@ -93,11 +94,18 @@ void radio_hf_init() {
 }
 
 void radio_si5351_init() {
+  uint64_t si5351_xtal_freq = fs_load_setting(HARDWARE_FILE, "xtal_freq_hz").toInt();
+  // rough error checking. TODO: move magic numbers elsewhere
+  if(si5351_xtal_freq < 25900000 || si5351_xtal_freq > 26100000) {
+    si5351_xtal_freq = 26000000;
+    Serial.println("Wrong config file, setting to 26.000MHz");
+  }
+
   Wire.begin(CLOCK_SDA, CLOCK_SCL);
 
   Serial.print("[SI5351] Status: ");
   Serial.println(si5351.si5351_read(SI5351_DEVICE_STATUS));
-  si5351.init(SI5351_CRYSTAL_LOAD_8PF , 25999740, 0);
+  si5351.init(SI5351_CRYSTAL_LOAD_8PF , fs_load_setting(HARDWARE_FILE, "xtal_freq_hz").toInt(), 0);
 
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLA);
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLB);
