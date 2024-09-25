@@ -7,38 +7,65 @@
 
 HardwareSerial VHFserial(1);
 
+String radio_vhf_command(String command);
+bool radio_vhf_handshake();
+bool radio_vhf_set_volume(uint16_t volume);
 bool radio_vhf_response_success(String response);
 
 void radio_vhf_init() {
     pinMode(VHF_EN, OUTPUT);
     pinMode(VHF_PTT, OUTPUT);
 
-    // digitalWrite(VHF_EN, HIGH);   // enabled
-    digitalWrite(VHF_EN, LOW);
-    digitalWrite(VHF_PTT, HIGH);  // RX
-
+    digitalWrite(VHF_PTT, HIGH);  // RX mode, then delay before enabling - don't want to accidentally transmit
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+    digitalWrite(VHF_EN, HIGH);   // enabled
+    
     VHFserial.begin(VHF_SERIAL_SPEED, SERIAL_8N1, VHF_TX_ESP_RX, VHF_RX_ESP_TX);
+
+    // TODO: understand why this delay is needed, what the min value is, whether we can configure in parallel with other things, etc
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
 
     // set VHFserial timeout (milliseconds)
     VHFserial.setTimeout(100);
 
-    // send serial commands
-    Serial.println("VHF connecting...");
-    VHFserial.println("AT+DMOCONNECT");
-
-    delay(1000);
-
-    // todo: parametrize length
-    char buf[64];
-    int read_len = VHFserial.readBytes(buf, 64);
-
-    Serial.println("VHF Response: ");
-    for(int i=0; i < read_len; i++) {
-        Serial.print(buf[i]);
+    // attempt to handshake
+    if(!radio_vhf_handshake()) {
+        // TODO: do something about it
     }
-    // todo: parse this response and make sure it's good.
 
-    radio_vhf_set_freq(146580000);
+    // attempt to set frequency
+    if(!radio_vhf_set_freq(146580000)) {
+        // TODO: do something about it
+    }
+
+    // attempt to set volume
+    if(!radio_vhf_set_volume(8)) {
+        // TODO: do something about it
+    }
+
+    // disable VHF now that config is complete
+    digitalWrite(VHF_EN, LOW);
+}
+
+
+String radio_vhf_command(String command) {
+    // send serial commands
+    Serial.print("VHF Sending: ");
+    Serial.println(command);
+    VHFserial.print(command + "\r\n");   
+
+    vTaskDelay(100 / portTICK_PERIOD_MS); 
+
+
+    Serial.print("VHF Response: ");
+    String response = "";
+    while(VHFserial.available() > 1) {
+        char next_char = VHFserial.read();
+        response += next_char;
+    }
+    Serial.println(response);
+
+    return response;
 }
 
 bool radio_vhf_response_success(String response) {
@@ -52,30 +79,34 @@ bool radio_vhf_response_success(String response) {
     return false;
 }
 
+bool radio_vhf_handshake() {
+    String response = radio_vhf_command("AT+DMOCONNECT");
+    return radio_vhf_response_success(response);
+}
+
 bool radio_vhf_set_freq(uint64_t new_freq) {
-    Serial.println("New freq: ");
-    Serial.println(new_freq);
-    uint64_t MHz = new_freq / 1000000;
-    uint64_t kHz = (new_freq - MHz) / 1000;
-    String tmp = String(MHz, 3) + "." + String(kHz, 4);
-    Serial.print("Formatted: ");
-    Serial.println(tmp);
+    // construct the message. Example: "AT+DMOSETGROUP=0,146.5800,146.5800,0000,1,0000"
+    String formatted_freq = String(((float) new_freq) / 1000000, 4);
+    String prefix = "AT+DMOSETGROUP=0,";    // 12.5kHz wide
+    String suffix = ",0000,1,0000";         // no CTCSS on TX or RX. Squelch level 1
+    String to_send = prefix + formatted_freq + "," + formatted_freq + suffix;   // assume TX and RX on the same frequency
 
-    // see: https://www.dorji.com/docs/data/DRA818V.pdf
-    VHFserial.println("AT+DMOSETGROUP=0,146.5400,146.5400,0000,1,0000");
-    delay(1000);
-    Serial.println("VHF Response: ");
-    String response = "";
-    while(VHFserial.available() > 1) {
-        char next_char = VHFserial.read();
-        Serial.print(next_char);
-        response += next_char;
-    }
-    Serial.println();
-    Serial.println(radio_vhf_response_success(response));
+    String response = radio_vhf_command(to_send);
 
-    Serial.println();
+    return radio_vhf_response_success(response);
+}
 
-    // TODO: something more intelligent than this
-    return true;
+bool radio_vhf_set_volume(uint16_t volume) {
+    // check bounds on volume request
+    // TODO: parametrize this better
+    if(volume < 0 || volume > 8)
+        return false;
+
+    String formatted_volume = String(((float) volume), 1);
+    String prefix = "AT+DMOSETVOLUME=";
+    String to_send = prefix + formatted_volume;
+
+    String response = radio_vhf_command(to_send);
+
+    return radio_vhf_response_success(response);
 }

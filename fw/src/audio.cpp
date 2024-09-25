@@ -17,9 +17,15 @@
 // constant used in math [dB]
 #define PGA_GAIN                24
 
+#define NOTIFY_PGA_ON           0
+#define NOTIFY_PGA_OFF          1
+#define NOTIFY_MODE_HF_RXTX_CW  2
+#define NOTIFY_MODE_VHF_RX      3
+#define NOTIFY_MODE_VHF_TX      4
+
 TwoWire codecI2C = TwoWire(1);  // "Wire" is used in si5351 library. Defined through TwoWire(0), so the other peripheral is still available
 
-TaskHandle_t xAudioStreamTaskHandle;
+TaskHandle_t xAudioTaskHandle;
 
 AudioInfo                     info_stereo(F_AUDIO, 2, 16);              // sampling rate, # channels, bit depth
 AudioInfo                     info_mono(F_AUDIO, 1, 16);                // sampling rate, # channels, bit depth
@@ -63,6 +69,7 @@ audio_filt_t cur_filt = AUDIO_FILT_DEFAULT;
 float last_volume_dB = 0;
 
 void audio_task (void * pvParameter);
+void audio_configure_codec(audio_mode_t mode);
 void audio_measure_volume();
 
 void audio_init() {
@@ -74,7 +81,7 @@ void audio_init() {
         16384,
         NULL,
         TASK_PRIORITY_AUDIO, // priority
-        &xAudioStreamTaskHandle,
+        &xAudioTaskHandle,
         1 // core
     );
 }
@@ -88,8 +95,9 @@ void audio_task(void *param) {
     my_pins.begin();
     audio_board.begin();
 
-    // audio_set_mode() reinitializes the codec driver each time it's called
-    audio_set_mode(AUDIO_HF_RXTX_CW);
+    // subsequent calls should be to audio_set_mode(), the thread-safe one exposed externally
+    // force a configuration of the codec
+    audio_configure_codec(AUDIO_HF_RXTX_CW);
 
     sine_wave.begin(info_mono, sidetone_freq);
 
@@ -181,6 +189,7 @@ void audio_task(void *param) {
     audio_en_sidetone(false);
     audio_en_rx_audio(true);
 
+    uint32_t notifiedValue;
     while(true) {
         copier_1.copy();
         copier_2.copy();
@@ -188,22 +197,38 @@ void audio_task(void *param) {
         // update this variable so other modules can more readily consume it
         last_volume_dB = audio_get_rx_db();
 
+        // look for flags. Don't clear on entry; clear on exit
+        if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, 0) == pdTRUE) {
+            if(notifiedValue == NOTIFY_PGA_ON) {
+                AudioDriver *driver = audio_board.getDriver();
+                driver->setInputVolume(100); // changes PGA in the codec
+                pga_en = true;
+            }
+            if(notifiedValue == NOTIFY_PGA_OFF) {
+                AudioDriver *driver = audio_board.getDriver();
+                driver->setInputVolume(0); // changes PGA in the codec
+                pga_en = false;
+            }
+            if(notifiedValue == NOTIFY_MODE_HF_RXTX_CW)
+                audio_configure_codec(AUDIO_HF_RXTX_CW);
+            if(notifiedValue == NOTIFY_MODE_VHF_RX)
+                audio_configure_codec(AUDIO_VHF_RX);
+            if(notifiedValue == NOTIFY_MODE_VHF_TX)
+                audio_configure_codec(AUDIO_VHF_TX);
+        }
+
         // this is a LOWEST priority task, yield to another LOWEST priority task
         taskYIELD();
     }
 }
 
-// TODO: think about thread safety with this function. It's the only one in the file that accesses the hardware
-void audio_set_mode(audio_mode_t mode) {
-    // not all modes supported yet
-    if(mode != AUDIO_HF_RXTX_CW && mode != AUDIO_VHF_RX && mode != AUDIO_VHF_TX)
-        return;
-
+void audio_configure_codec(audio_mode_t mode) {
     Serial.println("Configuring codec...");
     auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
     i2s_config.copyFrom(info_stereo);
     i2s_config.buffer_size = 1024;
-    i2s_config.buffer_count = 4;
+    // i2s_config.buffer_size = 512;
+    i2s_config.buffer_count = 2;
     i2s_config.port_no = 0;
 
     AudioDriver *driver = audio_board.getDriver();
@@ -232,6 +257,16 @@ void audio_set_mode(audio_mode_t mode) {
         driver->setMute(true, 0);
         driver->setMute(false, 1);
     }
+}
+
+// TODO: think about thread safety with this function. It's the only one in the file that accesses the hardware
+void audio_set_mode(audio_mode_t mode) {
+    if(mode == AUDIO_HF_RXTX_CW)
+        xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_HF_RXTX_CW, eSetBits);
+    else if(mode == AUDIO_VHF_RX)
+        xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_VHF_RX, eSetBits);
+    else if(mode == AUDIO_VHF_TX)
+        xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_VHF_TX, eSetBits);
 }
 
 // changes the audio FIR in use
@@ -272,18 +307,11 @@ void audio_test(bool swap) {
 #endif
 }
 
-// TODO: make this thread safe. Other modules could try to initiate i2c writes via this function
 void audio_en_pga(bool gain) {
-    AudioDriver *driver = audio_board.getDriver();
-
-    // TODO: fix the bug in pschatzmann's library that makes 100 % volume output weird gains ("Debug:   input volume: 100 -> gain -2113876796")
-    if(gain) {
-        driver->setInputVolume(100); // changes PGA in the codec
-    }
+    if(gain)
+        xTaskNotify(xAudioTaskHandle, NOTIFY_PGA_ON, eSetBits);
     else
-        driver->setInputVolume(0);
-
-    pga_en = gain;
+        xTaskNotify(xAudioTaskHandle, NOTIFY_PGA_OFF, eSetBits);
 }
 
 // ONLY affects sidetone, does not affect muting of rx audio

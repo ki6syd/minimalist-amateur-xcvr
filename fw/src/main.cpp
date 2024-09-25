@@ -21,6 +21,7 @@ TaskHandle_t xInfoTaskHandle;
 void info_task(void *pvParameter);
 
 void setup() {
+  // TODO: make sure any slow initializations are happening in parallel
   fs_init();
   power_init();
   io_init();
