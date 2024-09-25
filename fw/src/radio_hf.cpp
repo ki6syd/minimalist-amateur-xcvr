@@ -169,10 +169,9 @@ void radio_task(void *param) {
   uint32_t notifiedValue;
 
   while(true) {
-    // look for flags
-    // Don't clear flag on entry. Clear on exit. Don't wait, the task will yield at the end
+    // look for flags. Don't clear on entry; clear on exit
     // example: https://freertos.org/Documentation/02-Kernel/02-Kernel-features/03-Direct-to-task-notifications/04-As-event-group
-    if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, 0) == pdTRUE) {
+    if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(10)) == pdTRUE) {
       if(notifiedValue == NOTIFY_KEY_OFF) {
         Serial.println("Key off");
         // initiate mode change
@@ -211,9 +210,6 @@ void radio_task(void *param) {
         }
       }
     }
-
-    // todo why was notifywait not blocking
-    vTaskDelay(1 / portTICK_PERIOD_MS);
   }
 }
 

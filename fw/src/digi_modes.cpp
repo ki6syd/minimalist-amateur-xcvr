@@ -36,7 +36,7 @@ void digi_mode_task(void *pvParameter) {
     digi_msg_t tmp;
     while(1) {
         // block until there is something to pull out of the message queue
-        if(xQueueReceive(xDigiMessageQueue, (void *) &tmp, 0) == pdTRUE) {
+        if(xQueueReceive(xDigiMessageQueue, (void *) &tmp, pdMS_TO_TICKS(100)) == pdTRUE) {
             digi_mode_print(&tmp);
 
             // change frequency, if the message has one
@@ -50,9 +50,6 @@ void digi_mode_task(void *pvParameter) {
             ft8_send_msg(&tmp);
             }
         }
-
-        // todo why was notifywait not blocking
-        vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 }
 
