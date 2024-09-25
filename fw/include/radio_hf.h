@@ -64,5 +64,7 @@ void radio_hf_init();
 void radio_key_on();
 void radio_key_off();
 bool radio_set_dial_freq(uint64_t freq);
+bool radio_set_dial_freq_fine(uint64_t freq_dHz);
+bool radio_freq_valid(uint64_t freq);
 uint64_t radio_get_dial_freq();
 radio_audio_bw_t radio_get_bw();

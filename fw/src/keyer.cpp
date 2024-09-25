@@ -64,8 +64,16 @@ void keyer_dah() {
 }
 
 
+void keyer_send_msg(digi_msg_t *to_send) {
+    uint8_t i=0;
+    while(to_send->buf[i] != '\0' && i < 255) {
+        // TODO: don't continue sending if there was a key press or TBD semaphore set
+        keyer_letter(String((char) to_send->buf[i++]));
+    }
+}
+
 // could accept a char, but leaving this as a String input to handle prosigns
-void morse_letter(String letter) {
+void keyer_letter(String letter) {
   if(letter == " " || isSpace(letter.charAt(0)) || letter == "_") {
     vTaskDelay((MORSE_INTERWORD_LEN  / keyer_speed) / portTICK_PERIOD_MS);
   }

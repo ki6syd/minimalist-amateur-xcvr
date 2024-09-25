@@ -8,6 +8,8 @@
 #include "time_keeping.h"
 #include "git-version.h"
 #include "file_system.h"
+#include "digi_modes.h"
+#include "ft8.h"
 
 #include <ESPAsyncWebServer.h>
 #include <Arduino.h>
@@ -19,6 +21,87 @@ bool handler_require_param(AsyncWebServerRequest *request, String param_name) {
         return false;
     }
     return true;
+}
+
+void handler_ft8_post(AsyncWebServerRequest *request) {
+    if(!handler_require_param(request, "messageText"))
+        return;
+
+    digi_msg_t tmp;
+    tmp.type = DIGI_MODE_FT8;
+    tmp.ignore_time = false;
+
+    String message_text = request->getParam("messageText")->value();
+
+    // update FT8 frequency if one is given
+    if(request->hasParam("rfFrequency") && request->hasParam("audioFrequency")) {
+        float rf_request = request->getParam("rfFrequency")->value().toFloat();
+        float af_request = request->getParam("audioFrequency")->value().toFloat();
+        tmp.freq = (uint64_t) (rf_request + af_request);
+
+        // check that frequency is valid, abort early if not
+        if(!radio_freq_valid(tmp.freq)) {
+            request->send(400, "text/plain", "Radio does not support this frequency");
+            return;
+        }
+    }
+    else {
+        tmp.freq = 0;
+    }
+
+    if(request->hasParam("ignoreTime") && request->getParam("ignoreTime")->value() == "true")
+        tmp.ignore_time = true;
+
+    // update time if parameter exists
+    if(request->hasParam("timeNow")) {
+        // TODO - delete the hack substring once the time module works in millseconds
+        String time_string = request->getParam("timeNow")->value();
+        time_string = time_string.substring(0, time_string.length()-3);
+        time_update(time_string.toInt());
+    }
+    
+    // turn the string into an encoded message, try adding to queue
+    ft8_string_process(message_text, &tmp);
+    if(digi_mode_enqueue(&tmp))
+        request->send(201, "text/plain", "OK");
+    else
+        request->send(400, "text/plain", "Unable to add to queue");
+}
+
+void handler_cw_post(AsyncWebServerRequest *request) {
+    if(!handler_require_param(request, "messageText"))
+        return;
+
+    digi_msg_t tmp;
+    tmp.type = DIGI_MODE_CW;
+    tmp.ignore_time = true;
+
+    String message_text = request->getParam("messageText")->value();
+
+    // update frequency if one is given
+    if(request->hasParam("rfFrequency")) {
+        uint64_t rf_request = request->getParam("rfFrequency")->value().toInt();
+        tmp.freq = rf_request;
+
+        // check that frequency is valid, abort early if not
+        if(!radio_freq_valid(tmp.freq)) {
+            request->send(400, "text/plain", "Radio does not support this frequency");
+            return;
+        }
+    }
+    else {
+        tmp.freq = 0;
+    }
+
+    // package string into the buffer
+    message_text.toCharArray((char *) tmp.buf, 255);
+    // add null terminator
+    tmp.buf[message_text.length()] = '\0';
+    // add to queue, error code if it didn't add successfully
+    if(digi_mode_enqueue(&tmp))
+        request->send(201, "text/plain", "OK");
+    else
+        request->send(400, "text/plain", "Unable to add to queue");
 }
 
 void handler_time_get(AsyncWebServerRequest *request) {

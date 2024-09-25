@@ -1,7 +1,5 @@
 #pragma once
-
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
+#include <Arduino.h>
 
 // #define AUDIO_EN_OUT_VBAN
 // #define AUDIO_EN_OUT_CSV

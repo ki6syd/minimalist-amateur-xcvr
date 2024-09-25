@@ -9,7 +9,7 @@
 #include "audio.h"
 #include "radio_hf.h"
 #include "radio_vhf.h"
-#include "keyer.h"
+#include "digi_modes.h"
 #include "time_keeping.h"
 
 int t = 0;
@@ -33,10 +33,9 @@ void setup() {
   radio_hf_init();
   radio_vhf_init();
 
-  keyer_init();
   time_init();
+  digi_mode_init();
 
-  
 
   // todo: signal that setup is complete with some sort of semaphore
   io_set_blink_mode(BLINK_NORMAL);

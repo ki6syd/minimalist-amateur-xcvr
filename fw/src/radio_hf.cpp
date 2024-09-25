@@ -44,7 +44,6 @@ void radio_calc_clocks();
 void radio_set_clocks(uint64_t freq_bfo, uint64_t freq_vfo, uint64_t freq_rf);
 void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode);
 void radio_set_band(radio_band_t new_band);
-bool radio_freq_valid(uint64_t freq);
 
 void radio_task (void * pvParameter);
 void radio_qsk_timer_callback(TimerHandle_t timer);
@@ -74,6 +73,7 @@ void radio_hf_init() {
   radio_set_rxtx_mode(MODE_RX);
 
   // create the message queue
+  // TODO: parametrize the length of this queue
   xRadioQueue = xQueueCreate(10, sizeof(radio_state_t));
 
   
@@ -110,7 +110,7 @@ void radio_si5351_init() {
 
   Serial.print("[SI5351] Status: ");
   Serial.println(si5351.si5351_read(SI5351_DEVICE_STATUS));
-  si5351.init(SI5351_CRYSTAL_LOAD_8PF , fs_load_setting(HARDWARE_FILE, "xtal_freq_hz").toInt(), 0);
+  si5351.init(SI5351_CRYSTAL_LOAD_8PF , si5351_xtal_freq, 0);
 
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLA);
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLB);
@@ -207,7 +207,7 @@ void radio_task(void *param) {
           radio_set_clocks(freq_bfo, freq_vfo, freq_dial);
 
           // TODO: unpack any bandwidth changes from tmp.bw
-          // radio_set_clocks() needs to know the audio filter ?
+          // radio_set_clocks() needs to know the audio filter to account for sidetone offset?
         }
       }
     }
@@ -472,15 +472,11 @@ void radio_set_band(radio_band_t new_band) {
   band = new_band;
 }
 
-// 
-// TODO: load frequency limits for each band from NVM
 bool radio_freq_valid(uint64_t freq) {
-  if(freq > 7000000 && freq < 7250000)
-    return true;
-  if(freq > 14000000 && freq < 14300000)
-    return true;
-  if(freq > 21000000 && freq < 21300000)
-    return true;
+  for(uint8_t i = 0; i < NUMBER_BANDS; i++) {
+    if(freq < band_capability[i].max_freq && freq > band_capability[i].min_freq)
+      return true;
+  }
 
   return false;
 }
