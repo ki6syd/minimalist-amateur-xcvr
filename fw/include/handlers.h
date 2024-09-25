@@ -3,6 +3,8 @@
 
 void handler_ft8_post(AsyncWebServerRequest *request);
 void handler_cw_post(AsyncWebServerRequest *request);
+void handler_queue_get(AsyncWebServerRequest *request);
+void handler_queue_delete(AsyncWebServerRequest *request);
 void handler_time_get(AsyncWebServerRequest *request);
 void handler_time_set(AsyncWebServerRequest *request);
 void handler_frequency_get(AsyncWebServerRequest *request);

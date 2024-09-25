@@ -104,6 +104,20 @@ void handler_cw_post(AsyncWebServerRequest *request) {
         request->send(400, "text/plain", "Unable to add to queue");
 }
 
+void handler_queue_get(AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", String(digi_mode_queue_size()));
+}
+
+void handler_queue_delete(AsyncWebServerRequest *request) {
+    if(digi_mode_queue_size() > 0) {
+        digi_mode_queue_clear();
+        request->send(204, "text/plain", "Queue cleared");
+    }
+    else
+        request->send(404, "text/plain", "Unable to clear queue, might have been empty");
+}
+
+
 void handler_time_get(AsyncWebServerRequest *request) {
     request->send(200, "text/plain", String(time_ms()));
 }

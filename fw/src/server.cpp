@@ -32,6 +32,8 @@ AsyncEventSource events("/events");
 static const server_handler_t handlers[] = {
     {API_V1,    HTTP_POST,  "ft8",              handler_ft8_post},
     {API_V1,    HTTP_POST,  "cw",               handler_cw_post},
+    {API_V1,    HTTP_GET,   "queue",            handler_queue_get},
+    {API_V1,    HTTP_DELETE, "queue",           handler_queue_delete},
     {API_V1,    HTTP_GET,   "time",             handler_time_get},
     {API_V1,    HTTP_PUT,   "time",             handler_time_set},
     {API_V1,    HTTP_GET,   "frequency",        handler_frequency_get},

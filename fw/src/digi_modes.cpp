@@ -8,6 +8,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
+#define DIGI_QUEUE_LEN      10
+
 QueueHandle_t xDigiMessageQueue;
 TaskHandle_t xDigiModeTaskHandle;
 
@@ -16,7 +18,7 @@ const char* digi_mode_to_string(digi_type_t type);
 
 void digi_mode_init() {
     // TODO: parametrize the length of this queue
-    xDigiMessageQueue = xQueueCreate(10, sizeof(digi_msg_t));
+    xDigiMessageQueue = xQueueCreate(DIGI_QUEUE_LEN, sizeof(digi_msg_t));
 
     xTaskCreatePinnedToCore(
         digi_mode_task,
@@ -88,4 +90,13 @@ void digi_mode_print(const digi_msg_t* msg) {
     }
     
     Serial.println();
+}
+
+uint16_t digi_mode_queue_size() {
+    return DIGI_QUEUE_LEN - (uint16_t) uxQueueSpacesAvailable(xDigiMessageQueue);
+}
+
+void digi_mode_queue_clear() {
+    xQueueReset(xDigiMessageQueue);
+    // TODO: set a flag that stops whatever the digimode queue is working on
 }

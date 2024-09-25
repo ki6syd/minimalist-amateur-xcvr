@@ -16,3 +16,5 @@ typedef struct {
 void digi_mode_init();
 bool digi_mode_enqueue(digi_msg_t *new_msg);
 void digi_mode_print(const digi_msg_t* to_print);
+uint16_t digi_mode_queue_size();
+void digi_mode_queue_clear();
