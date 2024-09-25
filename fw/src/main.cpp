@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
 #include "globals.h"
+#include "git-version.h"
 #include "io.h"
 #include "power.h"
 #include "wifi_conn.h"
@@ -35,7 +36,6 @@ void setup() {
 
   time_init();
   digi_mode_init();
-
 
   // todo: signal that setup is complete with some sort of semaphore
   io_set_blink_mode(BLINK_NORMAL);
@@ -86,6 +86,9 @@ void info_task(void *param) {
 
     Serial.print("MAC Address: ");
     Serial.println(wifi_get_mac());
+
+    Serial.print("Firmware: ");
+    Serial.println(GIT_VERSION);
 
     vTaskDelay(10000 / portTICK_PERIOD_MS);
   }

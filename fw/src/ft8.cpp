@@ -37,8 +37,6 @@ void ft8_send_msg(digi_msg_t *to_send) {
 
     for(uint8_t i = 0; i < FT8_SYMBOL_COUNT; i++)
     {
-        Serial.print("On symbol #: ");
-        Serial.println(i);
         // TODO: abort sending on keypress or a semaphore signaling to abort
         
         // TODO: fine clock setting (sub-hz)

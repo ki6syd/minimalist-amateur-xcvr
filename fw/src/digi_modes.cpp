@@ -50,6 +50,9 @@ void digi_mode_task(void *pvParameter) {
             ft8_send_msg(&tmp);
             }
         }
+
+        // todo why was notifywait not blocking
+        vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 }
 
