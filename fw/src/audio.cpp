@@ -8,6 +8,7 @@
 #include "AudioTools.h"
 #include "AudioLibs/I2SCodecStream.h"
 #include "AudioLibs/VBANStream.h"
+#include "Communication/ESPNowStream.h"
 
 // defines the indices of the audio mixer that combines two input channels and sidetone
 #define MIXER_IDX_SIDETONE      0
@@ -51,12 +52,16 @@ MultiOutput                   multi_output;                             // split
 FilteredStream<int16_t, float> audio_filt(out_vol, info_mono.channels); // filter outputting into out_vol volume control
 OutputMixer<int16_t>          side_l_r_mix(audio_filt, 3);              // sidetone, left, right, audio mixing into audio_filt
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
+// TODO: try using constructor with 3rd argument of default buffer size, currently it's relatively large at 1024
 StreamCopy copier_1(side_l_r_mix, sound_stream);                      // move sine wave from sound_stream into the sidetone mixer
 StreamCopy copier_2(input_split, i2s_stream);                           // moves data through the streams. To: input_split, from: i2s_stream
 #ifdef AUDIO_PATH_IQ
 FilteredStream<int16_t, float> hilbert_n45deg(input_l_vol, info_mono.channels);
 FilteredStream<int16_t, float> hilbert_p45deg(input_r_vol, info_mono.channels);
 #endif
+
+ESPNowStream now;
+const char *peers[] = {"48:CA:43:57:66:98"};    // serial number 1
 
 // example of i2s codec for both input and output: https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-audiokit/streams-audiokit-filter-audiokit/streams-audiokit-filter-audiokit.ino
 
@@ -78,7 +83,7 @@ void audio_init() {
     xTaskCreatePinnedToCore(
         audio_task,
         "Audio Stream Updater Task",
-        16384,
+        32768,
         NULL,
         TASK_PRIORITY_AUDIO, // priority
         &xAudioTaskHandle,
@@ -180,6 +185,16 @@ void audio_task(void *param) {
     multi_output.add(csv_stream);
 #endif
 
+    // TESTING
+    /*
+    multi_output.add(now);
+    auto now_cfg = now.defaultConfig();
+    now_cfg.mac_address = "A8:48:FA:0B:93:02";  // replace this with the actual mac addr
+    now.begin(now_cfg);
+    now.addPeers(peers);
+    */
+
+
     // take a mono audio stream and make it stereo
     // declaration links it to i2s stream (stereo output)
     mono_to_stereo.begin(1, 2);
@@ -193,9 +208,6 @@ void audio_task(void *param) {
     while(true) {
         copier_1.copy();
         copier_2.copy();
-
-        // TBD if this is needed
-        vTaskDelay(1 / portTICK_PERIOD_MS);
 
         // TODO: move everything below here to a lower priority task that runs less frequently
         // update this variable so other modules can more readily consume it
@@ -398,7 +410,7 @@ float audio_get_rx_db(uint16_t num_to_avg, uint16_t delay_ms) {
 
             // only delay between samples if we are averaging
             if(num_to_avg > 0)
-                vTaskDelay(delay_ms / portTICK_PERIOD_MS);
+                vTaskDelay(pdMS_TO_TICKS(delay_ms));
         }
         volume_dB /= num_to_avg;
 

@@ -17,13 +17,13 @@ void radio_vhf_init() {
     pinMode(VHF_PTT, OUTPUT);
 
     digitalWrite(VHF_PTT, HIGH);  // RX mode, then delay before enabling - don't want to accidentally transmit
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(10));
     digitalWrite(VHF_EN, HIGH);   // enabled
     
     VHFserial.begin(VHF_SERIAL_SPEED, SERIAL_8N1, VHF_TX_ESP_RX, VHF_RX_ESP_TX);
 
     // TODO: understand why this delay is needed, what the min value is, whether we can configure in parallel with other things, etc
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(2000));
 
     // set VHFserial timeout (milliseconds)
     VHFserial.setTimeout(100);

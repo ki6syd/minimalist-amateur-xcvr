@@ -103,7 +103,7 @@ void io_init() {
 
   Serial.begin(DEBUG_SERIAL_SPEED);
   // delay gives time to see serial port messages on monitor
-  delay(5000);
+  vTaskDelay(pdMS_TO_TICKS(5000));
 
   // helps avoid some sort of overflow when USB is not connected
   if(!Serial.isPlugged() && !Serial.isConnected())
@@ -129,6 +129,7 @@ void io_init() {
   Serial.print("Free PSRAM: ");
   Serial.println(ESP.getFreePsram());
 
+
   // run on core 0
   xTaskCreatePinnedToCore(
       spare_task_core_0,
@@ -151,6 +152,7 @@ void io_init() {
       1 // core
   );
 
+
   
   xTaskCreatePinnedToCore(
       blink_task,
@@ -164,7 +166,6 @@ void io_init() {
 
   btn_semaphore = xSemaphoreCreateBinary();
 
-  
   xTaskCreatePinnedToCore(
       tx_pulse_task,
       "TX pulse generator",
@@ -175,6 +176,7 @@ void io_init() {
       1 // core
   );
 
+
   xTaskCreatePinnedToCore(
       key_task,
       "Key monitoring task",
@@ -184,8 +186,6 @@ void io_init() {
       &xKeyTaskHandle,
       TASK_CORE_KEY_IO // core
   );
-  
-
   
 }
 
@@ -198,7 +198,7 @@ void io_set_blink_mode(blink_type_t mode) {
 void spare_task_core_0(void *param) {
   while(true) {
     digitalWrite(LED_DBG_0, HIGH);
-    vTaskDelay(1 / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(1));
     digitalWrite(LED_DBG_0, LOW);
     taskYIELD();
   }
@@ -206,7 +206,7 @@ void spare_task_core_0(void *param) {
 void spare_task_core_1(void *param) {
   while(true) {
     digitalWrite(LED_DBG_1, HIGH);
-    vTaskDelay(1 / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(1));
     digitalWrite(LED_DBG_1, LOW);
     taskYIELD();
   }
@@ -231,9 +231,9 @@ void blink_task(void *param) {
     }
 
     digitalWrite(LED_GRN, HIGH);
-    vTaskDelay(on_duration / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(on_duration));
     digitalWrite(LED_GRN, LOW);
-    vTaskDelay(off_duration / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(off_duration));
   }
 }
 
@@ -267,6 +267,7 @@ void key_task(void *param) {
         io_enable_dah_isr(true);
       }
     }
+    vTaskDelay(pdMS_TO_TICKS(10));
   }
 }
 

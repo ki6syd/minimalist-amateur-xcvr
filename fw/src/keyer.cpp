@@ -33,19 +33,19 @@ uint16_t keyer_get_speed() {
 
 void keyer_dit() {
     radio_key_on();
-    vTaskDelay((MORSE_SYMBOL_MS_WPM * MORSE_DIT_LEN / keyer_speed) / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(MORSE_SYMBOL_MS_WPM * MORSE_DIT_LEN / keyer_speed));
 
     radio_key_off();
-    vTaskDelay((MORSE_SYMBOL_MS_WPM  / keyer_speed) / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(MORSE_SYMBOL_MS_WPM  / keyer_speed));
 }
 
 
 void keyer_dah() {
     radio_key_on();
-    vTaskDelay((MORSE_SYMBOL_MS_WPM * MORSE_DAH_LEN / keyer_speed) / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(MORSE_SYMBOL_MS_WPM * MORSE_DAH_LEN / keyer_speed));
 
     radio_key_off();
-    vTaskDelay((MORSE_SYMBOL_MS_WPM  / keyer_speed) / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(MORSE_SYMBOL_MS_WPM  / keyer_speed));
 }
 
 
@@ -60,7 +60,7 @@ void keyer_send_msg(digi_msg_t *to_send) {
 // could accept a char, but leaving this as a String input to handle prosigns
 void keyer_letter(String letter) {
   if(letter == " " || isSpace(letter.charAt(0)) || letter == "_") {
-    vTaskDelay((MORSE_INTERWORD_LEN  / keyer_speed) / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(MORSE_INTERWORD_LEN  / keyer_speed));
   }
   
   if(letter == "a" || letter == "A") {
@@ -296,5 +296,5 @@ void keyer_letter(String letter) {
   }
   
   // intercharacter delay
-  vTaskDelay((MORSE_SYMBOL_MS_WPM * MORSE_INTERCHAR_LEN / keyer_speed) / portTICK_PERIOD_MS);
+  vTaskDelay(pdMS_TO_TICKS(MORSE_SYMBOL_MS_WPM * MORSE_INTERCHAR_LEN / keyer_speed));
 }

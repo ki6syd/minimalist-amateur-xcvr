@@ -244,6 +244,6 @@ void fs_task(void *pvParameter) {
 
     while(1) {
         filemgr.handleClient();
-        vTaskDelay(1 / portTICK_PERIOD_MS);
+        vTaskDelay(pdMS_TO_TICKS(1));
     }
 }

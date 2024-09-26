@@ -35,8 +35,8 @@ void setup() {
   radio_hf_init();
   radio_vhf_init();
 
-  time_init();
-  digi_mode_init();
+  // time_init();
+  // digi_mode_init();
 
   // todo: signal that setup is complete with some sort of semaphore
   io_set_blink_mode(BLINK_NORMAL);
@@ -91,6 +91,6 @@ void info_task(void *param) {
     Serial.print("Firmware: ");
     Serial.println(GIT_VERSION);
 
-    vTaskDelay(10000 / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(10000));
   }
 }

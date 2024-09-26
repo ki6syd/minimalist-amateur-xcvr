@@ -328,7 +328,7 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
 
       // delay so VDD can discharge
       // implemented on entry to QSK_COUNTDOWN to guarantee that we can't immediately transition to RX 
-      vTaskDelay(5 / portTICK_PERIOD_MS);
+      vTaskDelay(pdMS_TO_TICKS(5));
 
       break;
 
@@ -461,7 +461,7 @@ void radio_set_band(radio_band_t new_band) {
 
   // add a delay for relay settling
   // TODO: parametrize this
-  vTaskDelay(2 / portTICK_PERIOD_MS);
+  vTaskDelay(pdMS_TO_TICKS(2));
 
   // update band
   band = new_band;
@@ -568,7 +568,7 @@ void radio_cal_tx_10MHz() {
   si5351.output_enable(SI5351_IDX_BFO, 0);
   si5351.output_enable(SI5351_IDX_VFO, 0);
   si5351.output_enable(SI5351_IDX_TX, 1);
-  vTaskDelay(5000 / portTICK_PERIOD_MS);
+  vTaskDelay(pdMS_TO_TICKS(5000));
 }
 
 // stop the VFO, enable BFO, sweep TX-CLK injection and observe amplitude

@@ -29,7 +29,7 @@ void ft8_send_msg(digi_msg_t *to_send) {
     // TODO: implement interface from radio module that indicates it's done with the queued requests
     radio_set_dial_freq(to_send->freq + (to_send->buf[0] * FT8_TONE_SPACING));
     radio_key_on();
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(10));
 
     // start the clock
     TickType_t xLastWakeTime = xTaskGetTickCount();

@@ -33,7 +33,7 @@ void time_delay_ft8() {
     if(second() % FT8_START_TIME == 0)
         return;
 
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(100));
     }
 
     Serial.println("[FT8] Window open");
