@@ -425,6 +425,7 @@ function get_githash() {
   func = function() {
     if (this.readyState == 4 && this.status == 200) {
       document.getElementById('githash').value = this.responseText;
+      console.log(this.responseText);
     }
   };
   http_request("GET", "githash", [], [], func)
@@ -435,6 +436,7 @@ function get_address() {
   func = function() {
     if (this.readyState == 4 && this.status == 200) {
       document.getElementById('address').value = this.responseText;
+      console.log(this.responseText);
     }
   };
   http_request("GET", "ip", [], [], func)
@@ -763,11 +765,8 @@ function on_load() {
   get_input_voltage();
   get_s_meter();
   get_volume();
-  get_sidetone();
   get_speed();
   get_bw();
-  get_lna();
-  get_antenna();
   // get_debug();
   get_freq();
   get_utc_time();
@@ -810,9 +809,6 @@ setInterval(function() { get_s_meter();}, 500);
 setInterval(function() { get_volume();}, 5000); 
 setInterval(function() { get_speed();}, 5000); 
 setInterval(function() { get_bw();}, 3000); 
-setInterval(function() { get_lna();}, 3000); 
-setInterval(function() { get_antenna();}, 3000); 
-setInterval(function() { get_sidetone();}, 3000); 
 setInterval(function() { get_queue_len();}, 1000); 
 // setInterval(function() { get_debug();}, 500);
 setInterval(function() { get_utc_time();}, 5000) 

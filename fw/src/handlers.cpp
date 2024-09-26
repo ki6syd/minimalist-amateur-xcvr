@@ -126,6 +126,9 @@ void handler_time_set(AsyncWebServerRequest *request) {
     if(!handler_require_param(request, "timeNow"))
         return;
 
+    Serial.print("New time: ");
+    Serial.println(request->getParam("timeNow")->value());
+
     uint64_t new_time = request->getParam("timeNow")->value().toInt();
     if(time_update(new_time))
         request->send(201, "text/plain", "OK");

@@ -194,6 +194,7 @@ void audio_task(void *param) {
         copier_1.copy();
         copier_2.copy();
 
+        // TBD if this is needed
         vTaskDelay(1 / portTICK_PERIOD_MS);
 
         // TODO: move everything below here to a lower priority task that runs less frequently
@@ -220,6 +221,7 @@ void audio_task(void *param) {
                 audio_configure_codec(AUDIO_VHF_TX);
         }
 
+        // TBD if this is needed
         // this is a LOWEST priority task, yield to another LOWEST priority task
         taskYIELD();
     }
