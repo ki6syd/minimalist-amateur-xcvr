@@ -40,6 +40,10 @@ VBANStream                    vban;                                     // audio
 #ifdef AUDIO_EN_OUT_CSV
 CsvOutput<int16_t>            csv_stream(Serial);                      // data over serial
 #endif
+#ifdef AUDIO_EN_OUT_ESPNOW
+ESPNowStream now;
+const char *peers[] = {"48:CA:43:57:66:98"};    // serial number 1
+#endif
 
 SineWaveGenerator<int16_t>    sine_wave;
 GeneratedSoundStream<int16_t> sound_stream(sine_wave);
@@ -59,9 +63,6 @@ StreamCopy copier_2(input_split, i2s_stream);                           // moves
 FilteredStream<int16_t, float> hilbert_n45deg(input_l_vol, info_mono.channels);
 FilteredStream<int16_t, float> hilbert_p45deg(input_r_vol, info_mono.channels);
 #endif
-
-ESPNowStream now;
-const char *peers[] = {"48:CA:43:57:66:98"};    // serial number 1
 
 // example of i2s codec for both input and output: https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-audiokit/streams-audiokit-filter-audiokit/streams-audiokit-filter-audiokit.ino
 
@@ -93,7 +94,7 @@ void audio_init() {
 
 void audio_task(void *param) {
     AudioLogger::instance().begin(Serial, AudioLogger::Warning);
-    LOGLEVEL_AUDIODRIVER = AudioDriverWarning;    // AudioDriverInfo  // AudioDriverWarning // AudioDriverDebug
+    LOGLEVEL_AUDIODRIVER = AudioDriverWarning;    // AudioDriverInfo  // AudioDriverWarning // AudioDriverDebug    // AudioDriverError
 
     my_pins.addI2C(PinFunction::CODEC, CODEC_SCL, CODEC_SDA, CODEC_ADDR, CODEC_I2C_SPEED, codecI2C);
     my_pins.addI2S(PinFunction::CODEC, CODEC_MCLK, CODEC_BCLK, CODEC_WS, CODEC_DO, CODEC_DI);
@@ -184,16 +185,18 @@ void audio_task(void *param) {
 #ifdef AUDIO_EN_OUT_CSV
     multi_output.add(csv_stream);
 #endif
-
-    // TESTING
-    /*
-    multi_output.add(now);
+#ifdef AUDIO_EN_OUT_ESPNOW
     auto now_cfg = now.defaultConfig();
-    now_cfg.mac_address = "A8:48:FA:0B:93:02";  // replace this with the actual mac addr
+    now_cfg.mac_address = "48:CA:43:57:66:5C"   // serial number 2
+    now_cfg.channel = 2;
+    now_cfg.use_send_ack = false;
+    now_cfg.write_retry_count = 0;
+    now_cfg.delay_after_write_ms = 0;
+    now_cfg.delay_after_failed_write_ms = 0;
     now.begin(now_cfg);
     now.addPeers(peers);
-    */
-
+    multi_output.add(now);
+#endif
 
     // take a mono audio stream and make it stereo
     // declaration links it to i2s stream (stereo output)
