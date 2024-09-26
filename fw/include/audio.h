@@ -3,6 +3,7 @@
 
 // #define AUDIO_EN_OUT_VBAN
 // #define AUDIO_EN_OUT_CSV
+// #define AUDIO_EN_OUT_ESPNOW
 
 #ifdef RX_ARCHITECTURE_QSD
 #define AUDIO_PATH_IQ

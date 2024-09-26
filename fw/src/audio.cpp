@@ -187,7 +187,7 @@ void audio_task(void *param) {
 #endif
 #ifdef AUDIO_EN_OUT_ESPNOW
     auto now_cfg = now.defaultConfig();
-    now_cfg.mac_address = "48:CA:43:57:66:5C"   // serial number 2
+    now_cfg.mac_address = "48:CA:43:57:66:5C";   // serial number 2
     now_cfg.channel = 2;
     now_cfg.use_send_ack = false;
     now_cfg.write_retry_count = 0;
