@@ -46,10 +46,10 @@ void digi_mode_task(void *pvParameter) {
             radio_set_dial_freq(tmp.freq);
 
             if(tmp.type == DIGI_MODE_CW) {
-            keyer_send_msg(&tmp);
+                keyer_send_msg(&tmp);
             }
             else if(tmp.type == DIGI_MODE_FT8) {
-            ft8_send_msg(&tmp);
+                ft8_send_msg(&tmp);
             }
         }
     }

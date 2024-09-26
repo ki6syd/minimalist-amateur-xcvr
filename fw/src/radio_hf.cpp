@@ -6,10 +6,10 @@
 #include <Arduino.h>
 #include <si5351.h>
 
-#define NOTIFY_KEY_ON         0
-#define NOTIFY_KEY_OFF        1
-#define NOTIFY_QSK_EXPIRE     2
-#define NOTIFY_FREQ_CHANGE    3
+#define NOTIFY_KEY_ON         1
+#define NOTIFY_KEY_OFF        2
+#define NOTIFY_QSK_EXPIRE     4
+#define NOTIFY_FREQ_CHANGE    8
 
 #define SI5351_IDX_BFO    SI5351_CLK0
 #define SI5351_IDX_VFO    SI5351_CLK1
@@ -163,7 +163,6 @@ void radio_si5351_init() {
 
 }
 
-
 void radio_task(void *param) {
   radio_state_t tmp;
   uint32_t notifiedValue;
@@ -172,8 +171,7 @@ void radio_task(void *param) {
     // look for flags. Don't clear on entry; clear on exit
     // example: https://freertos.org/Documentation/02-Kernel/02-Kernel-features/03-Direct-to-task-notifications/04-As-event-group
     if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(10)) == pdTRUE) {
-      if(notifiedValue == NOTIFY_KEY_OFF) {
-        Serial.println("Key off");
+      if(notifiedValue & NOTIFY_KEY_OFF) {
         // initiate mode change
         radio_set_rxtx_mode(MODE_QSK_COUNTDOWN);
 
@@ -182,8 +180,7 @@ void radio_task(void *param) {
         digitalWrite(LED_RED, LOW);
         digitalWrite(PA_VDD_CTRL, LOW);
       }
-      if(notifiedValue == NOTIFY_KEY_ON) {
-        Serial.println("Key on");
+      if(notifiedValue & NOTIFY_KEY_ON) {
         // initiate mode change
         radio_set_rxtx_mode(MODE_TX);
 
@@ -192,10 +189,10 @@ void radio_task(void *param) {
         digitalWrite(LED_RED, HIGH);
         // digitalWrite(PA_VDD_CTRL, HIGH); // comment out for testing
       }
-      if(notifiedValue == NOTIFY_QSK_EXPIRE) {
+      if(notifiedValue & NOTIFY_QSK_EXPIRE) {
         radio_set_rxtx_mode(MODE_RX);
       }
-      if(notifiedValue == NOTIFY_FREQ_CHANGE) {
+      if(notifiedValue & NOTIFY_FREQ_CHANGE) {
         // wait for zero ticks, don't want to block here
         if(xQueueReceive(xRadioQueue, (void *) &tmp, 0) == pdTRUE) {
           Serial.print("Queue message: ");
@@ -289,8 +286,8 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
   if(rxtx_mode == MODE_TX && new_mode == MODE_RX)
     new_mode = MODE_QSK_COUNTDOWN;
 
-  Serial.print("Mode change: ");
-  Serial.println(new_mode);
+  // Serial.print("Mode change: ");
+  // Serial.println(new_mode);
 
   switch(new_mode) {
     case MODE_RX:
@@ -308,10 +305,8 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
       // change over relays if needed. Add some settling time
       // TODO: rework the radio_set_band(band) fundtion so it is "radio_set_relays(freq)" and looks up band from dial freq
       radio_set_band(band);
-      vTaskDelay(5 / portTICK_PERIOD_MS);
 
       // enable RX audio
-      audio_en_pga(true);
       audio_en_rx_audio(true);
       audio_en_sidetone(false);
 
@@ -324,16 +319,16 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
       // update mode 
       rxtx_mode = MODE_QSK_COUNTDOWN;
 
-      // mute all audio sources
-      audio_en_pga(false);
-      audio_en_rx_audio(true);
+      // turn off RX audio
+      // TX power amp rail, sidetone, and TX LED are handled elsewhere
+      audio_en_rx_audio(false);
 
       // no need to update clocks, was just in TX
       // no need to update relays when mode changes to QSK, was just in TX
 
       // delay so VDD can discharge
       // implemented on entry to QSK_COUNTDOWN to guarantee that we can't immediately transition to RX 
-      vTaskDelay(25 / portTICK_PERIOD_MS);
+      vTaskDelay(5 / portTICK_PERIOD_MS);
 
       break;
 
@@ -346,13 +341,11 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
 
       // turn off RX audio
       // TX power amp rail, sidetone, and TX LED are handled elsewhere
-      audio_en_pga(false);
       audio_en_rx_audio(false);
 
       // change over relays if needed. Add some settling time
       // TODO: rework the radio_set_band(band) fundtion so it is "radio_set_relays(freq)" and looks up band from dial freq
       radio_set_band(band);
-      vTaskDelay(5 / portTICK_PERIOD_MS);
 
       // set up clocks. TX clock always running in TX mode
       si5351.output_enable(SI5351_IDX_BFO, 0);
@@ -465,6 +458,12 @@ void radio_set_band(radio_band_t new_band) {
         return;
     }
   }
+
+  // add a delay for relay settling
+  // TODO: parametrize this
+  vTaskDelay(2 / portTICK_PERIOD_MS);
+
+  // update band
   band = new_band;
 }
 

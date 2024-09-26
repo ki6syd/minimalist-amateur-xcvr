@@ -1,12 +1,17 @@
 #include "globals.h"
 #include "io.h"
 #include "radio_hf.h"
+#include "keyer.h"
 
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-TaskHandle_t xBlinkTaskHandle, xSpareTaskHandle0, xSpareTaskHandle1, xTxPulseTaskHandle;
+#define NOTIFY_DIT            1
+#define NOTIFY_DAH            2
+#define NOTIFY_SK             4
+
+TaskHandle_t xBlinkTaskHandle, xSpareTaskHandle0, xSpareTaskHandle1, xTxPulseTaskHandle, xKeyTaskHandle;
 SemaphoreHandle_t btn_semaphore;
 
 blink_type_t blink_mode = BLINK_NORMAL;
@@ -14,16 +19,37 @@ blink_type_t blink_mode = BLINK_NORMAL;
 void spare_task_core_0(void *pvParameter);
 void spare_task_core_1(void *pvParameter);
 void blink_task(void *pvParameter);
+void key_task(void *pvParameter);
 void tx_pulse_task(void *pvParameter);
+void io_enable_dit_isr(bool enable);
+void io_enable_dah_isr(bool enable);
 
+// only handles straight key / microphone PTT
 ICACHE_RAM_ATTR void buttonISR() {
   // detach interrupt here, reattaches after taking semaphore
   detachInterrupt(digitalPinToInterrupt(BOOT_BTN));
   detachInterrupt(digitalPinToInterrupt(MIC_PTT));
-  detachInterrupt(digitalPinToInterrupt(KEY_DIT));
-  detachInterrupt(digitalPinToInterrupt(KEY_DAH));
 
   xSemaphoreGiveFromISR(btn_semaphore, NULL);
+}
+
+// only handles paddle inputs (dit, dah)
+// reference for freertos code in this function: https://www.freertos.org/Documentation/02-Kernel/04-API-references/05-Direct-to-task-notifications/07-xTaskNotifyFromISR
+ICACHE_RAM_ATTR void paddle_isr() {
+
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+  // check which pin caused the interrupt. Detach its interrupt, notify the task
+  if(digitalRead(KEY_DIT) == LOW) {
+    io_enable_dit_isr(false);
+    xTaskNotifyFromISR(xKeyTaskHandle, NOTIFY_DIT, eSetBits, &xHigherPriorityTaskWoken);
+  }
+  if(digitalRead(KEY_DAH) == LOW) {
+    io_enable_dah_isr(false);
+    xTaskNotifyFromISR(xKeyTaskHandle, NOTIFY_DAH, eSetBits, &xHigherPriorityTaskWoken);
+  }
+
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 static void usbEventCallback(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
@@ -65,10 +91,11 @@ void io_init() {
   attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, CHANGE);
   pinMode(MIC_PTT, INPUT);
   attachInterrupt(digitalPinToInterrupt(MIC_PTT), buttonISR, FALLING);
+  
   pinMode(KEY_DAH, INPUT);
-  attachInterrupt(digitalPinToInterrupt(KEY_DAH), buttonISR, FALLING);
   pinMode(KEY_DIT, INPUT);
-  attachInterrupt(digitalPinToInterrupt(KEY_DIT), buttonISR, FALLING);
+  io_enable_dit_isr(true);
+  io_enable_dah_isr(true);
 
   digitalWrite(SPARE_0, LOW);
   digitalWrite(LED_DBG_0, LOW);
@@ -136,6 +163,8 @@ void io_init() {
   );
 
   btn_semaphore = xSemaphoreCreateBinary();
+
+  
   xTaskCreatePinnedToCore(
       tx_pulse_task,
       "TX pulse generator",
@@ -145,6 +174,19 @@ void io_init() {
       &xTxPulseTaskHandle,
       1 // core
   );
+
+  xTaskCreatePinnedToCore(
+      key_task,
+      "Key monitoring task",
+      4096,
+      NULL,
+      TASK_PRIORITY_KEY_IO, // priority
+      &xKeyTaskHandle,
+      TASK_CORE_KEY_IO // core
+  );
+  
+
+  
 }
 
 void io_set_blink_mode(blink_type_t mode) {
@@ -203,11 +245,41 @@ void tx_pulse_task(void *param) {
       if(digitalRead(BOOT_BTN) == HIGH)
         radio_key_off();
 
-
       attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, CHANGE);
       attachInterrupt(digitalPinToInterrupt(MIC_PTT), buttonISR, FALLING);
-      attachInterrupt(digitalPinToInterrupt(KEY_DIT), buttonISR, FALLING);
-      attachInterrupt(digitalPinToInterrupt(KEY_DAH), buttonISR, FALLING);
     }
   }
+}
+
+void key_task(void *param) {
+  uint32_t notified_value;
+  while(true) {
+    // paddle_isr() will unblock and force context switch
+    if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notified_value, 100) == pdTRUE) {
+      if(notified_value & NOTIFY_DIT) {
+        keyer_dit();
+        io_enable_dah_isr(true);
+        io_enable_dit_isr(true);
+      }
+      if(notified_value & NOTIFY_DAH) {
+        keyer_dah();
+        io_enable_dit_isr(true);
+        io_enable_dah_isr(true);
+      }
+    }
+  }
+}
+
+void io_enable_dit_isr(bool enabled) {
+  if(enabled)
+    attachInterrupt(digitalPinToInterrupt(KEY_DIT), paddle_isr, ONLOW);
+  else
+    detachInterrupt(digitalPinToInterrupt(KEY_DIT));
+}
+
+void io_enable_dah_isr(bool enabled) {
+  if(enabled)
+    attachInterrupt(digitalPinToInterrupt(KEY_DAH), paddle_isr, ONLOW);
+  else
+    detachInterrupt(digitalPinToInterrupt(KEY_DAH));
 }

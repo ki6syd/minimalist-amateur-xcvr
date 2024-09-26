@@ -1,0 +1,165 @@
+/* CSS styles */
+body {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+form {
+  font-family: monospace, sans-serif;
+  color: gray;
+}
+
+a {
+  font-family: monospace, sans-serif;
+  color: gray;
+}
+
+progress {
+  width: 80px;
+}
+
+.label {
+  font-size: 20px;
+}
+
+.label_small {
+  font-size: 16px;
+}
+
+.label_tiny {
+  font-size: 12px;
+}
+
+.vfo_display {
+  color: #3389FF;
+  font-family: monospace;
+  width: 160px;
+  font-size: 30px;
+  letter-spacing: 0.1em;
+}
+
+.vfo_display_invalid {
+  color: #BA3329;
+  font-family: monospace;
+  width: 160px;
+  font-size: 30px;
+  letter-spacing: 0.1em;
+}
+
+.cw_input {
+  color: gray;
+  font-family: monospace;
+  font-size: 25px;
+  width:160px;
+}
+
+.readout {
+  color: #3389FF;
+  font-family: monospace;
+  font-size: 22px;
+}
+
+.readout_small {
+  color: #3389FF;
+  font-family: monospace;
+  font-size: 16px;
+}
+
+.readout_small_alert {
+  color: #BA3329;
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.readout_tiny_alert {
+  color: #BA3329;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.readout_tiny {
+  color: #3389FF;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.button {
+  background-color: #4d4c46;
+  border: none;
+  color: white;
+  padding: 5px 5px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 22px;
+  margin: 2px 2px;
+  cursor: pointer;
+  border-radius: 4px;
+  touch-action: manipulation;
+  line-height: 30px;
+}
+
+.button_pressed {
+  background-color: #8f8f8f;
+  border: none;
+  color: white;
+  padding: 5px 5px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 22px;
+  margin: 2px 2px;
+  cursor: pointer;
+  border-radius: 4px;
+  touch-action: manipulation;
+  line-height: 30px;
+}
+
+.button_emoji {
+  background-color: #4d4c46;
+  border: none;
+  color: white;
+  padding: 5px 5px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 28px;
+  margin: 2px 2px;
+  cursor: pointer;
+  border-radius: 4px;
+  touch-action: manipulation;
+  line-height: 30px;
+}
+}
+
+.table { 
+  display: table;
+  border-spacing: 100px 0;
+} 
+
+.table>* { 
+  display: table-row; 
+}
+
+.table>*>* { 
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  padding-right: 15px;
+  display: table-cell; 
+}
+
+div.middle-div {
+  position: relative;
+  top: 50%;
+  transform: translateY(-15%);
+}
+
+.scrollable {
+    height: 150px;
+    overflow-y: auto;
+}

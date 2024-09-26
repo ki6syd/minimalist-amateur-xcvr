@@ -17,11 +17,11 @@
 // constant used in math [dB]
 #define PGA_GAIN                24
 
-#define NOTIFY_PGA_ON           0
-#define NOTIFY_PGA_OFF          1
-#define NOTIFY_MODE_HF_RXTX_CW  2
-#define NOTIFY_MODE_VHF_RX      3
-#define NOTIFY_MODE_VHF_TX      4
+#define NOTIFY_PGA_ON           1
+#define NOTIFY_PGA_OFF          2
+#define NOTIFY_MODE_HF_RXTX_CW  4
+#define NOTIFY_MODE_VHF_RX      8
+#define NOTIFY_MODE_VHF_TX      16
 
 TwoWire codecI2C = TwoWire(1);  // "Wire" is used in si5351 library. Defined through TwoWire(0), so the other peripheral is still available
 
@@ -194,26 +194,29 @@ void audio_task(void *param) {
         copier_1.copy();
         copier_2.copy();
 
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+
+        // TODO: move everything below here to a lower priority task that runs less frequently
         // update this variable so other modules can more readily consume it
         last_volume_dB = audio_get_rx_db();
 
         // look for flags. Don't clear on entry; clear on exit
         if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, 0) == pdTRUE) {
-            if(notifiedValue == NOTIFY_PGA_ON) {
+            if(notifiedValue & NOTIFY_PGA_ON) {
                 AudioDriver *driver = audio_board.getDriver();
                 driver->setInputVolume(100); // changes PGA in the codec
                 pga_en = true;
             }
-            if(notifiedValue == NOTIFY_PGA_OFF) {
+            if(notifiedValue & NOTIFY_PGA_OFF) {
                 AudioDriver *driver = audio_board.getDriver();
                 driver->setInputVolume(0); // changes PGA in the codec
                 pga_en = false;
             }
-            if(notifiedValue == NOTIFY_MODE_HF_RXTX_CW)
+            if(notifiedValue & NOTIFY_MODE_HF_RXTX_CW)
                 audio_configure_codec(AUDIO_HF_RXTX_CW);
-            if(notifiedValue == NOTIFY_MODE_VHF_RX)
+            if(notifiedValue & NOTIFY_MODE_VHF_RX)
                 audio_configure_codec(AUDIO_VHF_RX);
-            if(notifiedValue == NOTIFY_MODE_VHF_TX)
+            if(notifiedValue & NOTIFY_MODE_VHF_TX)
                 audio_configure_codec(AUDIO_VHF_TX);
         }
 
@@ -226,9 +229,12 @@ void audio_configure_codec(audio_mode_t mode) {
     Serial.println("Configuring codec...");
     auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
     i2s_config.copyFrom(info_stereo);
-    i2s_config.buffer_size = 1024;
-    // i2s_config.buffer_size = 512;
-    i2s_config.buffer_count = 2;
+    // i2s_config.buffer_size = 1024;   // works but sidetone is choppy
+    // i2s_config.buffer_count = 2;
+    i2s_config.buffer_size = 128;
+    i2s_config.buffer_count = 8;
+    // i2s_config.buffer_size = 512;    // long delay
+    // i2s_config.buffer_count = 4;
     i2s_config.port_no = 0;
 
     AudioDriver *driver = audio_board.getDriver();
@@ -318,10 +324,12 @@ void audio_en_pga(bool gain) {
 void audio_en_sidetone(bool tone) {
     sidetone_en = tone;
 
-    if(tone)
+    if(tone) {
         side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, sidetone_vol);
-    else
+    }
+    else {
         side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, 0);
+    }
 
 }
 

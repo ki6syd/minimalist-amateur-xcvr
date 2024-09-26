@@ -1,6 +1,7 @@
 #include "globals.h"
 #include "keyer.h"
 #include "radio_hf.h"
+#include "io.h"
 
 #include <Arduino.h>
 
@@ -12,7 +13,7 @@
 #define MORSE_SPEED_MIN             5
 #define MORSE_SPEED_MAX             30
 
-uint16_t keyer_speed = 15;
+uint16_t keyer_speed = 16;
 
 void keyer_init() {
     // Todo: load keyer parameters from file system
@@ -31,36 +32,20 @@ uint16_t keyer_get_speed() {
 }
 
 void keyer_dit() {
-//   dit_flag = false;
-  
-  radio_key_on();
-  vTaskDelay((MORSE_SYMBOL_MS_WPM * MORSE_DIT_LEN / keyer_speed) / portTICK_PERIOD_MS);
+    radio_key_on();
+    vTaskDelay((MORSE_SYMBOL_MS_WPM * MORSE_DIT_LEN / keyer_speed) / portTICK_PERIOD_MS);
 
-  radio_key_off();
-  vTaskDelay((MORSE_SYMBOL_MS_WPM  / keyer_speed) / portTICK_PERIOD_MS);
-
-//   // start listening for key inputs again
-//   if(key == KEY_PADDLE)
-//     attach_paddle_isr(true, true);
-//   else
-//     attach_sk_isr(true);
+    radio_key_off();
+    vTaskDelay((MORSE_SYMBOL_MS_WPM  / keyer_speed) / portTICK_PERIOD_MS);
 }
 
 
 void keyer_dah() {
-//   dah_flag = false;
-  
-  radio_key_on();
-  vTaskDelay((MORSE_SYMBOL_MS_WPM * MORSE_DAH_LEN / keyer_speed) / portTICK_PERIOD_MS);
-  
-  radio_key_off();
-  vTaskDelay((MORSE_SYMBOL_MS_WPM  / keyer_speed) / portTICK_PERIOD_MS);
+    radio_key_on();
+    vTaskDelay((MORSE_SYMBOL_MS_WPM * MORSE_DAH_LEN / keyer_speed) / portTICK_PERIOD_MS);
 
-//   // start listening for key inputs again
-//   if(key == KEY_PADDLE)
-//     attach_paddle_isr(true, true);
-//   else
-//     attach_sk_isr(true);
+    radio_key_off();
+    vTaskDelay((MORSE_SYMBOL_MS_WPM  / keyer_speed) / portTICK_PERIOD_MS);
 }
 
 

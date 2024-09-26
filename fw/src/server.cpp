@@ -78,6 +78,15 @@ void server_init() {
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
         request->send(FILE_SYSTEM, "/index.html", "text/html");
     });
+    server.on("/index.html", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->send(FILE_SYSTEM, "/index.html", "text/html");
+    });
+    server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->send(FILE_SYSTEM, "/style.css", "text/css");
+    });
+    server.on("/script.js", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->send(FILE_SYSTEM, "/script.js", "text/javascript");
+    });
     
     // server.serveStatic("/", FILE_SYSTEM, "/");
 
@@ -165,10 +174,6 @@ bool server_http_handler(AsyncWebServerRequest *request) {
     for(uint16_t i = 0; i < num_handlers; i++) {
         // check for a match on api version, handler URL, and method
         if(api_version == handlers[i].api_version && url == handlers[i].url && request_type == handlers[i].method) {
-            Serial.print("Method: ");
-            Serial.print(request_type);
-            Serial.print("\tURL: ");
-            Serial.println(url);
             handlers[i].handler_function(request);
             return true;
         }
