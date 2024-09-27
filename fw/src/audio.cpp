@@ -280,7 +280,10 @@ void audio_task(void *param) {
 
         // TBD if this is needed
         // this is a LOWEST priority task, yield to another LOWEST priority task
-        taskYIELD();
+        // taskYIELD();
+
+        // is this better?
+        vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
 
@@ -392,7 +395,8 @@ void audio_en_sidetone(bool tone) {
         side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, sidetone_vol);
     }
     else {
-        side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, 0.05);
+        // side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, 0);
+        side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, 0.1);    // for testing only
     }
 
 }
