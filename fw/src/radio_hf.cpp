@@ -70,13 +70,10 @@ void radio_hf_init() {
 
   radio_si5351_init();
 
-  radio_set_rxtx_mode(MODE_RX);
-
   // create the message queue
   // TODO: parametrize the length of this queue
   xRadioQueue = xQueueCreate(10, sizeof(radio_state_t));
 
-  
   xTaskCreatePinnedToCore(
     radio_task,
     "Radio Task",
@@ -96,6 +93,10 @@ void radio_hf_init() {
     radio_qsk_timer_callback          // callback function
   );
   xTimerStart(xQskTimer, 0);
+
+  radio_set_dial_freq(14060000);
+  radio_set_rxtx_mode(MODE_RX);
+  radio_set_band(band);
 }
 
 void radio_si5351_init() {
@@ -137,7 +138,6 @@ void radio_si5351_init() {
   freq_xtal_upper = if_properties.f_upper;
 #endif
 
-  freq_dial = 14060000;
   radio_calc_clocks();
   radio_set_clocks(freq_bfo, freq_vfo, freq_dial);
 
@@ -198,9 +198,18 @@ void radio_task(void *param) {
           Serial.print("Queue message: ");
           Serial.println(tmp.dial_freq);
 
+          // TODO: block the frequncy change if it's a different band, and we are already transmitting
+
           freq_dial = tmp.dial_freq;
           radio_calc_clocks();
           radio_set_clocks(freq_bfo, freq_vfo, freq_dial);
+
+          // figure out which band we should be on
+          radio_band_t new_band = radio_get_band(freq_dial);
+          
+          // force a relay update if needed
+          if(new_band != band)
+            radio_set_band(new_band);
 
           // TODO: unpack any bandwidth changes from tmp.bw
           // radio_set_clocks() needs to know the audio filter to account for sidetone offset?
@@ -361,12 +370,13 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
 
 // this function does NOT care whether transmit is active currently. Blindly sets the correct relays/mux based on the band selection
 // mode change safety is handled by dial frequency updates
+// TODO: this is actually a relay setting function, break out into something that accepts a band and a mode
 void radio_set_band(radio_band_t new_band) {
   if(rxtx_mode == MODE_RX || rxtx_mode == MODE_QSK_COUNTDOWN) {
     digitalWrite(TX_RX_SEL, LOW);
     switch(new_band) {
       case BAND_HF_1:
-        digitalWrite(BPF_SEL_0, HIGH);
+        digitalWrite(BPF_SEL_0, LOW);
         digitalWrite(BPF_SEL_1, LOW);
         break;
       case BAND_HF_2:
@@ -385,9 +395,9 @@ void radio_set_band(radio_band_t new_band) {
         Serial.print("Invalid band request: ");
         Serial.println(new_band);
         return;
-      digitalWrite(LPF_SEL_0, LOW);
-      digitalWrite(LPF_SEL_1, LOW);
     }
+    digitalWrite(LPF_SEL_0, LOW);
+    digitalWrite(LPF_SEL_1, LOW);
   }
   else if(rxtx_mode == MODE_SELF_TEST) {
     // want to engage both BPF and LPF pathways properly
@@ -436,7 +446,7 @@ void radio_set_band(radio_band_t new_band) {
         break;
       case BAND_HF_2:
         digitalWrite(BPF_SEL_0, HIGH);
-        digitalWrite(BPF_SEL_1, LOW);
+        digitalWrite(BPF_SEL_1, HIGH);
         digitalWrite(LPF_SEL_0, HIGH);
         digitalWrite(LPF_SEL_1, LOW);
         break;
@@ -467,6 +477,15 @@ void radio_set_band(radio_band_t new_band) {
   band = new_band;
 }
 
+radio_band_t radio_get_band(uint64_t freq) {
+  for(uint8_t i = 0; i < NUMBER_BANDS; i++) {
+    if(freq < band_capability[i].max_freq && freq > band_capability[i].min_freq) {
+      return band_capability[i].band_name;
+    }
+  }
+  return BAND_UNKNOWN;
+}
+
 bool radio_freq_valid(uint64_t freq) {
   for(uint8_t i = 0; i < NUMBER_BANDS; i++) {
     if(freq < band_capability[i].max_freq && freq > band_capability[i].min_freq)
@@ -474,6 +493,28 @@ bool radio_freq_valid(uint64_t freq) {
   }
 
   return false;
+}
+
+
+const char* radio_band_to_string(radio_band_t band) {
+    switch (band) {
+        case BAND_HF_1: return "BAND_HF_1";
+        case BAND_HF_2: return "BAND_HF_2";
+        case BAND_HF_3: return "BAND_HF_3";
+        case BAND_VHF: return "BAND_VHF";
+        case BAND_SELF_TEST: return "BAND_SELF_TEST";
+        default: return "UNKNOWN_BAND";
+    }
+}
+
+// Convert radio_audio_bw_t enum to string
+const char* radio_bandwidth_to_string(radio_audio_bw_t bw) {
+    switch (bw) {
+        case BW_CW: return "CW";
+        case BW_SSB: return "SSB";
+        case BW_FM: return "FM";
+        default: return "UNKNOWN_BW";
+    }
 }
 
 // inputs: sweep setup, dataset

@@ -1,5 +1,6 @@
 #include "file_system.h"
 #include "globals.h"
+#include "radio_hf.h"
 
 #include <Arduino.h>
 #include "LittleFS.h"
@@ -104,27 +105,6 @@ radio_audio_bw_t string_to_radio_audio_bw(const char* bw_str) {
     if (strcmp(bw_str, "ssb") == 0) return BW_SSB;
     if (strcmp(bw_str, "fm") == 0) return BW_FM;
     return BW_CW;  // Default to CW if unrecognized
-}
-
-const char* radio_band_to_string(radio_band_t band) {
-    switch (band) {
-        case BAND_HF_1: return "BAND_HF_1";
-        case BAND_HF_2: return "BAND_HF_2";
-        case BAND_HF_3: return "BAND_HF_3";
-        case BAND_VHF: return "BAND_VHF";
-        case BAND_SELF_TEST: return "BAND_SELF_TEST";
-        default: return "UNKNOWN_BAND";
-    }
-}
-
-// Convert radio_audio_bw_t enum to string
-const char* radio_bandwidth_to_string(radio_audio_bw_t bw) {
-    switch (bw) {
-        case BW_CW: return "CW";
-        case BW_SSB: return "SSB";
-        case BW_FM: return "FM";
-        default: return "UNKNOWN_BW";
-    }
 }
 
 void print_band_capability(radio_band_capability_t (&bands)[NUMBER_BANDS]) {
