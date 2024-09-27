@@ -38,7 +38,7 @@ void setup() {
   time_init();
   digi_mode_init();
 
-  // todo: signal that setup is complete with some sort of semaphore
+  // todo: signal that setup is complete with some sort of semaphore, the init() functions *don't* block until setup is complete
   io_set_blink_mode(BLINK_NORMAL);
 
   xTaskCreatePinnedToCore(

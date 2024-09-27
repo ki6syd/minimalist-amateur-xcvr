@@ -5,7 +5,8 @@
 
 #include <Arduino.h>
 #include <Wire.h>
-#include <WiFiUdp.h>
+#include <WiFiUdp.h>                    // TODO: move the networking items to wifi_conn
+#include <ESPmDNS.h>
 #include "AudioTools.h"
 #include "AudioLibs/I2SCodecStream.h"
 #include "AudioLibs/VBANStream.h"
@@ -79,9 +80,16 @@ IPAddress udpAddress(192, 168, 0, 255); // broadcast
 const int udpPort = 7000;
 #endif
 
+#ifdef AUDIO_EN_OUT_IP
 WiFiClient client;
-IPAddress clientAddress(192, 168, 0, 178);
+IPAddress client_address(192, 168, 0, 178);  // serial number 2
 const int ip_port = 7000;
+
+// TODO: try a codec, like this example https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-communication/esp-now/codec/communication-codec-espnow-send/communication-codec-espnow-send.ino
+
+#endif
+
+
 
 
 float sidetone_vol = 1.0;
@@ -224,18 +232,49 @@ void audio_task(void *param) {
     // was getting weird UDP packets in Wireshark otherwise
     // worked with 8x256 buffers
 #endif
-
-
-    // TESTING
-    multi_output.add(client);
+#ifdef AUDIO_EN_OUT_IP
+    
     client.setNoDelay(true);   // doesn't wait to accumulate packets
-    if(!client.connected()){
-        while (!client.connect(clientAddress, ip_port)) {
-            Serial.println("trying to connect...");
-            vTaskDelay(pdMS_TO_TICKS(500));
-        }    
+    client.setTimeout(2);       // 2 second timeout
+
+    // attempt connection repeatedly
+    bool connected = false;
+    IPAddress search_address;
+    for(uint16_t i = 0; i < 10; i++) {
+        // try to find the client. assumes MDNS has started
+        // TODO: move this sort of logicto wifi_conn.cpp, don't hard-code
+        // TODO: some sort of logic to attempt the hard-coded address on the final try
+        search_address = MDNS.queryHost("key", 500);    //500ms timeout
+        if(search_address != IPAddress(0, 0, 0, 0)) {
+            Serial.print("Found address: ");
+            Serial.println(search_address.toString());
+            client_address = search_address;
+            
+            if(client.connect(client_address, ip_port)) {
+                connected = true;
+                break;
+            }
+        }
+        else {
+            // failed to find it on MDNS
+            Serial.print("Not found on MDNS...");
+            Serial.println(client_address.toString());
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(500));        
     }
 
+    // only proceed if client connected
+    if(connected) {
+        Serial.println("IP Key Connection success");
+        multi_output.add(client);
+    }
+    else {
+        Serial.println("Unable to connect to IP key");
+        client.stop();
+    }
+    
+#endif
 
     // take a mono audio stream and make it stereo
     // declaration links it to i2s stream (stereo output)
@@ -248,11 +287,9 @@ void audio_task(void *param) {
 
     uint32_t notifiedValue;
     while(true) {
+        // TODO (for IP): the .copy() calls will block if the client disconnects
         copier_1.copy();
         copier_2.copy();
-
-        if (!client.connected())
-            Serial.println("Lost server");
 
         // TODO: move everything below here to a lower priority task that runs less frequently
         // update this variable so other modules can more readily consume it
@@ -282,7 +319,8 @@ void audio_task(void *param) {
         // this is a LOWEST priority task, yield to another LOWEST priority task
         // taskYIELD();
 
-        // is this better?
+        // is this better than yielding?
+        // TODO: find out why the .copy() calls run in a couple of ticks sometimes, in 10's of ticks other times. Task interrupted?
         vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
