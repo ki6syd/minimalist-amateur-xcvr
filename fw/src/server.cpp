@@ -54,7 +54,8 @@ static const server_handler_t handlers[] = {
     {API_V1,    HTTP_GET,   "ip",               handler_ip_get},
     {API_V1,    HTTP_GET,   "hwRevision",       handler_revision_get},
     {API_V1,    HTTP_GET,   "unitSerial",       handler_serial_get},
-    {API_V1,    HTTP_GET,   "api",              handler_api_get}
+    {API_V1,    HTTP_GET,   "api",              handler_api_get},
+    {API_V1,    HTTP_POST,  "debug",            handler_debug_post}
 };
 
 

@@ -17,7 +17,7 @@
 // returns false if the request does not have the required parameter, and sends error code
 bool handler_require_param(AsyncWebServerRequest *request, String param_name) {
     if(!request->hasParam(param_name)) {
-        request->send(400, "text/plain", "Required parameter " + param_name + " was not sent");
+        request->send(400, "text/plain", "Required parameter \"" + param_name + "\" was not sent");
         return false;
     }
     return true;
@@ -268,4 +268,35 @@ void handler_serial_get(AsyncWebServerRequest *request) {
 
 void handler_api_get(AsyncWebServerRequest *request) {
     request->send(200, "text/plain", API_IMPLEMENTED);
+}
+
+void handler_debug_post(AsyncWebServerRequest *request) {
+    if(!handler_require_param(request, "command"))
+        return;
+
+    uint64_t command_num = request->getParam("command")->value().toInt();
+
+    // toggles the TX clock of the si5351
+    if(command_num == DEBUG_CMD_TXCLK) {
+        if(!handler_require_param(request, "value"))
+            return;
+        
+        String value = request->getParam("value")->value();
+        bool on_off;
+
+        if(strcmp(value.c_str(), "on") == 0)
+            on_off = true;
+        else if(strcmp(value.c_str(), "off") == 0) 
+            on_off = false;
+        else {
+            request->send(400, "text/plain", "Unknown value requested");
+            return;
+        }
+        radio_debug(DEBUG_CMD_TXCLK, &on_off);
+    }
+    else if(command_num == DEBUG_CMD_REBOOT) {
+
+    }
+
+    request->send(201, "text/plain", "OK");
 }

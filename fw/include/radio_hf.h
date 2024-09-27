@@ -1,5 +1,7 @@
 #pragma once
 
+#include "globals.h"
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/queue.h>
@@ -71,3 +73,4 @@ uint64_t radio_get_dial_freq();
 radio_audio_bw_t radio_get_bw();
 const char* radio_band_to_string(radio_band_t band);
 const char* radio_bandwidth_to_string(radio_audio_bw_t bw);
+void radio_debug(debug_action_t action, void *value);

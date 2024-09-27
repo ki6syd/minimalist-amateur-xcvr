@@ -93,7 +93,8 @@ void info_task(void *param) {
 
     Serial.print("Firmware: ");
     Serial.println(GIT_VERSION);
-
+    
+    Serial.println();
     vTaskDelay(pdMS_TO_TICKS(10000));
   }
 }

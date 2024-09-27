@@ -140,6 +140,11 @@ void radio_si5351_init() {
 
   radio_calc_clocks();
   radio_set_clocks(freq_bfo, freq_vfo, freq_dial);
+  // the first call to si5351.set_freq() will enable the clocks. Turn them off
+  si5351.output_enable(SI5351_IDX_BFO, 0);
+  si5351.output_enable(SI5351_IDX_VFO, 0);
+  si5351.output_enable(SI5351_IDX_TX, 0);
+
 
   // do this routine only after calibrating the crystal frequencies
 #ifdef CAL_BPF_FILT_ON_STARTUP
@@ -701,4 +706,20 @@ void radio_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_
   audio_en_pga(AUDIO_PGA_DEFAULT);
   audio_set_volume(AUDIO_VOL_DEFAULT);
   audio_en_rx_audio(true);
+}
+
+void radio_debug(debug_action_t action, void *value) {
+  switch(action) {
+    case DEBUG_CMD_TXCLK:
+      bool on_off = *((bool *) value);
+
+      Serial.print("Setting TXCLK: ");
+      Serial.println(on_off);
+
+      if(on_off)
+        si5351.output_enable(SI5351_IDX_TX, 1);
+      else
+        si5351.output_enable(SI5351_IDX_TX, 0);
+      break;
+  }
 }

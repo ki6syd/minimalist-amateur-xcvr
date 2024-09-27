@@ -86,10 +86,7 @@ IPAddress client_address(192, 168, 0, 178);  // serial number 2
 const int ip_port = 7000;
 
 // TODO: try a codec, like this example https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-communication/esp-now/codec/communication-codec-espnow-send/communication-codec-espnow-send.ino
-
 #endif
-
-
 
 
 float sidetone_vol = 1.0;

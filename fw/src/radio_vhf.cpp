@@ -5,9 +5,12 @@
 #include <Arduino.h>
 #include <HardwareSerial.h>
 
+
 HardwareSerial VHFserial(1);
+bool configured = false;
 
 String radio_vhf_command(String command);
+void radio_vhf_complete_config(bool pass);
 bool radio_vhf_handshake();
 bool radio_vhf_set_volume(uint16_t volume);
 bool radio_vhf_response_success(String response);
@@ -30,21 +33,35 @@ void radio_vhf_init() {
 
     // attempt to handshake
     if(!radio_vhf_handshake()) {
-        // TODO: do something about it
+        radio_vhf_complete_config(false);
+        return;
     }
 
     // attempt to set frequency
     if(!radio_vhf_set_freq(146580000)) {
-        // TODO: do something about it
+        radio_vhf_complete_config(false);
+        return;
     }
 
     // attempt to set volume
     if(!radio_vhf_set_volume(8)) {
-        // TODO: do something about it
+        radio_vhf_complete_config(false);
+        return;
     }
 
+    
     // disable VHF now that config is complete
     digitalWrite(VHF_EN, LOW);
+    configured = true;
+}
+
+void radio_vhf_complete_config(bool pass) {
+    if(pass)
+        return;
+    
+    Serial.println("VHF module could not be configured");
+    digitalWrite(VHF_EN, LOW);
+    configured = false;
 }
 
 

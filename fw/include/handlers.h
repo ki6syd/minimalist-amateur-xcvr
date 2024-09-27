@@ -26,3 +26,4 @@ void handler_ip_get(AsyncWebServerRequest *request);
 void handler_revision_get(AsyncWebServerRequest *request);
 void handler_serial_get(AsyncWebServerRequest *request);
 void handler_api_get(AsyncWebServerRequest *request);
+void handler_debug_post(AsyncWebServerRequest *request);
