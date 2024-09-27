@@ -6,7 +6,6 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <WiFiUdp.h>
-#include <AsyncUDP.h>
 #include "AudioTools.h"
 #include "AudioLibs/I2SCodecStream.h"
 #include "AudioLibs/VBANStream.h"
@@ -60,8 +59,8 @@ FilteredStream<int16_t, float> audio_filt(out_vol, info_mono.channels); // filte
 OutputMixer<int16_t>          side_l_r_mix(audio_filt, 3);              // sidetone, left, right, audio mixing into audio_filt
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
 // TODO: try using constructor with 3rd argument of default buffer size, currently it's relatively large at 1024
-StreamCopy copier_1(side_l_r_mix, sound_stream);                      // move sine wave from sound_stream into the sidetone mixer
-StreamCopy copier_2(input_split, i2s_stream);                           // moves data through the streams. To: input_split, from: i2s_stream
+StreamCopy copier_1(side_l_r_mix, sound_stream, 256);                      // move sine wave from sound_stream into the sidetone mixer
+StreamCopy copier_2(input_split, i2s_stream, 256);                           // moves data through the streams. To: input_split, from: i2s_stream
 #ifdef AUDIO_PATH_IQ
 FilteredStream<int16_t, float> hilbert_n45deg(input_l_vol, info_mono.channels);
 FilteredStream<int16_t, float> hilbert_p45deg(input_r_vol, info_mono.channels);
@@ -75,9 +74,15 @@ UDPStream udp("", "");    // already connected
 // Throttle throttle(udp);
 // IPAddress udpAddress(192, 168, 0, 232); // laptop
 // IPAddress udpAddress(192, 168, 0, 238); // serial number 1
+// IPAddress udpAddress(192, 168, 0, 178); // serial number 2
 IPAddress udpAddress(192, 168, 0, 255); // broadcast
 const int udpPort = 7000;
 #endif
+
+WiFiClient client;
+IPAddress clientAddress(192, 168, 0, 178);
+const int ip_port = 7000;
+
 
 float sidetone_vol = 1.0;
 float sidetone_freq = F_SIDETONE_DEFAULT;
@@ -220,6 +225,18 @@ void audio_task(void *param) {
     // worked with 8x256 buffers
 #endif
 
+
+    // TESTING
+    multi_output.add(client);
+    client.setNoDelay(true);   // doesn't wait to accumulate packets
+    if(!client.connected()){
+        while (!client.connect(clientAddress, ip_port)) {
+            Serial.println("trying to connect...");
+            vTaskDelay(pdMS_TO_TICKS(500));
+        }    
+    }
+
+
     // take a mono audio stream and make it stereo
     // declaration links it to i2s stream (stereo output)
     mono_to_stereo.begin(1, 2);
@@ -233,6 +250,9 @@ void audio_task(void *param) {
     while(true) {
         copier_1.copy();
         copier_2.copy();
+
+        if (!client.connected())
+            Serial.println("Lost server");
 
         // TODO: move everything below here to a lower priority task that runs less frequently
         // update this variable so other modules can more readily consume it
@@ -269,9 +289,11 @@ void audio_configure_codec(audio_mode_t mode) {
     auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
     i2s_config.copyFrom(info_stereo);
     
-    i2s_config.buffer_size = 256;       // working with udp
-    i2s_config.buffer_count = 8;
-    // i2s_config.buffer_size = 128;       // good compromise
+    i2s_config.buffer_size = 256;       // working with ip
+    i2s_config.buffer_count = 16;
+    // i2s_config.buffer_size = 256;       // working with udp
+    // i2s_config.buffer_count = 8;
+    // i2s_config.buffer_size = 256;       // good compromise
     // i2s_config.buffer_count = 8;
     // i2s_config.buffer_size = 1024;   // works but sidetone is choppy
     // i2s_config.buffer_count = 2;
@@ -370,7 +392,7 @@ void audio_en_sidetone(bool tone) {
         side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, sidetone_vol);
     }
     else {
-        side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, 0);
+        side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, 0.05);
     }
 
 }
