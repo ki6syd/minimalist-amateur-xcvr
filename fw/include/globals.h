@@ -29,7 +29,7 @@
 // audio settings used at startup
 #define AUDIO_FILT_DEFAULT      AUDIO_FILT_SSB
 #define AUDIO_VOL_DEFAULT       0.3
-#define AUDIO_SIDE_DEFAULT      0.1
+#define AUDIO_SIDE_DEFAULT      0.5
 #define AUDIO_VOL_DURING_CAL    0.1
 #define AUDIO_PGA_DEFAULT       true
 

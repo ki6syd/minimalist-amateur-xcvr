@@ -5,10 +5,13 @@
 
 #include <Arduino.h>
 #include <Wire.h>
+#include <WiFiUdp.h>
+#include <AsyncUDP.h>
 #include "AudioTools.h"
 #include "AudioLibs/I2SCodecStream.h"
 #include "AudioLibs/VBANStream.h"
 #include "Communication/ESPNowStream.h"
+#include "Communication/UDPStream.h"
 
 // defines the indices of the audio mixer that combines two input channels and sidetone
 #define MIXER_IDX_SIDETONE      0
@@ -65,6 +68,16 @@ FilteredStream<int16_t, float> hilbert_p45deg(input_r_vol, info_mono.channels);
 #endif
 
 // example of i2s codec for both input and output: https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-audiokit/streams-audiokit-filter-audiokit/streams-audiokit-filter-audiokit.ino
+
+#ifdef AUDIO_EN_OUT_UDP
+WiFiUDP default_udp;
+UDPStream udp("", "");    // already connected
+// Throttle throttle(udp);
+// IPAddress udpAddress(192, 168, 0, 232); // laptop
+// IPAddress udpAddress(192, 168, 0, 238); // serial number 1
+IPAddress udpAddress(192, 168, 0, 255); // broadcast
+const int udpPort = 7000;
+#endif
 
 float sidetone_vol = 1.0;
 float sidetone_freq = F_SIDETONE_DEFAULT;
@@ -197,6 +210,15 @@ void audio_task(void *param) {
     now.addPeers(peers);
     multi_output.add(now);
 #endif
+#ifdef AUDIO_EN_OUT_UDP
+    multi_output.add(udp);
+
+    udp.setUDP(default_udp);
+    udp.begin(udpAddress, udpPort);
+    // note that I2S buffer total size needs to be >1492, the UDP write size
+    // was getting weird UDP packets in Wireshark otherwise
+    // worked with 8x256 buffers
+#endif
 
     // take a mono audio stream and make it stereo
     // declaration links it to i2s stream (stereo output)
@@ -246,10 +268,13 @@ void audio_configure_codec(audio_mode_t mode) {
     Serial.println("Configuring codec...");
     auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
     i2s_config.copyFrom(info_stereo);
+    
+    i2s_config.buffer_size = 256;       // working with udp
+    i2s_config.buffer_count = 8;
+    // i2s_config.buffer_size = 128;       // good compromise
+    // i2s_config.buffer_count = 8;
     // i2s_config.buffer_size = 1024;   // works but sidetone is choppy
     // i2s_config.buffer_count = 2;
-    i2s_config.buffer_size = 128;
-    i2s_config.buffer_count = 8;
     // i2s_config.buffer_size = 512;    // long delay
     // i2s_config.buffer_count = 4;
     i2s_config.port_no = 0;
