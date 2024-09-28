@@ -82,8 +82,7 @@ void info_task(void *param) {
     Serial.print("S-meter: ");
     Serial.println(audio_get_s_meter());
 
-    Serial.print("Dial frequency: ");
-    Serial.println(radio_get_dial_freq());
+    Serial.println(radio_freq_string());
 
     Serial.print("IP Address: ");
     Serial.println(wifi_get_ip());

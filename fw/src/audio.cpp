@@ -327,12 +327,16 @@ void audio_configure_codec(audio_mode_t mode) {
     auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
     i2s_config.copyFrom(info_stereo);
     
+#ifdef AUDIO_EN_OUT_IP
     i2s_config.buffer_size = 256;       // working with ip
     i2s_config.buffer_count = 16;
+#else
+    i2s_config.buffer_size = 256;       // good compromise
+    i2s_config.buffer_count = 8;
+#endif
     // i2s_config.buffer_size = 256;       // working with udp
     // i2s_config.buffer_count = 8;
-    // i2s_config.buffer_size = 256;       // good compromise
-    // i2s_config.buffer_count = 8;
+    
     // i2s_config.buffer_size = 1024;   // works but sidetone is choppy
     // i2s_config.buffer_count = 2;
     // i2s_config.buffer_size = 512;    // long delay
@@ -430,8 +434,8 @@ void audio_en_sidetone(bool tone) {
         side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, sidetone_vol);
     }
     else {
-        // side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, 0);
-        side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, 0.1);    // for testing only
+        side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, 0);
+        // side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, 0.1);    // for testing only
     }
 
 }

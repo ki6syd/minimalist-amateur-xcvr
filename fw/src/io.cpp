@@ -100,14 +100,25 @@ void io_init() {
   digitalWrite(SPARE_0, LOW);
   digitalWrite(LED_DBG_0, LOW);
   digitalWrite(LED_DBG_1, LOW);
+  digitalWrite(LED_GRN, HIGH);
 
-  Serial.begin(DEBUG_SERIAL_SPEED);
-  // delay gives time to see serial port messages on monitor
-  vTaskDelay(pdMS_TO_TICKS(5000));
+  // check if USB is plugged in before attempting to configure Serial
+  if(Serial.isPlugged()) {
+    Serial.begin(DEBUG_SERIAL_SPEED);
+    // delay gives time to see serial port messages on monitor
+    vTaskDelay(pdMS_TO_TICKS(5000));
+  }
+    
 
-  // helps avoid some sort of overflow when USB is not connected
-  if(!Serial.isPlugged() && !Serial.isConnected())
-    Serial.end();
+  // Serial.begin(DEBUG_SERIAL_SPEED);
+  // // delay gives time to see serial port messages on monitor
+  // vTaskDelay(pdMS_TO_TICKS(5000));
+
+  // // helps avoid some sort of overflow when USB is not connected
+  // if(!Serial.isPlugged() && !Serial.isConnected())
+  //   Serial.end();
+
+  
 
   // PSRAM initialization
   // https://community.platformio.org/t/how-to-use-psram-on-esp32-s3-devkitc-1-under-esp-idf/32127/17

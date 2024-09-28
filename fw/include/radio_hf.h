@@ -1,7 +1,7 @@
 #pragma once
 
 #include "globals.h"
-
+#include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/queue.h>
@@ -10,7 +10,8 @@ typedef enum {
     MODE_RX,
     MODE_TX,
     MODE_QSK_COUNTDOWN,
-    MODE_SELF_TEST
+    MODE_SELF_TEST,
+    MODE_STARTUP
 } radio_rxtx_mode_t;
 
 // TODO: pull this enum into a radio.h module, and add VHF
@@ -71,6 +72,7 @@ radio_band_t radio_get_band(uint64_t freq);
 bool radio_freq_valid(uint64_t freq);
 uint64_t radio_get_dial_freq();
 radio_audio_bw_t radio_get_bw();
-const char* radio_band_to_string(radio_band_t band);
-const char* radio_bandwidth_to_string(radio_audio_bw_t bw);
+String radio_band_to_string(radio_band_t band);
+String radio_bandwidth_to_string(radio_audio_bw_t bw);
+String radio_freq_string();
 void radio_debug(debug_action_t action, void *value);

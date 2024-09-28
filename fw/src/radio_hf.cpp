@@ -28,7 +28,7 @@ TaskHandle_t xRadioTaskHandle;
 TimerHandle_t xQskTimer = NULL;
 
 radio_audio_bw_t bw = BW_CW;
-radio_rxtx_mode_t rxtx_mode = MODE_RX;
+radio_rxtx_mode_t rxtx_mode = MODE_STARTUP;
 radio_band_t band = BAND_HF_2;
 
 radio_band_capability_t band_capability[NUMBER_BANDS];
@@ -111,6 +111,10 @@ void radio_si5351_init() {
 
   Serial.print("[SI5351] Status: ");
   Serial.println(si5351.si5351_read(SI5351_DEVICE_STATUS));
+
+  // TODO: parse and have logic based on SI5351 status
+  // expect to see a "0" when ANDing with (1<<3), this would indicate that there is no LOS related to the XTAL. 
+
   si5351.init(SI5351_CRYSTAL_LOAD_8PF , si5351_xtal_freq, 0);
 
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLA);
@@ -282,13 +286,6 @@ void radio_set_clocks(uint64_t freq_bfo, uint64_t freq_vfo, uint64_t freq_rf) {
   si5351.set_freq(freq_bfo * 100, SI5351_IDX_BFO);
   si5351.set_freq(freq_vfo * 100, SI5351_IDX_VFO);
   si5351.set_freq(freq_rf * 100, SI5351_IDX_TX);
-
-  // Serial.print("bfo: ");
-  // Serial.print(freq_bfo);
-  // Serial.print("\tvfo: ");
-  // Serial.print(freq_vfo);
-  // Serial.print("\ttx: ");
-  // Serial.println(freq_rf);
 }
 
 void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
@@ -501,7 +498,7 @@ bool radio_freq_valid(uint64_t freq) {
 }
 
 
-const char* radio_band_to_string(radio_band_t band) {
+String radio_band_to_string(radio_band_t band) {
     switch (band) {
         case BAND_HF_1: return "BAND_HF_1";
         case BAND_HF_2: return "BAND_HF_2";
@@ -513,13 +510,26 @@ const char* radio_band_to_string(radio_band_t band) {
 }
 
 // Convert radio_audio_bw_t enum to string
-const char* radio_bandwidth_to_string(radio_audio_bw_t bw) {
+String radio_bandwidth_to_string(radio_audio_bw_t bw) {
     switch (bw) {
         case BW_CW: return "CW";
         case BW_SSB: return "SSB";
         case BW_FM: return "FM";
         default: return "UNKNOWN_BW";
     }
+}
+
+
+String radio_freq_string() {
+  String result = "";
+
+  result += "BFO: ";
+  result += String(freq_bfo);
+  result += "\tVFO: ";
+  result += String(freq_vfo);
+  result += "\tTX: ";
+  result += String(freq_dial);
+  return result;
 }
 
 // inputs: sweep setup, dataset
@@ -712,10 +722,6 @@ void radio_debug(debug_action_t action, void *value) {
   switch(action) {
     case DEBUG_CMD_TXCLK:
       bool on_off = *((bool *) value);
-
-      Serial.print("Setting TXCLK: ");
-      Serial.println(on_off);
-
       if(on_off)
         si5351.output_enable(SI5351_IDX_TX, 1);
       else

@@ -15,8 +15,6 @@ bool fs_mounted = false;
 
 radio_band_t string_to_radio_band(const char* band_str);
 radio_audio_bw_t string_to_radio_audio_bw(const char* bw_str);
-const char* radio_band_to_string(radio_band_t band);
-const char* radio_bandwidth_to_string(radio_audio_bw_t bw);
 void print_band_capability(radio_band_capability_t (&bands)[NUMBER_BANDS]);
 void fs_task(void *pvParameter);
 
