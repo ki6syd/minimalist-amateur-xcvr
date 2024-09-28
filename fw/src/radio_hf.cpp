@@ -274,11 +274,11 @@ radio_audio_bw_t radio_get_bw() {
 void radio_calc_clocks() {
   if(freq_dial < 10000000) {
     freq_vfo = freq_dial - freq_xtal_lower;
-    freq_bfo = freq_xtal_lower - ((uint64_t) audio_get_sidetone_freq());
+    freq_bfo = freq_xtal_lower + ((uint64_t) audio_get_sidetone_freq());
   }
   else {
     freq_vfo = freq_dial + freq_xtal_upper;
-    freq_bfo = freq_xtal_upper + ((uint64_t) audio_get_sidetone_freq());
+    freq_bfo = freq_xtal_upper - ((uint64_t) audio_get_sidetone_freq());
   }
 }
 
