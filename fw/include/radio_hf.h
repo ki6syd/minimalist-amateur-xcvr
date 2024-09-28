@@ -6,6 +6,9 @@
 #include <freertos/task.h>
 #include <freertos/queue.h>
 
+// comment out to prevent accidental TX
+// #define RADIO_ALLOW_TX
+
 typedef enum {
     MODE_RX,
     MODE_TX,

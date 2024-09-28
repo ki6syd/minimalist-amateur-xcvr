@@ -196,7 +196,10 @@ void radio_task(void *param) {
         // turn off sidetone, LED, TX power amp rail
         audio_en_sidetone(true);
         digitalWrite(LED_RED, HIGH);
-        // digitalWrite(PA_VDD_CTRL, HIGH); // comment out for testing
+        // turn on power amp rail if build flags allow
+#ifdef RADIO_ALLOW_TX
+        digitalWrite(PA_VDD_CTRL, HIGH);
+#endif
       }
       if(notifiedValue & NOTIFY_QSK_EXPIRE) {
         radio_set_rxtx_mode(MODE_RX);
