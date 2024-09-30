@@ -18,6 +18,7 @@ int counter = 0;
 
 TaskHandle_t xInfoTaskHandle;
 
+
 void info_task(void *pvParameter);
 
 void setup() {
@@ -59,12 +60,12 @@ void loop() {
     if(counter % 2 == 0) {      
       // radio_set_dial_freq(14060000);
 
-      audio_test(true);
+      // audio_test(true);
     }
     else {
       // radio_set_dial_freq(14061000);
 
-      audio_test(false);
+      // audio_test(false);
 
     }      
     counter++;

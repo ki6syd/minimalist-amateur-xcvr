@@ -21,11 +21,12 @@
 // constant used in math [dB]
 #define PGA_GAIN                24
 
-#define NOTIFY_PGA_ON           1
-#define NOTIFY_PGA_OFF          2
-#define NOTIFY_MODE_HF_RXTX_CW  4
-#define NOTIFY_MODE_VHF_RX      8
-#define NOTIFY_MODE_VHF_TX      16
+#define NOTIFY_PGA_ON           (1 << 0)
+#define NOTIFY_PGA_OFF          (1 << 1)
+#define NOTIFY_MODE_HF_RXTX_CW  (1 << 2)
+#define NOTIFY_MODE_VHF_RX      (1 << 3)
+#define NOTIFY_MODE_VHF_TX      (1 << 4)
+#define NOTIFY_DBG_MAX_VOL      (1 << 5)
 
 TwoWire codecI2C = TwoWire(1);  // "Wire" is used in si5351 library. Defined through TwoWire(0), so the other peripheral is still available
 
@@ -59,6 +60,7 @@ MultiOutput                   multi_output;                             // split
 FilteredStream<int16_t, float> audio_filt(out_vol, info_mono.channels); // filter outputting into out_vol volume control
 OutputMixer<int16_t>          side_l_r_mix(audio_filt, 3);              // sidetone, left, right, audio mixing into audio_filt
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
+AudioEffectStream             effects(mono_to_stereo);                  // effects --> mono_to_stereo             
 // TODO: try using constructor with 3rd argument of default buffer size, currently it's relatively large at 1024
 StreamCopy copier_1(side_l_r_mix, sound_stream, 256);                      // move sine wave from sound_stream into the sidetone mixer
 StreamCopy copier_2(input_split, i2s_stream, 256);                           // moves data through the streams. To: input_split, from: i2s_stream
@@ -87,7 +89,6 @@ const int ip_port = 7000;
 
 // TODO: try a codec, like this example https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-communication/esp-now/codec/communication-codec-espnow-send/communication-codec-espnow-send.ino
 #endif
-
 
 float sidetone_vol = 1.0;
 float sidetone_freq = F_SIDETONE_DEFAULT;
@@ -200,7 +201,7 @@ void audio_task(void *param) {
     out_vol.begin(info_mono);
 
     // multi_output goes to vban (mono), mono_to_stereo (mono), csv
-    multi_output.add(mono_to_stereo);
+    multi_output.add(effects);
     multi_output.add(out_vol_meas);
 #ifdef AUDIO_EN_OUT_VBAN
     multi_output.add(vban);
@@ -273,6 +274,11 @@ void audio_task(void *param) {
     
 #endif
 
+
+    // TODO: pull the Distortion effect out of this line, factor into a max volume setting routine and disable during calibrations
+    effects.addEffect(new Distortion(32000, 32000));
+    effects.begin(info_mono);
+
     // take a mono audio stream and make it stereo
     // declaration links it to i2s stream (stereo output)
     mono_to_stereo.begin(1, 2);
@@ -282,11 +288,14 @@ void audio_task(void *param) {
     audio_en_sidetone(false);
     audio_en_rx_audio(true);
 
-    uint32_t notifiedValue;
+    uint32_t notifiedValue, start_tick, stop_tick;
     while(true) {
+        start_tick = xTaskGetTickCount();
         // TODO (for IP): the .copy() calls will block if the client disconnects
         copier_1.copy();
         copier_2.copy();
+        stop_tick = xTaskGetTickCount();
+        // Serial.println(stop_tick - start_tick);
 
         // TODO: move everything below here to a lower priority task that runs less frequently
         // update this variable so other modules can more readily consume it
@@ -310,6 +319,9 @@ void audio_task(void *param) {
                 audio_configure_codec(AUDIO_VHF_RX);
             if(notifiedValue & NOTIFY_MODE_VHF_TX)
                 audio_configure_codec(AUDIO_VHF_TX);
+            if(notifiedValue & NOTIFY_DBG_MAX_VOL) {
+                Serial.println("calibrating max volume");
+            }
         }
 
         // TBD if this is needed
@@ -317,7 +329,6 @@ void audio_task(void *param) {
         // taskYIELD();
 
         // is this better than yielding?
-        // TODO: find out why the .copy() calls run in a couple of ticks sometimes, in 10's of ticks other times. Task interrupted?
         vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
@@ -331,7 +342,8 @@ void audio_configure_codec(audio_mode_t mode) {
     i2s_config.buffer_size = 256;       // working with ip
     i2s_config.buffer_count = 16;
 #else
-    i2s_config.buffer_size = 256;       // good compromise
+    // i2s_config.buffer_size = 256;       // good compromise
+    i2s_config.buffer_size = 128;       // good compromise
     i2s_config.buffer_count = 8;
 #endif
     // i2s_config.buffer_size = 256;       // working with udp
@@ -447,6 +459,8 @@ void audio_en_rx_audio(bool en) {
         side_l_r_mix.setWeight(MIXER_IDX_RIGHT, 1.0);
 #ifdef AUDIO_PATH_IQ
         side_l_r_mix.setWeight(MIXER_IDX_LEFT, 1.0);
+#else
+        side_l_r_mix.setWeight(MIXER_IDX_LEFT, 0.0);
 #endif
 
     }
@@ -491,6 +505,10 @@ bool audio_set_sidetone_freq(float freq) {
     return false;
 }
 
+bool audio_get_pga() {
+    return pga_en;
+}
+
 // compensate for volume control here
 // TODO: change audio chain to measure before applying volume control
 float audio_get_rx_db(uint16_t num_to_avg, uint16_t delay_ms) {
@@ -529,4 +547,12 @@ float audio_get_sidetone_freq() {
 
 float audio_get_volume() {
     return global_vol;
+}
+
+void audio_debug(debug_action_t command_num) {
+    switch(command_num) {
+        case DEBUG_CMD_MAX_VOL:
+            xTaskNotify(xAudioTaskHandle, NOTIFY_DBG_MAX_VOL, eSetBits);
+            break;
+    }
 }

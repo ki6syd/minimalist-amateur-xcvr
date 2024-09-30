@@ -37,10 +37,10 @@ void audio_en_rx_audio(bool en);
 bool audio_set_volume(float vol);
 bool audio_set_sidetone_volume(float vol);
 bool audio_set_sidetone_freq(float freq);
+bool audio_get_pga();
 float audio_get_sidetone_volume();
 float audio_get_rx_db(uint16_t num_to_avg=1, uint16_t delay_ms=0);
 float audio_get_s_meter();
 float audio_get_sidetone_freq();
 float audio_get_volume();
-
-void audio_test(bool swap); // delete me later - used for debug only
+void audio_debug(debug_action_t command_num);
