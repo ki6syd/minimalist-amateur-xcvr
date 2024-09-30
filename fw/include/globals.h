@@ -32,7 +32,7 @@
 #define AUDIO_FILT_DEFAULT      AUDIO_FILT_SSB
 #define AUDIO_VOL_DEFAULT       0.3
 #define AUDIO_SIDE_DEFAULT      0.3
-#define AUDIO_VOL_DURING_CAL    0.1
+#define AUDIO_VOL_DURING_CAL    0.01
 #define AUDIO_PGA_DEFAULT       true
 
 #define NUMBER_BANDS        4

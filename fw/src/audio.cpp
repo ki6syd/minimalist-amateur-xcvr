@@ -248,7 +248,7 @@ void audio_dsp_task(void *param) {
     // attempt connection repeatedly
     bool connected = false;
     IPAddress search_address;
-    for(uint16_t i = 0; i < 5; i++) {
+    for(uint16_t i = 0; i < 4; i++) {
         // try to find the client. assumes MDNS has started
         // TODO: move this sort of logicto wifi_conn.cpp, don't hard-code
         search_address = MDNS.queryHost("key", 500);    //500ms timeout
@@ -257,17 +257,20 @@ void audio_dsp_task(void *param) {
             Serial.println(search_address.toString());
             client_address = search_address;
         }
-        else 
-            Serial.print("Not found on MDNS...");
+        else { 
+            Serial.print("Audio receiver not yet found on MDNS, will also try: ");
+            Serial.println(client_address.toString());
+        }
+
 
             
         if(client.connect(client_address, ip_port)) {
             connected = true;
             Serial.print("Successfully connected to server at: ");
-            Serial.print(client_address.toString());
+            Serial.println(client_address.toString());
             break;
         }
-        vTaskDelay(pdMS_TO_TICKS(250));        
+        vTaskDelay(pdMS_TO_TICKS(100));        
     }
 
     // only proceed if client connected

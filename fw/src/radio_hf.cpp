@@ -253,11 +253,11 @@ radio_audio_bw_t radio_get_bw() {
 void radio_calc_clocks() {
   if(freq_dial < 10000000) {
     freq_vfo = freq_dial - freq_if_lower;
-    freq_bfo = freq_if_lower + ((uint64_t) audio_get_sidetone_freq());
+    freq_bfo = freq_if_lower - ((uint64_t) audio_get_sidetone_freq());
   }
   else {
     freq_vfo = freq_dial + freq_if_upper;
-    freq_bfo = freq_if_upper - ((uint64_t) audio_get_sidetone_freq());
+    freq_bfo = freq_if_upper + ((uint64_t) audio_get_sidetone_freq());
   }
 #ifdef RX_ARCHITECTURE_QSD
   // multiple BFO frequency by 4x if we are using a QSD and 90deg divider circuit
@@ -641,8 +641,8 @@ void radio_cal_if_filt(radio_filt_sweep_t sweep, radio_filt_properties_t *proper
   {
     uint64_t f_tx = sweep.f_center + (uint64_t) step_size * (i - sweep.num_steps/2);
     si5351.set_freq(f_tx * 100, SI5351_IDX_TX);
-    si5351.set_freq(((uint64_t) f_tx + audio_get_sidetone_freq()) * 100, SI5351_IDX_BFO);
-    vTaskDelay(pdMS_TO_TICKS(50));
+    si5351.set_freq(((uint64_t) f_tx - audio_get_sidetone_freq()) * 100, SI5351_IDX_BFO);
+    vTaskDelay(pdMS_TO_TICKS(100));
 
     measurements[i] = audio_get_rx_db(sweep.num_to_avg, 10);
   }
@@ -731,7 +731,7 @@ void radio_debug(debug_action_t action, void *value) {
         .f_center = 10000000,
         .f_span = 8000,
         .num_steps = 30,
-        .num_to_avg = 5,
+        .num_to_avg = 10,
         .rolloff = 3
         };
 
