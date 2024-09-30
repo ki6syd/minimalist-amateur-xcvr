@@ -7,3 +7,4 @@
 *.net
 *.raw
 fw/data/wifi_info.json
+tools/received_audio.wav
