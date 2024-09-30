@@ -596,7 +596,7 @@ void radio_cal_tx_10MHz() {
   si5351.output_enable(SI5351_IDX_BFO, 0);
   si5351.output_enable(SI5351_IDX_VFO, 0);
   si5351.output_enable(SI5351_IDX_TX, 1);
-  vTaskDelay(pdMS_TO_TICKS(5000));
+  vTaskDelay(pdMS_TO_TICKS(10000));
 
   radio_set_rxtx_mode(MODE_QSK_COUNTDOWN);
 }
@@ -624,7 +624,7 @@ void radio_cal_if_filt(radio_filt_sweep_t sweep, radio_filt_properties_t *proper
   radio_set_rxtx_mode(MODE_SELF_TEST);
   radio_set_band(BAND_SELFTEST_LOOPBACK);
 
-  vTaskDelay(500 / portTICK_PERIOD_MS);
+  vTaskDelay(100 / portTICK_PERIOD_MS);
 
   // turn on TX-CLK, turn off other clocks
   si5351.output_enable(SI5351_IDX_BFO, 1);
@@ -651,12 +651,13 @@ void radio_cal_if_filt(radio_filt_sweep_t sweep, radio_filt_properties_t *proper
 
   // TODO: logic to broaden the search if the upper or lower index are at the edges of the sweep
   digitalWrite(LED_RED, LOW);
+  freq_dial = sweep.f_center;
   radio_set_rxtx_mode(MODE_RX);
-  radio_set_dial_freq(freq_dial);
   audio_set_filt(AUDIO_FILT_DEFAULT);
   audio_en_pga(pga_init);
   audio_set_volume(volume_init);
   audio_en_rx_audio(true);
+  Serial.println("Routine complete.\n\n");
 }
 
 void radio_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_properties_t *properties) {
@@ -686,10 +687,12 @@ void radio_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_
   si5351.output_enable(SI5351_IDX_TX, 1);
 
   // wait to let audio settle
-  vTaskDelay(500 / portTICK_PERIOD_MS);
+  vTaskDelay(100 / portTICK_PERIOD_MS);
 
   int64_t step_size = ((int64_t) sweep.f_span) / sweep.num_steps;
   float measurements[sweep.num_steps];
+  // TODO: remove the hack of shifting +/-5kHz on the IF filter. Doing this to get less signal.
+  freq_if_upper += 2000;
   for(uint16_t i = 0; i < sweep.num_steps; i++)
   {
     int64_t dF = step_size * (((int64_t) i) - (int64_t) sweep.num_steps/2);
@@ -700,16 +703,18 @@ void radio_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_
 
     measurements[i] = audio_get_rx_db(sweep.num_to_avg, 10);
   }
+  freq_if_upper -= 2000;
 
   radio_sweep_analyze(sweep, measurements, properties);
 
   digitalWrite(LED_RED, LOW);
+  freq_dial = sweep.f_center;
   radio_set_rxtx_mode(MODE_RX);
-  radio_set_dial_freq(sweep.f_center);
   audio_set_filt(AUDIO_FILT_DEFAULT);
   audio_en_pga(pga_init);
   audio_set_volume(volume_init);
   audio_en_rx_audio(true);
+  Serial.println("Routine complete.\n\n");
 }
 
 void radio_debug(debug_action_t action, void *value) {

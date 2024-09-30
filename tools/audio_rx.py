@@ -30,6 +30,48 @@ def save_audio_to_wav(file_name, raw_audio_data):
         wav_file.setsampwidth(SAMPLE_WIDTH)
         wav_file.setframerate(SAMPLE_RATE)
         wav_file.writeframes(raw_audio_data)
+        
+def handle_client(conn, addr):
+    """Handle the client connection, receive and play audio data."""
+    print(f"Connection established with {addr}")
+    
+    # Set up audio stream for playback
+    stream = p.open(format=p.get_format_from_width(SAMPLE_WIDTH),
+                    channels=CHANNELS,
+                    rate=SAMPLE_RATE,
+                    output=True)
+
+    raw_audio_data = b''  # Buffer to hold the incoming audio data
+    conn.settimeout(TIMEOUT_DURATION)  # Set timeout for 1 second of inactivity
+
+    try:
+        # Receive and play the audio data in chunks
+        while True:
+            try:
+                data = conn.recv(CHUNK_SIZE)
+                if not data:
+                    break  # No more data from client, break the loop
+                raw_audio_data += data
+                # Play the audio chunk live
+                stream.write(data)
+            except socket.timeout:
+                print("Connection timed out due to inactivity.")
+                break  # Break out of the loop if data is not received in time
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    finally:
+        # Save the received data as a WAV file
+        if raw_audio_data:
+            save_audio_to_wav(f"received_audio_{addr[1]}.wav", raw_audio_data)
+            print(f"Audio data saved as 'received_audio_{addr[1]}.wav'.")
+        else:
+            print("No audio data received, file not created.")
+        
+        # Stop and close the PyAudio stream after client disconnects
+        stream.stop_stream()
+        stream.close()
+        conn.close()
+        print(f"Connection with {addr} closed.")
 
 def start_audio_server():
     """Start the TCP server to receive raw audio samples and play them live."""
@@ -38,40 +80,19 @@ def start_audio_server():
         s.listen()
         print(f"Listening for connections on {HOST}:{PORT}...")
 
-        conn, addr = s.accept()
-        with conn:
-            print(f"Connection established with {addr}")
-
-            raw_audio_data = b''  # Buffer to hold the incoming audio data
-            conn.settimeout(TIMEOUT_DURATION)  # Set timeout for 1 second of inactivity
-
+        while True:  # Loop to keep accepting new connections
             try:
-                # Receive and play the audio data in chunks
-                while True:
-                    try:
-                        data = conn.recv(CHUNK_SIZE)
-                        if not data:
-                            break  # No more data from client, break the loop
-                        raw_audio_data += data
-                        # Play the audio chunk live
-                        stream.write(data)
-                    except socket.timeout:
-                        print("Connection timed out due to inactivity.")
-                        break  # Break out of the loop if data is not received in time
+                conn, addr = s.accept()
+                handle_client(conn, addr)
             except Exception as e:
                 print(f"An error occurred: {e}")
-    
-    # Save the received data as a WAV file
-    if raw_audio_data:
-        save_audio_to_wav("received_audio.wav", raw_audio_data)
-        print("Audio data saved as 'received_audio.wav'.")
-    else:
-        print("No audio data received, file not created.")
+                break  # Stop server in case of a critical error
 
 if __name__ == "__main__":
-    start_audio_server()
-
-    # Stop and close the PyAudio stream after server stops
-    stream.stop_stream()
-    stream.close()
-    p.terminate()
+    try:
+        start_audio_server()
+    except KeyboardInterrupt:
+        print("\nServer stopped manually.")
+    finally:
+        # Clean up PyAudio when the server stops
+        p.terminate()
