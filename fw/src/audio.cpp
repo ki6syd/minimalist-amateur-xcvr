@@ -30,7 +30,7 @@
 
 TwoWire codecI2C = TwoWire(1);  // "Wire" is used in si5351 library. Defined through TwoWire(0), so the other peripheral is still available
 
-TaskHandle_t xAudioTaskHandle;
+TaskHandle_t xDSPTaskHandle, xAudioTaskHandle;
 
 AudioInfo                     info_stereo(F_AUDIO, 2, 16);              // sampling rate, # channels, bit depth
 AudioInfo                     info_mono(F_AUDIO, 1, 16);                // sampling rate, # channels, bit depth
@@ -97,8 +97,10 @@ bool pga_en = false;
 float global_vol = 0;
 audio_filt_t cur_filt = AUDIO_FILT_DEFAULT;
 float last_volume_dB = 0;
+uint32_t max_safe_vol = 4000;                   // 32768 allows full volume output (int32_t)
 
-void audio_task (void * pvParameter);
+void audio_dsp_task(void * pvParameter);
+void audio_logic_task(void *pvParameter);
 void audio_configure_codec(audio_mode_t mode);
 void audio_measure_volume();
 
@@ -106,17 +108,27 @@ void audio_init() {
     // note: platformio + arduino puts wifi on core 0
     // run on core 1
     xTaskCreatePinnedToCore(
-        audio_task,
+        audio_dsp_task,
         "Audio Stream Updater Task",
         32768,
         NULL,
+        TASK_PRIORITY_DSP, // priority
+        &xDSPTaskHandle,
+        TASK_CORE_DSP // core
+    );
+
+    xTaskCreatePinnedToCore(
+        audio_logic_task,
+        "Audio Housekeeping Task",
+        16384,
+        NULL,
         TASK_PRIORITY_AUDIO, // priority
         &xAudioTaskHandle,
-        1 // core
+        TASK_CORE_AUDIO // core
     );
 }
 
-void audio_task(void *param) {
+void audio_dsp_task(void *param) {
     AudioLogger::instance().begin(Serial, AudioLogger::Warning);
     LOGLEVEL_AUDIODRIVER = AudioDriverWarning;    // AudioDriverInfo  // AudioDriverWarning // AudioDriverDebug    // AudioDriverError
 
@@ -200,7 +212,7 @@ void audio_task(void *param) {
     out_vol.setOutput(multi_output);
     out_vol.begin(info_mono);
 
-    // multi_output goes to vban (mono), mono_to_stereo (mono), csv
+    // multi_output goes to mono_to_stereo (mono, via the clipping effect), volume measurement, and any optional outputs
     multi_output.add(effects);
     multi_output.add(out_vol_meas);
 #ifdef AUDIO_EN_OUT_VBAN
@@ -275,8 +287,8 @@ void audio_task(void *param) {
 #endif
 
 
-    // TODO: pull the Distortion effect out of this line, factor into a max volume setting routine and disable during calibrations
-    effects.addEffect(new Distortion(32000, 32000));
+    // Distortion (clipping) operates *after* volume control is applied, making it the same threshold regardless of volume setting
+    effects.addEffect(new Distortion(max_safe_vol, max_safe_vol));
     effects.begin(info_mono);
 
     // take a mono audio stream and make it stereo
@@ -288,7 +300,7 @@ void audio_task(void *param) {
     audio_en_sidetone(false);
     audio_en_rx_audio(true);
 
-    uint32_t notifiedValue, start_tick, stop_tick;
+    uint32_t start_tick, stop_tick;
     while(true) {
         start_tick = xTaskGetTickCount();
         // TODO (for IP): the .copy() calls will block if the client disconnects
@@ -297,6 +309,14 @@ void audio_task(void *param) {
         stop_tick = xTaskGetTickCount();
         // Serial.println(stop_tick - start_tick);
 
+        vTaskDelay(pdMS_TO_TICKS(1));
+    }
+}
+
+void audio_logic_task(void *pvParameter) {
+    uint32_t notifiedValue;
+
+    while(true) {
         // TODO: move everything below here to a lower priority task that runs less frequently
         // update this variable so other modules can more readily consume it
         last_volume_dB = audio_get_rx_db();
@@ -320,16 +340,27 @@ void audio_task(void *param) {
             if(notifiedValue & NOTIFY_MODE_VHF_TX)
                 audio_configure_codec(AUDIO_VHF_TX);
             if(notifiedValue & NOTIFY_DBG_MAX_VOL) {
-                Serial.println("calibrating max volume");
+                Serial.println("Testing max volume");
+
+                audio_set_sidetone_volume(1.0);
+                audio_set_volume(0);
+                audio_en_sidetone(true);
+                audio_en_rx_audio(false);
+
+                // ramp up volume slowly
+                for(float i=0; i < 1; i += 0.01) {
+                    audio_set_volume(i);
+                    vTaskDelay(pdMS_TO_TICKS(100));
+                }
+
+                audio_set_sidetone_volume(AUDIO_SIDE_DEFAULT);
+                audio_set_volume(AUDIO_VOL_DEFAULT);
+                audio_en_sidetone(false);
+                audio_en_rx_audio(true);
             }
         }
-
-        // TBD if this is needed
-        // this is a LOWEST priority task, yield to another LOWEST priority task
-        // taskYIELD();
-
-        // is this better than yielding?
-        vTaskDelay(pdMS_TO_TICKS(1));
+        
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 

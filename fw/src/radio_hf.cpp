@@ -270,6 +270,8 @@ void radio_set_clocks(uint64_t freq_bfo, uint64_t freq_vfo, uint64_t freq_rf) {
   si5351.set_freq(freq_bfo * 100, SI5351_IDX_BFO);
   si5351.set_freq(freq_vfo * 100, SI5351_IDX_VFO);
   si5351.set_freq(freq_rf * 100, SI5351_IDX_TX);
+
+  // Serial.println(radio_freq_string());
 }
 
 void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
@@ -691,9 +693,9 @@ void radio_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_
   for(uint16_t i = 0; i < sweep.num_steps; i++)
   {
     int64_t dF = step_size * (((int64_t) i) - (int64_t) sweep.num_steps/2);
-    uint64_t f_tx = (uint64_t) sweep.f_center + dF;
+    freq_dial = (uint64_t) sweep.f_center + dF;
     radio_calc_clocks();
-    radio_set_clocks(freq_bfo, freq_vfo, f_tx);
+    radio_set_clocks(freq_bfo, freq_vfo, freq_dial);
     vTaskDelay(pdMS_TO_TICKS(50));
 
     measurements[i] = audio_get_rx_db(sweep.num_to_avg, 10);
@@ -703,7 +705,7 @@ void radio_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_
 
   digitalWrite(LED_RED, LOW);
   radio_set_rxtx_mode(MODE_RX);
-  radio_set_dial_freq(freq_dial);
+  radio_set_dial_freq(sweep.f_center);
   audio_set_filt(AUDIO_FILT_DEFAULT);
   audio_en_pga(pga_init);
   audio_set_volume(volume_init);
@@ -726,8 +728,8 @@ void radio_debug(debug_action_t action, void *value) {
     }
     case DEBUG_CMD_CAL_IF: {
       sweep_config = {
-        .f_center = 10000500,
-        .f_span = 6000,
+        .f_center = 10000000,
+        .f_span = 8000,
         .num_steps = 30,
         .num_to_avg = 5,
         .rolloff = 3
