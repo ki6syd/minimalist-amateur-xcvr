@@ -48,6 +48,21 @@ CsvOutput<int16_t>            csv_stream(Serial);                      // data o
 ESPNowStream now;
 const char *peers[] = {"48:CA:43:57:66:98"};    // serial number 1
 #endif
+#ifdef AUDIO_EN_OUT_UDP
+WiFiUDP default_udp;
+UDPStream udp("", "");    // already connected
+// Throttle throttle(udp);
+// IPAddress udpAddress(192, 168, 0, 232); // laptop
+// IPAddress udpAddress(192, 168, 0, 238); // serial number 1
+// IPAddress udpAddress(192, 168, 0, 178); // serial number 2
+IPAddress udpAddress(192, 168, 0, 255); // broadcast
+const int udpPort = 7000;
+#endif
+#ifdef AUDIO_EN_OUT_IP
+WiFiClient client;
+IPAddress client_address(192, 168, 0, 178);  // serial number 2
+const int ip_port = 7000;
+#endif
 
 SineWaveGenerator<int16_t>    sine_wave;
 GeneratedSoundStream<int16_t> sound_stream(sine_wave);
@@ -62,8 +77,8 @@ OutputMixer<int16_t>          side_l_r_mix(audio_filt, 3);              // sidet
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
 AudioEffectStream             effects(mono_to_stereo);                  // effects --> mono_to_stereo             
 // TODO: try using constructor with 3rd argument of default buffer size, currently it's relatively large at 1024
-StreamCopy copier_1(side_l_r_mix, sound_stream, 256);                      // move sine wave from sound_stream into the sidetone mixer
-StreamCopy copier_2(input_split, i2s_stream, 256);                           // moves data through the streams. To: input_split, from: i2s_stream
+StreamCopy copier_1(side_l_r_mix, sound_stream, 256);                   // move sine wave from sound_stream into the sidetone mixer
+StreamCopy copier_2(input_split, i2s_stream, 256);                      // moves data through the streams. To: input_split, from: i2s_stream
 #ifdef AUDIO_PATH_IQ
 FilteredStream<int16_t, float> hilbert_n45deg(input_l_vol, info_mono.channels);
 FilteredStream<int16_t, float> hilbert_p45deg(input_r_vol, info_mono.channels);
@@ -71,33 +86,15 @@ FilteredStream<int16_t, float> hilbert_p45deg(input_r_vol, info_mono.channels);
 
 // example of i2s codec for both input and output: https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-audiokit/streams-audiokit-filter-audiokit/streams-audiokit-filter-audiokit.ino
 
-#ifdef AUDIO_EN_OUT_UDP
-WiFiUDP default_udp;
-UDPStream udp("", "");    // already connected
-// Throttle throttle(udp);
-// IPAddress udpAddress(192, 168, 0, 232); // laptop
-// IPAddress udpAddress(192, 168, 0, 238); // serial number 1
-// IPAddress udpAddress(192, 168, 0, 178); // serial number 2
-IPAddress udpAddress(192, 168, 0, 255); // broadcast
-const int udpPort = 7000;
-#endif
-
-#ifdef AUDIO_EN_OUT_IP
-WiFiClient client;
-IPAddress client_address(192, 168, 0, 178);  // serial number 2
-const int ip_port = 7000;
-
-// TODO: try a codec, like this example https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-communication/esp-now/codec/communication-codec-espnow-send/communication-codec-espnow-send.ino
-#endif
-
-float sidetone_vol = 1.0;
+float sidetone_vol = AUDIO_SIDE_DEFAULT;
 float sidetone_freq = F_SIDETONE_DEFAULT;
 bool sidetone_en = false;
 bool pga_en = false;
-float global_vol = 0;
+float global_vol = AUDIO_VOL_DEFAULT;
 audio_filt_t cur_filt = AUDIO_FILT_DEFAULT;
 float last_volume_dB = 0;
-uint32_t max_safe_vol = 4000;                   // 32768 allows full volume output (int32_t)
+// TODO: max_safe_vol would be good to put in json preferences
+uint32_t max_safe_vol = 2000;                   // 32768 allows full volume output (int32_t)
 
 void audio_dsp_task(void * pvParameter);
 void audio_logic_task(void *pvParameter);
@@ -250,7 +247,7 @@ void audio_dsp_task(void *param) {
     // attempt connection repeatedly
     bool connected = false;
     IPAddress search_address;
-    for(uint16_t i = 0; i < 10; i++) {
+    for(uint16_t i = 0; i < 5; i++) {
         // try to find the client. assumes MDNS has started
         // TODO: move this sort of logicto wifi_conn.cpp, don't hard-code
         // TODO: some sort of logic to attempt the hard-coded address on the final try
@@ -271,7 +268,7 @@ void audio_dsp_task(void *param) {
             Serial.println(client_address.toString());
         }
 
-        vTaskDelay(pdMS_TO_TICKS(500));        
+        vTaskDelay(pdMS_TO_TICKS(250));        
     }
 
     // only proceed if client connected
@@ -369,21 +366,8 @@ void audio_configure_codec(audio_mode_t mode) {
     auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
     i2s_config.copyFrom(info_stereo);
     
-#ifdef AUDIO_EN_OUT_IP
-    i2s_config.buffer_size = 256;       // working with ip
-    i2s_config.buffer_count = 16;
-#else
-    // i2s_config.buffer_size = 256;       // good compromise
-    i2s_config.buffer_size = 128;       // good compromise
-    i2s_config.buffer_count = 8;
-#endif
-    // i2s_config.buffer_size = 256;       // working with udp
-    // i2s_config.buffer_count = 8;
-    
-    // i2s_config.buffer_size = 1024;   // works but sidetone is choppy
-    // i2s_config.buffer_count = 2;
-    // i2s_config.buffer_size = 512;    // long delay
-    // i2s_config.buffer_count = 4;
+    i2s_config.buffer_size = 256;
+    i2s_config.buffer_count = 4;
     i2s_config.port_no = 0;
 
     AudioDriver *driver = audio_board.getDriver();

@@ -303,6 +303,19 @@ void handler_debug_post(AsyncWebServerRequest *request) {
     else if(command_num == DEBUG_CMD_MAX_VOL) {
         audio_debug((debug_action_t) command_num);
     }
+    else if(command_num == DEBUG_CMD_SPOT) {
+         if(!handler_require_param(request, "value"))
+            return;
 
+        String value = request->getParam("value")->value();
+        if(strcmp(value.c_str(), "on") == 0)
+            audio_en_sidetone(true);
+        else if(strcmp(value.c_str(), "off") == 0) 
+            audio_en_sidetone(false);
+        else {
+            request->send(400, "text/plain", "Unknown value requested");
+            return;
+        }
+    }
     request->send(201, "text/plain", "OK");
 }

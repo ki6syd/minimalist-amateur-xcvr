@@ -31,7 +31,7 @@
 // audio settings used at startup
 #define AUDIO_FILT_DEFAULT      AUDIO_FILT_SSB
 #define AUDIO_VOL_DEFAULT       0.3
-#define AUDIO_SIDE_DEFAULT      0.4
+#define AUDIO_SIDE_DEFAULT      0.3
 #define AUDIO_VOL_DURING_CAL    0.1
 #define AUDIO_PGA_DEFAULT       true
 
@@ -54,5 +54,6 @@ typedef enum {
     DEBUG_CMD_CAL_XTAL=3,
     DEBUG_CMD_CAL_IF=4,
     DEBUG_CMD_CAL_BPF=5,
-    DEBUG_CMD_MAX_VOL=6
+    DEBUG_CMD_MAX_VOL=6,
+    DEBUG_CMD_SPOT=7
 } debug_action_t;

@@ -5,7 +5,7 @@
 // #define AUDIO_EN_OUT_CSV             // too slow to print over serial
 // #define AUDIO_EN_OUT_ESPNOW          // doesn't work
 // #define AUDIO_EN_OUT_UDP             // works except for dropped packets causing choppy audio
-// #define AUDIO_EN_OUT_IP              // works fairly well
+#define AUDIO_EN_OUT_IP              // works fairly well
 
 #ifdef RX_ARCHITECTURE_QSD
 #define AUDIO_PATH_IQ
