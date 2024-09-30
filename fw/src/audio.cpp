@@ -60,7 +60,8 @@ const int udpPort = 7000;
 #endif
 #ifdef AUDIO_EN_OUT_IP
 WiFiClient client;
-IPAddress client_address(192, 168, 0, 178);  // serial number 2
+// IPAddress client_address(192, 168, 0, 178);  // serial number 2
+IPAddress client_address(192, 168, 0, 232);  // laptop
 const int ip_port = 7000;
 #endif
 
@@ -250,24 +251,22 @@ void audio_dsp_task(void *param) {
     for(uint16_t i = 0; i < 5; i++) {
         // try to find the client. assumes MDNS has started
         // TODO: move this sort of logicto wifi_conn.cpp, don't hard-code
-        // TODO: some sort of logic to attempt the hard-coded address on the final try
         search_address = MDNS.queryHost("key", 500);    //500ms timeout
         if(search_address != IPAddress(0, 0, 0, 0)) {
             Serial.print("Found address: ");
             Serial.println(search_address.toString());
             client_address = search_address;
-            
-            if(client.connect(client_address, ip_port)) {
-                connected = true;
-                break;
-            }
         }
-        else {
-            // failed to find it on MDNS
+        else 
             Serial.print("Not found on MDNS...");
-            Serial.println(client_address.toString());
-        }
 
+            
+        if(client.connect(client_address, ip_port)) {
+            connected = true;
+            Serial.print("Successfully connected to server at: ");
+            Serial.print(client_address.toString());
+            break;
+        }
         vTaskDelay(pdMS_TO_TICKS(250));        
     }
 
