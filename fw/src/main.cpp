@@ -56,16 +56,16 @@ void setup() {
 
 // code in loop() is just for testing, don't want to actually do anything here
 void loop() { 
-  if(millis() - t > 1000) {
+  if(millis() - t > 3000) {
     if(counter % 2 == 0) {      
       // radio_set_dial_freq(14060000);
 
-      // audio_test(true);
+      audio_test(true);
     }
     else {
       // radio_set_dial_freq(14061000);
 
-      // audio_test(false);
+      audio_test(false);
 
     }      
     counter++;

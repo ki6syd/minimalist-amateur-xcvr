@@ -44,3 +44,5 @@ float audio_get_s_meter();
 float audio_get_sidetone_freq();
 float audio_get_volume();
 void audio_debug(debug_action_t command_num);
+
+void audio_test(bool swap);

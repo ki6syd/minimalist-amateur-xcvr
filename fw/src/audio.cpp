@@ -77,7 +77,6 @@ FilteredStream<int16_t, float> audio_filt(out_vol, info_mono.channels); // filte
 OutputMixer<int16_t>          side_l_r_mix(audio_filt, 3);              // sidetone, left, right, audio mixing into audio_filt
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
 AudioEffectStream             effects(mono_to_stereo);                  // effects --> mono_to_stereo             
-// TODO: try using constructor with 3rd argument of default buffer size, currently it's relatively large at 1024
 StreamCopy copier_1(side_l_r_mix, sound_stream, 256);                   // move sine wave from sound_stream into the sidetone mixer
 StreamCopy copier_2(input_split, i2s_stream, 256);                      // moves data through the streams. To: input_split, from: i2s_stream
 #ifdef AUDIO_PATH_IQ
@@ -178,10 +177,11 @@ void audio_dsp_task(void *param) {
 
 
 #ifdef AUDIO_PATH_IQ
+
     // l/r volume pathways feed into hilbert transforms
     input_l_vol.setOutput(hilbert_n45deg);
     input_l_vol.begin(info_mono);
-    input_l_vol.setVolume(0);
+    input_l_vol.setVolume(1.0);
     input_r_vol.setOutput(hilbert_p45deg);
     input_r_vol.begin(info_mono);
     input_r_vol.setVolume(1.0);
@@ -191,11 +191,15 @@ void audio_dsp_task(void *param) {
     hilbert_n45deg.setOutput(side_l_r_mix);
     hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
     hilbert_p45deg.setOutput(side_l_r_mix);
+
+    todo: test routine that measures the gain of I/Q channels by muting one at a time, with no hilbert transform
+    todo: figure out USB and LSB
+    
 #endif
 
 
     // left + right + sidetone --> side_l_r_mix (mono). declaration links to audio_filt
-    // HF, VHF, sidetone all set to zero weight. audio_set_mode() will properly apply weights.
+    // HF I, Q, sidetone all set to zero weight. audio_set_mode() will properly apply weights.
     side_l_r_mix.begin();
     side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, 0);      // input 0: sidetone from sound_stream
     side_l_r_mix.setWeight(MIXER_IDX_LEFT, 0);          // input 1: INx-L codec channel
@@ -437,6 +441,17 @@ audio_filt_t audio_get_filt() {
 // debug fuction just to see the phase shift toggling
 void audio_test(bool swap) {
 #ifdef AUDIO_PATH_IQ
+
+    if(swap) {
+        side_l_r_mix.setWeight(MIXER_IDX_RIGHT, 1.0);
+        Serial.println("adding");
+    }
+    else  {
+        side_l_r_mix.setWeight(MIXER_IDX_RIGHT, -1.0);
+        Serial.println("subtracting");
+    }
+
+    /*
     if(swap) {
         hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
         hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
@@ -445,6 +460,7 @@ void audio_test(bool swap) {
         hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
         hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
     }
+    */
 #endif
 }
 

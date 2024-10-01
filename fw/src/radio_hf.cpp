@@ -261,7 +261,7 @@ void radio_calc_clocks() {
   }
 #ifdef RX_ARCHITECTURE_QSD
   // multiple BFO frequency by 4x if we are using a QSD and 90deg divider circuit
-  freq_bfo *= 4;
+  freq_bfo = 4 * (freq_dial + ((uint64_t) audio_get_sidetone_freq()));
 #endif
 
 }
