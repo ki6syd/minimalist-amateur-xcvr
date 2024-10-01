@@ -82,8 +82,9 @@ StreamCopy copier_2(input_split, i2s_stream, 256);                      // moves
 #ifdef AUDIO_PATH_IQ
 FilteredStream<int16_t, float> hilbert_n45deg(input_l_vol, info_mono.channels);
 FilteredStream<int16_t, float> hilbert_p45deg(input_r_vol, info_mono.channels);
-float i_channel_correction = 84/94;
-float q_channel_correction = 1.0;
+// AudioEffectStream quadrature_inverter(side_l_r_mix);  // -45deg --> quadrature_inverter
+float i_channel_correction = 1.0;
+float q_channel_correction = 0.89;
 #endif
 
 // example of i2s codec for both input and output: https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-audiokit/streams-audiokit-filter-audiokit/streams-audiokit-filter-audiokit.ino
@@ -155,16 +156,16 @@ void audio_dsp_task(void *param) {
     cfg.throttle_correction_us = -1000; // optimize overload and underrun
     if (!vban.begin(cfg)) stop();
 #endif
+#ifdef AUDIO_EN_OUT_CSV
+    csv_stream.begin(info_mono);
+#endif
+
 
     // OutputVolume sink to measure amplitude
     // note that this is currently consuming out_vol, which means it'll vary with volume control. Either compensate or measure before scaling
     out_vol_meas.setAudioInfo(info_mono);
     out_vol_meas.begin();
 
-    // set up test stream
-#ifdef AUDIO_EN_OUT_CSV
-    csv_stream.begin(info_mono);
-#endif
 
     // input_split (stereo) --> two (mono) volume control pathways
     // note that the indices of side_l_r_mix are set by the declaration above, then the following two lines
@@ -179,7 +180,6 @@ void audio_dsp_task(void *param) {
     input_split.addOutput(side_l_r_mix, 1);
 #endif
     input_split.begin(info_stereo);
-    // input_split.begin(info_mono);
 
 
 #ifdef AUDIO_PATH_IQ
@@ -188,6 +188,7 @@ void audio_dsp_task(void *param) {
     input_l_vol.setOutput(hilbert_n45deg);
     input_l_vol.begin(info_mono);
     input_l_vol.setVolume(q_channel_correction);
+
     input_r_vol.setOutput(hilbert_p45deg);
     input_r_vol.begin(info_mono);
     input_r_vol.setVolume(i_channel_correction);
@@ -195,11 +196,15 @@ void audio_dsp_task(void *param) {
     // hilbert transforms feed into the sidetone+left+right mixer
     hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
     hilbert_n45deg.setOutput(side_l_r_mix);
+    // hilbert_n45deg.setOutput(quadrature_inverter);
+    // quadrature_inverter.setOutput(side_l_r_mix);        // quadrature_inverter intercepts the Q stream, and applies a multiplication factor
+    // quadrature_inverter.addEffect(new Boost(0.9));
+    // quadrature_inverter.begin(info_mono);
+
     hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
     hilbert_p45deg.setOutput(side_l_r_mix);
     
 #endif
-
 
     // left + right + sidetone --> side_l_r_mix (mono). declaration links to audio_filt
     // HF I, Q, sidetone all set to zero weight. audio_set_mode() will properly apply weights.
@@ -248,9 +253,8 @@ void audio_dsp_task(void *param) {
     // worked with 8x256 buffers
 #endif
 #ifdef AUDIO_EN_OUT_IP
-    
     client.setNoDelay(true);   // doesn't wait to accumulate packets
-    client.setTimeout(2);       // 2 second timeout
+    client.setTimeout(1);       // 2 second timeout
 
     // attempt connection repeatedly
     bool connected = false;
@@ -268,8 +272,6 @@ void audio_dsp_task(void *param) {
             Serial.print("Audio receiver not yet found on MDNS, will also try: ");
             Serial.println(client_address.toString());
         }
-
-
             
         if(client.connect(client_address, ip_port)) {
             connected = true;
@@ -289,11 +291,10 @@ void audio_dsp_task(void *param) {
         Serial.println("Unable to connect to IP key");
         client.stop();
     }
-    
 #endif
 
-
     // Distortion (clipping) operates *after* volume control is applied, making it the same threshold regardless of volume setting
+    // TODO: make this Distortion available elsewhere so we can adjust clipping threshold on the fly?
     effects.addEffect(new Distortion(max_safe_vol, max_safe_vol));
     effects.begin(info_mono);
 
@@ -448,16 +449,18 @@ void audio_test(bool swap) {
     Serial.println(swap);
 
     if(swap) {
-        input_l_vol.setVolume(1.0);
-        input_r_vol.setVolume(0);
+        hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
+        // input_l_vol.setVolume(1.0);
+        // input_r_vol.setVolume(0);
         // side_l_r_mix.setWeight(MIXER_IDX_RIGHT, 1.0);
-        // side_l_r_mix.setWeight(MIXER_IDX_LEFT, 0);
+        // side_l_r_mix.setWeight(MIXER_IDX_LEFT, 1.0);
     }
     else  {
-        // side_l_r_mix.setWeight(MIXER_IDX_RIGHT, 0);
-        // side_l_r_mix.setWeight(MIXER_IDX_LEFT, 1.0);
-        input_l_vol.setVolume(0);
-        input_r_vol.setVolume(1.0);
+        hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg_negated));
+        // input_l_vol.setVolume(0);
+        // input_r_vol.setVolume(1.0);
+        // side_l_r_mix.setWeight(MIXER_IDX_RIGHT, 1.0);
+        // side_l_r_mix.setWeight(MIXER_IDX_LEFT, -1.0);
     }
 
     /*
