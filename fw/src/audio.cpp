@@ -77,11 +77,13 @@ FilteredStream<int16_t, float> audio_filt(out_vol, info_mono.channels); // filte
 OutputMixer<int16_t>          side_l_r_mix(audio_filt, 3);              // sidetone, left, right, audio mixing into audio_filt
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
 AudioEffectStream             effects(mono_to_stereo);                  // effects --> mono_to_stereo             
-StreamCopy copier_1(side_l_r_mix, sound_stream, 256);                   // move sine wave from sound_stream into the sidetone mixer
+StreamCopy copier_1(side_l_r_mix, sound_stream, 128);                   // move sine wave from sound_stream into the sidetone mixer
 StreamCopy copier_2(input_split, i2s_stream, 256);                      // moves data through the streams. To: input_split, from: i2s_stream
 #ifdef AUDIO_PATH_IQ
 FilteredStream<int16_t, float> hilbert_n45deg(input_l_vol, info_mono.channels);
 FilteredStream<int16_t, float> hilbert_p45deg(input_r_vol, info_mono.channels);
+float i_channel_correction = 84/94;
+float q_channel_correction = 1.0;
 #endif
 
 // example of i2s codec for both input and output: https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-audiokit/streams-audiokit-filter-audiokit/streams-audiokit-filter-audiokit.ino
@@ -94,7 +96,8 @@ float global_vol = AUDIO_VOL_DEFAULT;
 audio_filt_t cur_filt = AUDIO_FILT_DEFAULT;
 float last_volume_dB = 0;
 // TODO: max_safe_vol would be good to put in json preferences
-uint32_t max_safe_vol = 2000;                   // 32768 allows full volume output (int32_t)
+// uint32_t max_safe_vol = 2000;                   // 32768 allows full volume output (int32_t)
+uint32_t max_safe_vol = 32000;
 
 void audio_dsp_task(void * pvParameter);
 void audio_logic_task(void *pvParameter);
@@ -167,13 +170,16 @@ void audio_dsp_task(void *param) {
     // note that the indices of side_l_r_mix are set by the declaration above, then the following two lines
     // omit the input_x_vol controls if we are not using IQ data
 #ifdef AUDIO_PATH_IQ
+    // order of these will determine which side_l_r_mix is working
     input_split.addOutput(input_l_vol, 0);
     input_split.addOutput(input_r_vol, 1);
+    
 #else
     input_split.addOutput(side_l_r_mix, 0);
     input_split.addOutput(side_l_r_mix, 1);
 #endif
     input_split.begin(info_stereo);
+    // input_split.begin(info_mono);
 
 
 #ifdef AUDIO_PATH_IQ
@@ -181,19 +187,16 @@ void audio_dsp_task(void *param) {
     // l/r volume pathways feed into hilbert transforms
     input_l_vol.setOutput(hilbert_n45deg);
     input_l_vol.begin(info_mono);
-    input_l_vol.setVolume(1.0);
+    input_l_vol.setVolume(q_channel_correction);
     input_r_vol.setOutput(hilbert_p45deg);
     input_r_vol.begin(info_mono);
-    input_r_vol.setVolume(1.0);
+    input_r_vol.setVolume(i_channel_correction);
 
     // hilbert transforms feed into the sidetone+left+right mixer
     hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
     hilbert_n45deg.setOutput(side_l_r_mix);
     hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
     hilbert_p45deg.setOutput(side_l_r_mix);
-
-    todo: test routine that measures the gain of I/Q channels by muting one at a time, with no hilbert transform
-    todo: figure out USB and LSB
     
 #endif
 
@@ -442,13 +445,19 @@ audio_filt_t audio_get_filt() {
 void audio_test(bool swap) {
 #ifdef AUDIO_PATH_IQ
 
+    Serial.println(swap);
+
     if(swap) {
-        side_l_r_mix.setWeight(MIXER_IDX_RIGHT, 1.0);
-        Serial.println("adding");
+        input_l_vol.setVolume(1.0);
+        input_r_vol.setVolume(0);
+        // side_l_r_mix.setWeight(MIXER_IDX_RIGHT, 1.0);
+        // side_l_r_mix.setWeight(MIXER_IDX_LEFT, 0);
     }
     else  {
-        side_l_r_mix.setWeight(MIXER_IDX_RIGHT, -1.0);
-        Serial.println("subtracting");
+        // side_l_r_mix.setWeight(MIXER_IDX_RIGHT, 0);
+        // side_l_r_mix.setWeight(MIXER_IDX_LEFT, 1.0);
+        input_l_vol.setVolume(0);
+        input_r_vol.setVolume(1.0);
     }
 
     /*
