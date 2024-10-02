@@ -81,7 +81,7 @@ void info_task(void *param) {
     Serial.println(power_get_input_volt());
 
     Serial.print("S-meter: ");
-    Serial.println(audio_get_s_meter());
+    Serial.println(radio_get_s_meter());
 
     Serial.println(radio_freq_string());
 

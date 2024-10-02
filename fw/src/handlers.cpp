@@ -238,7 +238,7 @@ void handler_input_voltage_get(AsyncWebServerRequest *request) {
 }
 
 void handler_smeter_get(AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", String(audio_get_s_meter()));
+    request->send(200, "text/plain", String(radio_get_s_meter()));
 }
 
 void handler_mac_get(AsyncWebServerRequest *request) {

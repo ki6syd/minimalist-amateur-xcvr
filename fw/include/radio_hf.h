@@ -9,6 +9,8 @@
 // comment out to prevent accidental TX
 // #define RADIO_ALLOW_TX
 
+#define DB_PER_S_UNIT       6
+
 typedef enum {
     MODE_RX,
     MODE_TX,
@@ -78,4 +80,6 @@ radio_audio_bw_t radio_get_bw();
 String radio_band_to_string(radio_band_t band);
 String radio_bandwidth_to_string(radio_audio_bw_t bw);
 String radio_freq_string();
+float radio_get_s_meter();
+void radio_enable_tx(bool en);
 void radio_debug(debug_action_t action, void *value);

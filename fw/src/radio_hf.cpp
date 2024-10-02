@@ -13,6 +13,8 @@
 #define NOTIFY_CAL_XTAL       (1 << 4)
 #define NOTIFY_CAL_IF         (1 << 5)
 #define NOTIFY_CAL_BPF        (1 << 6)
+#define NOTIFY_LOW_BAT        (1 << 7)
+
 
 #define SI5351_IDX_BFO    SI5351_CLK0
 #define SI5351_IDX_VFO    SI5351_CLK1
@@ -32,11 +34,16 @@ radio_filt_sweep_t sweep_config;
 radio_filt_properties_t if_properties, bpf_properties;
 radio_band_capability_t band_capability[NUMBER_BANDS];
 
+bool ok_to_tx = false;
+
 uint64_t freq_dial = 14040000;
 uint64_t freq_if_lower = 9998500;
 uint64_t freq_if_upper = 10001500;
 uint64_t freq_vfo = 0;
 uint64_t freq_bfo = 0;
+
+// variable to track what value of audio_get_rx_db() corresponds to S0
+float audio_level_s0 = -60;
 
 void radio_si5351_init();
 void radio_calc_clocks();
@@ -68,6 +75,10 @@ void radio_hf_init() {
   digitalWrite(TX_RX_SEL, LOW);     // RX mode
 
   radio_si5351_init();
+
+#ifdef RADIO_ALLOW_TX
+  ok_to_tx = true;
+#endif
 
   // create the message queue
   // TODO: parametrize the length of this queue
@@ -160,10 +171,9 @@ void radio_task(void *param) {
         // turn off sidetone, LED, TX power amp rail
         audio_en_sidetone(true);
         digitalWrite(LED_RED, HIGH);
-        // turn on power amp rail if build flags allow
-#ifdef RADIO_ALLOW_TX
-        digitalWrite(PA_VDD_CTRL, HIGH);
-#endif
+        // turn on power amp rail if flag allows
+        if(ok_to_tx)
+          digitalWrite(PA_VDD_CTRL, HIGH);
       }
       if(notifiedValue & NOTIFY_QSK_EXPIRE) {
         radio_set_rxtx_mode(MODE_RX);
@@ -202,6 +212,9 @@ void radio_task(void *param) {
       if(notifiedValue & NOTIFY_CAL_BPF) {
         radio_band_t band_to_sweep = radio_get_band(sweep_config.f_center);
         radio_cal_bpf_filt(band_to_sweep, sweep_config, &bpf_properties);
+      }
+      if(notifiedValue & NOTIFY_LOW_BAT) {
+        ok_to_tx = false;
       }
     }
   }
@@ -715,6 +728,21 @@ void radio_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_
   audio_set_volume(volume_init);
   audio_en_rx_audio(true);
   Serial.println("Routine complete.\n\n");
+}
+
+float radio_get_s_meter() {
+  float audio_level = audio_get_s_meter();
+  Serial.print("Audio was: ");
+  Serial.println(audio_level);
+
+  float s_units_above = (audio_level - audio_level_s0) * DB_PER_S_UNIT;
+
+  return s_units_above;
+}
+
+void radio_enable_tx(bool en) {
+  if(!en && ok_to_tx)
+    xTaskNotify(xRadioTaskHandle, NOTIFY_LOW_BAT, eSetBits);
 }
 
 void radio_debug(debug_action_t action, void *value) {

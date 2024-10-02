@@ -72,9 +72,10 @@ GeneratedSoundStream<int16_t> sound_stream(sine_wave);
 ChannelSplitOutput            input_split;                              // splits the stereo input stream into two mono streams
 VolumeStream                  out_vol;                                  // output volume control
 VolumeStream                  input_l_vol, input_r_vol;
-VolumeMeter                   out_vol_meas;                             // measure the volume of the output
+// VolumeMeter                   out_vol_meas;                             // measure the volume of the output
+VolumeMeter                   audio_filt_meas;                          // measures the volume output of the audio filter, outputs into out_vol volume control
 MultiOutput                   multi_output;                             // splits the final output into audio jack, vban output, csv stream
-FilteredStream<int16_t, float> audio_filt(out_vol, info_mono.channels); // filter outputting into out_vol volume control
+FilteredStream<int16_t, float> audio_filt(audio_filt_meas, info_mono.channels); // filter outputting into audio_filt_meas volume detection
 OutputMixer<int16_t>          side_l_r_mix(audio_filt, 3);              // sidetone, left, right, audio mixing into audio_filt
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
 AudioEffectStream             effects(mono_to_stereo);                  // effects --> mono_to_stereo             
@@ -108,6 +109,9 @@ void audio_init() {
     // load maximum volume (a float from 0-1.0) and scale by maximum int32_t
     // TODO: make sure this ended up between 0-32768
     max_safe_vol = (uint32_t) (fs_load_setting(PREFERENCE_FILE, "max_audio_output").toFloat() * 32768); 
+
+    Serial.print("Maximum safe volume: ");
+    Serial.println(max_safe_vol);
 
     // note: platformio + arduino puts wifi on core 0
     // run on core 1
@@ -166,8 +170,10 @@ void audio_dsp_task(void *param) {
 
     // OutputVolume sink to measure amplitude
     // note that this is currently consuming out_vol, which means it'll vary with volume control. Either compensate or measure before scaling
-    out_vol_meas.setAudioInfo(info_mono);
-    out_vol_meas.begin();
+    // out_vol_meas.setAudioInfo(info_mono);
+    // out_vol_meas.begin();
+    audio_filt_meas.setAudioInfo(info_mono);
+    audio_filt_meas.begin();
 
 
     // input_split (stereo) --> two (mono) volume control pathways
@@ -217,13 +223,18 @@ void audio_dsp_task(void *param) {
 
     // audio_filt (mono) --> out_vol (mono) --> multi_output (mono)
     audio_set_volume(AUDIO_VOL_DEFAULT);
-    out_vol.setStream(audio_filt);
+    // out_vol.setStream(audio_filt);
+    out_vol.setStream(audio_filt_meas);
     out_vol.setOutput(multi_output);
     out_vol.begin(info_mono);
 
+    // audio_filt_meas.setAudioInfo(info_mono);
+    // audio_filt_meas.begin();
+
     // multi_output goes to mono_to_stereo (mono, via the clipping effect), volume measurement, and any optional outputs
     multi_output.add(effects);
-    multi_output.add(out_vol_meas);
+    // multi_output.add(out_vol_meas);
+    
 #ifdef AUDIO_EN_OUT_VBAN
     multi_output.add(vban);
 #endif
@@ -555,15 +566,13 @@ bool audio_get_pga() {
     return pga_en;
 }
 
-// compensate for volume control here
-// TODO: change audio chain to measure before applying volume control
 float audio_get_rx_db(uint16_t num_to_avg, uint16_t delay_ms) {
     if(sidetone_en)
         return -1001;
     else {
         float volume_dB = 0;
         for(uint16_t i = 0; i < num_to_avg; i++) {
-            volume_dB += out_vol_meas.volumeDB();
+            volume_dB += audio_filt_meas.volumeDB();
 
             // only delay between samples if we are averaging
             if(num_to_avg > 0)
