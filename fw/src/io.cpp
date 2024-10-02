@@ -101,7 +101,6 @@ void io_init() {
   digitalWrite(LED_DBG_0, LOW);
   digitalWrite(LED_DBG_1, LOW);
   digitalWrite(LED_GRN, HIGH);
-  digitalWrite(LED_RED, HIGH);
 
   // check if USB is plugged in before attempting to configure Serial
   // background: https://github.com/espressif/arduino-esp32/issues/6983

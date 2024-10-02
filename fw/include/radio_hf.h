@@ -9,7 +9,6 @@
 // comment out to prevent accidental TX
 // #define RADIO_ALLOW_TX
 
-#define S_UNIT_PER_DB       (1.0 / 6.0)
 
 typedef enum {
     MODE_RX,

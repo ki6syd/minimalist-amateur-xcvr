@@ -20,7 +20,7 @@
 #define SI5351_IDX_TX         SI5351_CLK2
 
 #define S_UNIT_PER_DB         (1.0 / 6.0)
-#define S_UNIT_REF            9
+#define S_UNIT_REF            7
 
 Si5351 si5351;
 
@@ -44,8 +44,8 @@ uint64_t freq_if_upper = 10001500;
 uint64_t freq_vfo = 0;
 uint64_t freq_bfo = 0;
 
-// variable to track what value of audio_get_rx_db() corresponds to S0
-float audio_level_s9 = -41;
+// variable to track what value of audio_get_rx_db() corresponds to the #define'd S_UNIT_REF above
+float audio_level_sREF = -49.4;
 
 void radio_si5351_init();
 void radio_calc_clocks();
@@ -734,9 +734,9 @@ void radio_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_
 
 float radio_get_s_meter() {
   float audio_level = audio_get_loudness();
-  float s_unit_delta = (audio_level_s9 - audio_level) * S_UNIT_PER_DB;
-  // Serial.print("audio: ");
-  // Serial.print(audio_level);
+  float s_unit_delta = (audio_level_sREF - audio_level) * S_UNIT_PER_DB;
+  Serial.print("audio: ");
+  Serial.print(audio_level);
   // Serial.print("\tdelta: ");
   // Serial.print(s_unit_delta);
   // Serial.print("\tsnapshot: ");
@@ -746,7 +746,7 @@ float radio_get_s_meter() {
     s_output = 0;
   if(s_output > 9)
     s_output = 9;
-    
+
   return s_output;
 }
 
