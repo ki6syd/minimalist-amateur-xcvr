@@ -62,7 +62,7 @@ void wifi_init() {
 
     // lower power to prevent audio noise (TODO: test if this is present in latest hardware)
     // maximum power is WIFI_POWER_19_5dBm
-    // WiFi.setTxPower(WIFI_POWER_5dBm);
+    WiFi.setTxPower(WIFI_POWER_17dBm);
 
 #ifdef WIFI_SCAN
     wifi_scan();

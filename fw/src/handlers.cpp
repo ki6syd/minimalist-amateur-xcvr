@@ -297,7 +297,7 @@ void handler_debug_post(AsyncWebServerRequest *request) {
     else if(command_num == DEBUG_CMD_REBOOT) {
         esp_restart();
     }
-    else if(command_num == DEBUG_CMD_CAL_XTAL || command_num == DEBUG_CMD_CAL_IF || command_num == DEBUG_CMD_CAL_BPF) {
+    else if(command_num == DEBUG_CMD_CAL_XTAL || command_num == DEBUG_CMD_CAL_IF || command_num == DEBUG_CMD_CAL_BPF || command_num == DEBUG_STOP_CLOCKS) {
         radio_debug((debug_action_t) command_num, nullptr);
     }
     else if(command_num == DEBUG_CMD_MAX_VOL) {

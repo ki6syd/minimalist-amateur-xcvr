@@ -55,5 +55,6 @@ typedef enum {
     DEBUG_CMD_CAL_IF=4,
     DEBUG_CMD_CAL_BPF=5,
     DEBUG_CMD_MAX_VOL=6,
-    DEBUG_CMD_SPOT=7
+    DEBUG_CMD_SPOT=7,
+    DEBUG_STOP_CLOCKS=8
 } debug_action_t;

@@ -15,10 +15,12 @@
 #define NOTIFY_CAL_BPF        (1 << 6)
 #define NOTIFY_LOW_BAT        (1 << 7)
 
+#define SI5351_IDX_BFO        SI5351_CLK0
+#define SI5351_IDX_VFO        SI5351_CLK1
+#define SI5351_IDX_TX         SI5351_CLK2
 
-#define SI5351_IDX_BFO    SI5351_CLK0
-#define SI5351_IDX_VFO    SI5351_CLK1
-#define SI5351_IDX_TX     SI5351_CLK2
+#define S_UNIT_PER_DB         (1.0 / 6.0)
+#define S_UNIT_REF            9
 
 Si5351 si5351;
 
@@ -739,7 +741,13 @@ float radio_get_s_meter() {
   // Serial.print(s_unit_delta);
   // Serial.print("\tsnapshot: ");
   // Serial.println(audio_get_rx_vol());
-  return 9.0 - s_unit_delta;
+  float s_output = S_UNIT_REF - s_unit_delta;
+  if(s_output < 0)
+    s_output = 0;
+  if(s_output > 9)
+    s_output = 9;
+    
+  return s_output;
 }
 
 void radio_enable_tx(bool en) {
@@ -784,6 +792,11 @@ void radio_debug(debug_action_t action, void *value) {
 
       xTaskNotify(xRadioTaskHandle, NOTIFY_CAL_BPF, eSetBits);
       break;
+    }
+    case DEBUG_STOP_CLOCKS: {
+      si5351.output_enable(SI5351_IDX_TX, 0);
+      si5351.output_enable(SI5351_IDX_BFO, 0);
+      si5351.output_enable(SI5351_IDX_VFO, 0);
     }
   }
 }

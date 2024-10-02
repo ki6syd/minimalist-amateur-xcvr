@@ -109,7 +109,6 @@ void io_init() {
     Serial.begin(DEBUG_SERIAL_SPEED);
     // delay gives time to see serial port messages on monitor
     vTaskDelay(pdMS_TO_TICKS(5000));
-    digitalWrite(LED_RED, LOW);
   }
   else {
     
