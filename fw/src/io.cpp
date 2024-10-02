@@ -114,18 +114,7 @@ void io_init() {
   else {
     
     Serial.setTxTimeoutMs(0);
-  }
-    
-
-  // Serial.begin(DEBUG_SERIAL_SPEED);
-  // // delay gives time to see serial port messages on monitor
-  // vTaskDelay(pdMS_TO_TICKS(5000));
-
-  // // helps avoid some sort of overflow when USB is not connected
-  // if(!Serial.isPlugged() && !Serial.isConnected())
-  //   Serial.end();
-
-  
+  }  
 
   // PSRAM initialization
   // https://community.platformio.org/t/how-to-use-psram-on-esp32-s3-devkitc-1-under-esp-idf/32127/17
