@@ -1,3 +1,4 @@
 {
-	"mdns_hostname": "radio"
+	"mdns_hostname": "radio",
+	"max_audio_output": "0.04"
 }

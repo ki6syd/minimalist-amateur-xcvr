@@ -2,6 +2,7 @@
 #include "audio.h"
 #include "fir_coeffs_bpf.h"
 #include "fir_coeffs_hilbert.h"
+#include "file_system.h"
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -82,7 +83,6 @@ StreamCopy copier_2(input_split, i2s_stream, 256);                      // moves
 #ifdef AUDIO_PATH_IQ
 FilteredStream<int16_t, float> hilbert_n45deg(input_l_vol, info_mono.channels);
 FilteredStream<int16_t, float> hilbert_p45deg(input_r_vol, info_mono.channels);
-// AudioEffectStream quadrature_inverter(side_l_r_mix);  // -45deg --> quadrature_inverter
 float i_channel_correction = 1.0;
 float q_channel_correction = 0.89;
 #endif
@@ -97,8 +97,7 @@ float global_vol = AUDIO_VOL_DEFAULT;
 audio_filt_t cur_filt = AUDIO_FILT_DEFAULT;
 float last_volume_dB = 0;
 // TODO: max_safe_vol would be good to put in json preferences
-// uint32_t max_safe_vol = 2000;                   // 32768 allows full volume output (int32_t)
-uint32_t max_safe_vol = 32000;
+uint32_t max_safe_vol = 5000;                   // 32768 allows full volume output (int32_t)
 
 void audio_dsp_task(void * pvParameter);
 void audio_logic_task(void *pvParameter);
@@ -106,6 +105,10 @@ void audio_configure_codec(audio_mode_t mode);
 void audio_measure_volume();
 
 void audio_init() {
+    // load maximum volume (a float from 0-1.0) and scale by maximum int32_t
+    // TODO: make sure this ended up between 0-32768
+    max_safe_vol = (uint32_t) (fs_load_setting(PREFERENCE_FILE, "max_audio_output").toFloat() * 32768); 
+
     // note: platformio + arduino puts wifi on core 0
     // run on core 1
     xTaskCreatePinnedToCore(
@@ -196,10 +199,6 @@ void audio_dsp_task(void *param) {
     // hilbert transforms feed into the sidetone+left+right mixer
     hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
     hilbert_n45deg.setOutput(side_l_r_mix);
-    // hilbert_n45deg.setOutput(quadrature_inverter);
-    // quadrature_inverter.setOutput(side_l_r_mix);        // quadrature_inverter intercepts the Q stream, and applies a multiplication factor
-    // quadrature_inverter.addEffect(new Boost(0.9));
-    // quadrature_inverter.begin(info_mono);
 
     hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
     hilbert_p45deg.setOutput(side_l_r_mix);
@@ -356,6 +355,8 @@ void audio_logic_task(void *pvParameter) {
 
                 // ramp up volume slowly
                 for(float i=0; i < 1; i += 0.01) {
+                    Serial.print("Volume: ");
+                    Serial.println(i);
                     audio_set_volume(i);
                     vTaskDelay(pdMS_TO_TICKS(100));
                 }
