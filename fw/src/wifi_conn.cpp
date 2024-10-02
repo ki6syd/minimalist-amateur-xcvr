@@ -31,10 +31,7 @@ void wifi_init() {
     for (int i = 0; i < 25; i++) {
         if (WiFi.status() == WL_CONNECTED)
             break;
-        digitalWrite(LED_RED, HIGH);
-        delay(100);
-        digitalWrite(LED_RED, LOW);
-        delay(100);
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 
 

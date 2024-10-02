@@ -101,12 +101,19 @@ void io_init() {
   digitalWrite(LED_DBG_0, LOW);
   digitalWrite(LED_DBG_1, LOW);
   digitalWrite(LED_GRN, HIGH);
+  digitalWrite(LED_RED, HIGH);
 
   // check if USB is plugged in before attempting to configure Serial
+  // background: https://github.com/espressif/arduino-esp32/issues/6983
   if(Serial.isPlugged()) {
     Serial.begin(DEBUG_SERIAL_SPEED);
     // delay gives time to see serial port messages on monitor
     vTaskDelay(pdMS_TO_TICKS(5000));
+    digitalWrite(LED_RED, LOW);
+  }
+  else {
+    
+    Serial.setTxTimeoutMs(0);
   }
     
 

@@ -31,7 +31,7 @@
 
 TwoWire codecI2C = TwoWire(1);  // "Wire" is used in si5351 library. Defined through TwoWire(0), so the other peripheral is still available
 
-TaskHandle_t xDSPTaskHandle, xAudioTaskHandle;
+TaskHandle_t xDSPTaskHandle, xAudioTaskHandle, xGainTaskHandle;
 
 AudioInfo                     info_stereo(F_AUDIO, 2, 16);              // sampling rate, # channels, bit depth
 AudioInfo                     info_mono(F_AUDIO, 1, 16);                // sampling rate, # channels, bit depth
@@ -72,11 +72,9 @@ GeneratedSoundStream<int16_t> sound_stream(sine_wave);
 ChannelSplitOutput            input_split;                              // splits the stereo input stream into two mono streams
 VolumeStream                  out_vol;                                  // output volume control
 VolumeStream                  input_l_vol, input_r_vol;
-VolumeMeter                   out_vol_meas;                             // measure the volume of the output
-VolumeMeter                   audio_filt_meas;                          // measures the volume output of the audio filter, outputs into out_vol volume control
+VolumeMeter                   audio_filt_meas(out_vol);                 // measures the volume output of the audio filter, outputs into out_vol volume control
 MultiOutput                   multi_output;                             // splits the final output into audio jack, vban output, csv stream
-FilteredStream<int16_t, float> audio_filt(out_vol, info_mono.channels); // filter outputting into out_vol volume control
-// FilteredStream<int16_t, float> audio_filt(audio_filt_meas, info_mono.channels); // filter outputting into audio_filt_meas volume detection
+FilteredStream<int16_t, float> audio_filt(audio_filt_meas, info_mono.channels); // filter outputting into audio_filt_meas volume detection
 OutputMixer<int16_t>          side_l_r_mix(audio_filt, 3);              // sidetone, left, right, audio mixing into audio_filt
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
 AudioEffectStream             effects(mono_to_stereo);                  // effects --> mono_to_stereo             
@@ -103,6 +101,7 @@ uint32_t max_safe_vol = 5000;                   // 32768 allows full volume outp
 
 void audio_dsp_task(void * pvParameter);
 void audio_logic_task(void *pvParameter);
+void audio_gain_task(void *pvParameter);
 void audio_configure_codec(audio_mode_t mode);
 void audio_measure_volume();
 
@@ -135,6 +134,19 @@ void audio_init() {
         &xAudioTaskHandle,
         TASK_CORE_AUDIO // core
     );
+
+    // working as designed but commented out, should implement AGC which actually controls PGA level
+    /*
+    xTaskCreatePinnedToCore(
+        audio_gain_task,
+        "Audio Gain Task",
+        16384,
+        NULL,
+        TASK_PRIORITY_AUDIO, // priority
+        &xGainTaskHandle,
+        TASK_CORE_AUDIO // core
+    );
+    */
 }
 
 void audio_dsp_task(void *param) {
@@ -168,15 +180,6 @@ void audio_dsp_task(void *param) {
     csv_stream.begin(info_mono);
 #endif
 
-
-    // OutputVolume sink to measure amplitude
-    // note that this is currently consuming out_vol, which means it'll vary with volume control. Either compensate or measure before scaling
-    out_vol_meas.setAudioInfo(info_mono);
-    out_vol_meas.begin();
-    // audio_filt_meas.setAudioInfo(info_mono);
-    // audio_filt_meas.begin();
-
-
     // input_split (stereo) --> two (mono) volume control pathways
     // note that the indices of side_l_r_mix are set by the declaration above, then the following two lines
     // omit the input_x_vol controls if we are not using IQ data
@@ -193,7 +196,6 @@ void audio_dsp_task(void *param) {
 
 
 #ifdef AUDIO_PATH_IQ
-
     // l/r volume pathways feed into hilbert transforms
     input_l_vol.setOutput(hilbert_n45deg);
     input_l_vol.begin(info_mono);
@@ -209,7 +211,6 @@ void audio_dsp_task(void *param) {
 
     hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
     hilbert_p45deg.setOutput(side_l_r_mix);
-    
 #endif
 
     // left + right + sidetone --> side_l_r_mix (mono). declaration links to audio_filt
@@ -222,20 +223,15 @@ void audio_dsp_task(void *param) {
     // audio_filt declaration has already linked it to out_vol (mono)
     audio_set_filt(AUDIO_FILT_DEFAULT);
 
-    // audio_filt (mono) --> out_vol (mono) --> multi_output (mono)
+    // audio_filt (mono) --> audio_filt_meas (mono) --> out_vol (mono) --> multi_output (mono)
     audio_set_volume(AUDIO_VOL_DEFAULT);
-    out_vol.setStream(audio_filt);
-    // out_vol.setStream(audio_filt_meas);
     out_vol.setOutput(multi_output);
     out_vol.begin(info_mono);
+    audio_filt_meas.setAudioInfo(info_mono);
+    audio_filt_meas.begin();
 
-    // audio_filt_meas.setAudioInfo(info_mono);
-    // audio_filt_meas.begin();
-
-    // multi_output goes to mono_to_stereo (mono, via the clipping effect), volume measurement, and any optional outputs
-    multi_output.add(effects);
-    multi_output.add(out_vol_meas);
-    
+    // multi_output goes to mono_to_stereo (mono, via the clipping effect), and any optional outputs
+    multi_output.add(effects);    
 #ifdef AUDIO_EN_OUT_VBAN
     multi_output.add(vban);
 #endif
@@ -305,7 +301,6 @@ void audio_dsp_task(void *param) {
 #endif
 
     // Distortion (clipping) operates *after* volume control is applied, making it the same threshold regardless of volume setting
-    // TODO: make this Distortion available elsewhere so we can adjust clipping threshold on the fly?
     effects.addEffect(new Distortion(max_safe_vol, max_safe_vol));
     effects.begin(info_mono);
 
@@ -337,7 +332,7 @@ void audio_logic_task(void *pvParameter) {
     while(true) {
         // TODO: move everything below here to a lower priority task that runs less frequently
         // update this variable so other modules can more readily consume it
-        last_volume_dB = audio_get_rx_db();
+        last_volume_dB = audio_get_rx_db(20, 1);
 
         // look for flags. Don't clear on entry; clear on exit
         if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, 0) == pdTRUE) {
@@ -381,6 +376,37 @@ void audio_logic_task(void *pvParameter) {
         }
         
         vTaskDelay(pdMS_TO_TICKS(50));
+    }
+}
+
+// responsible for adjusting PGA gain based on signal strength
+// TODO: turn this into an AGC loop, not just binary PGA on/off
+void audio_gain_task(void *pvParameter) {
+    uint32_t counter = 0;
+    float cur_s_meter = 0;
+    float last_s_meter = 0;
+    while(true) {
+        // check current S-meter value
+        cur_s_meter = radio_get_s_meter();
+
+        // turn off PGA if s-meter is high AND pga was already turned on
+        if(cur_s_meter > 7 && pga_en) {
+            audio_en_pga(false);
+            vTaskDelay(pdTICKS_TO_MS(100));
+        }
+        
+        // increment counter if s-meter is low AND pga is turned off currently
+        if(cur_s_meter < 6 && !pga_en)
+            counter++;
+
+        // turn on PGA if counter expires
+        if(counter > 10) {
+            audio_en_pga(true);
+            counter = 0;
+            vTaskDelay(10);
+        }
+
+        last_s_meter = cur_s_meter;
     }
 }
 
@@ -458,22 +484,17 @@ audio_filt_t audio_get_filt() {
 // debug fuction just to see the phase shift toggling
 void audio_test(bool swap) {
 #ifdef AUDIO_PATH_IQ
-
     Serial.println(swap);
 
     if(swap) {
         hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
         // input_l_vol.setVolume(1.0);
         // input_r_vol.setVolume(0);
-        // side_l_r_mix.setWeight(MIXER_IDX_RIGHT, 1.0);
-        // side_l_r_mix.setWeight(MIXER_IDX_LEFT, 1.0);
     }
     else  {
         hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg_negated));
         // input_l_vol.setVolume(0);
         // input_r_vol.setVolume(1.0);
-        // side_l_r_mix.setWeight(MIXER_IDX_RIGHT, 1.0);
-        // side_l_r_mix.setWeight(MIXER_IDX_LEFT, -1.0);
     }
 
     /*
@@ -486,6 +507,20 @@ void audio_test(bool swap) {
         hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
     }
     */
+#else
+    if(swap)
+        audio_en_pga(true);
+    else
+        audio_en_pga(false);
+    
+    // time for PGA flag to get addressed
+    vTaskDelay(pdMS_TO_TICKS(100));
+
+    Serial.print("\nen: ");
+    Serial.print(swap);
+
+    Serial.print("\tRX sample: ");
+    Serial.println(audio_get_rx_db(50, 1));
 #endif
 }
 
@@ -505,7 +540,6 @@ void audio_en_sidetone(bool tone) {
     }
     else {
         side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, 0);
-        // side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, 0.1);    // for testing only
     }
 
 }
@@ -571,30 +605,29 @@ float audio_get_rx_db(uint16_t num_to_avg, uint16_t delay_ms) {
     if(sidetone_en)
         return -1001;
     else {
-        float volume_dB = 0;
+        float rx_dB = 0;
         for(uint16_t i = 0; i < num_to_avg; i++) {
-            // volume_dB += audio_filt_meas.volumeDB();
-            volume_dB += out_vol_meas.volumeDB();
+            rx_dB += audio_filt_meas.volumeDB();
 
             // only delay between samples if we are averaging
-            if(num_to_avg > 0)
+            if(num_to_avg > 1)
                 vTaskDelay(pdMS_TO_TICKS(delay_ms));
         }
-        volume_dB /= num_to_avg;
-
-        // correct for volume
-        volume_dB += 20 * log10(1 / global_vol);
+        rx_dB /= num_to_avg;
 
         // correct for PGA
         if(pga_en)
-            volume_dB -= PGA_GAIN;
+            rx_dB -= PGA_GAIN;
 
-        return volume_dB;
+        return rx_dB;
     }
 }
 
-// TODO: report this in terms of S-units
-float audio_get_s_meter() {
+float audio_get_rx_vol() {
+    return audio_filt_meas.volumePercent();
+}
+
+float audio_get_loudness() {
     return last_volume_dB;
 }
 

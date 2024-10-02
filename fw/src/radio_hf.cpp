@@ -43,7 +43,7 @@ uint64_t freq_vfo = 0;
 uint64_t freq_bfo = 0;
 
 // variable to track what value of audio_get_rx_db() corresponds to S0
-float audio_level_s0 = -60;
+float audio_level_s9 = -41;
 
 void radio_si5351_init();
 void radio_calc_clocks();
@@ -731,13 +731,15 @@ void radio_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_
 }
 
 float radio_get_s_meter() {
-  float audio_level = audio_get_s_meter();
-  Serial.print("Audio was: ");
-  Serial.println(audio_level);
-
-  float s_units_above = (audio_level - audio_level_s0) * DB_PER_S_UNIT;
-
-  return s_units_above;
+  float audio_level = audio_get_loudness();
+  float s_unit_delta = (audio_level_s9 - audio_level) * S_UNIT_PER_DB;
+  // Serial.print("audio: ");
+  // Serial.print(audio_level);
+  // Serial.print("\tdelta: ");
+  // Serial.print(s_unit_delta);
+  // Serial.print("\tsnapshot: ");
+  // Serial.println(audio_get_rx_vol());
+  return 9.0 - s_unit_delta;
 }
 
 void radio_enable_tx(bool en) {
