@@ -1,6 +1,6 @@
 #include "globals.h"
 #include "power.h"
-#include "radio_hf.h"
+#include "radio.h"
 #include "io.h"
 
 #include <Arduino.h>
@@ -9,7 +9,7 @@
 
 #define POWER_BUCK_FSW      510e3
 // TODO: move this into JSON preferences
-#define VBAT_CELL_LOW       2.9
+#define VBAT_CELL_LOW       2.6
 #define VBAT_NUM_CELL       3
 #define VDIODE              0.6
 #define VUSB                5.5

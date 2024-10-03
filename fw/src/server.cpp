@@ -1,7 +1,7 @@
 #include "server.h"
 #include "handlers.h"
 #include "globals.h"
-#include "radio_hf.h"   // won't be needed after ESP-NOW handler moved into handlers.h
+#include "radio.h"   // won't be needed after ESP-NOW handler moved into handlers.h
 #include "file_system.h"
 
 #include <Arduino.h>

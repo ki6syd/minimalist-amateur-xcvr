@@ -2,7 +2,7 @@
 #include "digi_modes.h"
 #include "keyer.h"
 #include "ft8.h"
-#include "radio_hf.h"
+#include "radio.h"
 
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>

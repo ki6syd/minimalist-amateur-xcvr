@@ -8,9 +8,6 @@
 #include <ESPmDNS.h>
 #include <esp_now.h>
 
-// #include <WiFiClient.h>
-// #include <ESP8266HTTPClient.h>
-
 // #define WIFI_SCAN
 
 IPAddress ip;
@@ -63,7 +60,8 @@ void wifi_init() {
     // lower power to prevent audio noise (TODO: test if this is present in latest hardware)
     // maximum power is WIFI_POWER_19_5dBm
     // higher power level helps with TCP audio streaming, lower power makes less audible noise
-    WiFi.setTxPower(WIFI_POWER_13dBm);
+    // WiFi.setTxPower(WIFI_POWER_13dBm);
+    WiFi.setTxPower(WIFI_POWER_17dBm);
 
 #ifdef WIFI_SCAN
     wifi_scan();

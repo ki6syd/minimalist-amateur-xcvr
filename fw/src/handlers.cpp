@@ -1,6 +1,6 @@
 #include "handlers.h"
 #include "globals.h"
-#include "radio_hf.h"
+#include "radio.h"
 #include "audio.h"
 #include "keyer.h"
 #include "power.h"

@@ -8,8 +8,7 @@
 #include "server.h"
 #include "file_system.h"
 #include "audio.h"
-#include "radio_hf.h"
-#include "radio_vhf.h"
+#include "radio.h"
 #include "digi_modes.h"
 #include "time_keeping.h"
 
@@ -33,8 +32,7 @@ void setup() {
   audio_set_sidetone_volume(AUDIO_SIDE_DEFAULT);
   audio_set_volume(AUDIO_VOL_DEFAULT);
 
-  radio_hf_init();
-  radio_vhf_init();
+  radio_init();
 
   time_init();
   digi_mode_init();

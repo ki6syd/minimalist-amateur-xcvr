@@ -1,6 +1,6 @@
 #include "globals.h"
 #include "keyer.h"
-#include "radio_hf.h"
+#include "radio.h"
 #include "io.h"
 
 #include <Arduino.h>
