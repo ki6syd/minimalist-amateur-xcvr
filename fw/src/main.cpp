@@ -83,6 +83,9 @@ void info_task(void *param) {
     Serial.print("S-meter: ");
     Serial.println(radio_get_s_meter());
 
+    Serial.print("Audio dB: ");
+    Serial.println(audio_get_loudness());
+
     Serial.println(radio_freq_string());
 
     Serial.print("IP Address: ");

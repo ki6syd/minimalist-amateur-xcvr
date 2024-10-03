@@ -735,8 +735,8 @@ void radio_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_
 float radio_get_s_meter() {
   float audio_level = audio_get_loudness();
   float s_unit_delta = (audio_level_sREF - audio_level) * S_UNIT_PER_DB;
-  Serial.print("audio: ");
-  Serial.print(audio_level);
+  // Serial.print("audio: ");
+  // Serial.print(audio_level);
   // Serial.print("\tdelta: ");
   // Serial.print(s_unit_delta);
   // Serial.print("\tsnapshot: ");

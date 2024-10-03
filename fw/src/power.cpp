@@ -45,6 +45,8 @@ void analog_sense_task(void *param) {
   while(true) {
     input_volt = (float) analogRead(ADC_VDD) * ADC_MAX_VOLT / ADC_VDD_SCALE / ADC_FS_COUNTS;
 
+    // TODO: mute when power goes down, to avoid pop
+
     // figure out whether we're on USB power? Don't run this logic if voltage is very low
     if(input_volt + VDIODE > VUSB) {
       // increment counter if input voltage (corrected for diode drop) is too low
