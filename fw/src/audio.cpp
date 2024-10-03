@@ -1,7 +1,7 @@
 #include "globals.h"
 #include "audio.h"
-#include "fir_coeffs_bpf.h"
-#include "fir_coeffs_hilbert.h"
+#include "fir_coeffs_bpf_8kHz.h"
+#include "fir_coeffs_hilbert_8kHz.h"
 #include "file_system.h"
 
 #include <Arduino.h>

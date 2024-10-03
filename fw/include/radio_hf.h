@@ -7,7 +7,7 @@
 #include <freertos/queue.h>
 
 // comment out to prevent accidental TX
-// #define RADIO_ALLOW_TX
+#define RADIO_ALLOW_TX
 
 
 typedef enum {
