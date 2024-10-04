@@ -5,57 +5,73 @@
 #include <Arduino.h>
 #include <HardwareSerial.h>
 
-
 HardwareSerial VHFserial(1);
 bool configured = false;
 
-String radio_vhf_command(String command);
-void radio_vhf_complete_config(bool pass);
-bool radio_vhf_handshake();
-bool radio_vhf_set_volume(uint16_t volume);
-bool radio_vhf_response_success(String response);
+String vhf_command(String command);
+void vhf_complete_config(bool pass);
+bool vhf_response_success(String response);
 
-void radio_vhf_init() {
+void vhf_init() {
     pinMode(VHF_EN, OUTPUT);
     pinMode(VHF_PTT, OUTPUT);
 
     digitalWrite(VHF_PTT, HIGH);  // RX mode, then delay before enabling - don't want to accidentally transmit
     vTaskDelay(pdMS_TO_TICKS(10));
-    digitalWrite(VHF_EN, HIGH);   // enabled
+    
     
     VHFserial.begin(VHF_SERIAL_SPEED, SERIAL_8N1, VHF_TX_ESP_RX, VHF_RX_ESP_TX);
-
-    // TODO: understand why this delay is needed, what the min value is, whether we can configure in parallel with other things, etc
-    vTaskDelay(pdMS_TO_TICKS(2000));
-
     // set VHFserial timeout (milliseconds)
     VHFserial.setTimeout(100);
+    vTaskDelay(pdMS_TO_TICKS(10));
 
-    // attempt to handshake
-    if(!radio_vhf_handshake()) {
-        radio_vhf_complete_config(false);
-        return;
+    for(uint16_t i = 0; i < 2; i++) {   
+        digitalWrite(VHF_EN, HIGH);   // enabled     
+        // TODO: understand why this delay is needed, what the min value is, whether we can configure in parallel with other things, etc
+        vTaskDelay(pdMS_TO_TICKS(500));
+
+        // attempt to handshake
+        if(!vhf_handshake()) {
+            vhf_complete_config(false);
+            return;
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+
+        // attempt to set frequency
+        if(!vhf_set_freq(146580000)) {
+            vhf_complete_config(false);
+            return;
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+
+        // attempt to set volume
+        // TODO: parametrize, get rid of magic number
+        if(!vhf_set_volume(8)) {
+            vhf_complete_config(false);
+            return;
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        Serial.println("PTT");
+        digitalWrite(VHF_PTT, LOW);
+        digitalWrite(LED_RED, HIGH);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        digitalWrite(VHF_PTT, HIGH);
+
+        vTaskDelay(pdMS_TO_TICKS(100));
+        vhf_get_s_meter();
+
+        // disable VHF now that config is complete
+        digitalWrite(VHF_EN, LOW);
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 
-    // attempt to set frequency
-    if(!radio_vhf_set_freq(146580000)) {
-        radio_vhf_complete_config(false);
-        return;
-    }
 
-    // attempt to set volume
-    if(!radio_vhf_set_volume(8)) {
-        radio_vhf_complete_config(false);
-        return;
-    }
-
-    
-    // disable VHF now that config is complete
-    digitalWrite(VHF_EN, LOW);
     configured = true;
 }
 
-void radio_vhf_complete_config(bool pass) {
+void vhf_complete_config(bool pass) {
     if(pass)
         return;
     
@@ -65,14 +81,13 @@ void radio_vhf_complete_config(bool pass) {
 }
 
 
-String radio_vhf_command(String command) {
+String vhf_command(String command) {
     // send serial commands
     Serial.print("VHF Sending: ");
     Serial.println(command);
     VHFserial.print(command + "\r\n");   
 
     vTaskDelay(100 / portTICK_PERIOD_MS); 
-
 
     Serial.print("VHF Response: ");
     String response = "";
@@ -85,7 +100,7 @@ String radio_vhf_command(String command) {
     return response;
 }
 
-bool radio_vhf_response_success(String response) {
+bool vhf_response_success(String response) {
     int16_t idx = response.indexOf(":");
 
     if(idx != -1 && idx + 1 < response.length()) {
@@ -96,24 +111,38 @@ bool radio_vhf_response_success(String response) {
     return false;
 }
 
-bool radio_vhf_handshake() {
-    String response = radio_vhf_command("AT+DMOCONNECT");
-    return radio_vhf_response_success(response);
+bool vhf_handshake() {
+    for(uint16_t i = 0; i < 5; i++) {
+        String response = vhf_command("AT+DMOCONNECT");
+        if(vhf_response_success(response))
+            return true;
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+        
+    return false;
 }
 
-bool radio_vhf_set_freq(uint64_t new_freq) {
+bool vhf_set_freq(uint64_t new_freq) {
     // construct the message. Example: "AT+DMOSETGROUP=0,146.5800,146.5800,0000,1,0000"
     String formatted_freq = String(((float) new_freq) / 1000000, 4);
     String prefix = "AT+DMOSETGROUP=0,";    // 12.5kHz wide
     String suffix = ",0000,1,0000";         // no CTCSS on TX or RX. Squelch level 1
     String to_send = prefix + formatted_freq + "," + formatted_freq + suffix;   // assume TX and RX on the same frequency
 
-    String response = radio_vhf_command(to_send);
+    String response = vhf_command(to_send);
 
-    return radio_vhf_response_success(response);
+    return vhf_response_success(response);
 }
 
-bool radio_vhf_set_volume(uint16_t volume) {
+float vhf_get_s_meter() {
+    String to_send = "RSSI?";
+    
+    String response = vhf_command(to_send);
+
+    return 0.0;
+}
+
+bool vhf_set_volume(uint16_t volume) {
     // check bounds on volume request
     // TODO: parametrize this better
     if(volume < 0 || volume > 8)
@@ -123,7 +152,7 @@ bool radio_vhf_set_volume(uint16_t volume) {
     String prefix = "AT+DMOSETVOLUME=";
     String to_send = prefix + formatted_volume;
 
-    String response = radio_vhf_command(to_send);
+    String response = vhf_command(to_send);
 
-    return radio_vhf_response_success(response);
+    return vhf_response_success(response);
 }

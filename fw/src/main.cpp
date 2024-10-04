@@ -86,6 +86,9 @@ void info_task(void *param) {
 
     Serial.println(radio_freq_string());
 
+    Serial.print("Current band: ");
+    Serial.println(radio_band_to_string(radio_get_band(radio_get_dial_freq())));
+
     Serial.print("IP Address: ");
     Serial.println(wifi_get_ip());
 

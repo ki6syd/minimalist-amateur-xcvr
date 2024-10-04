@@ -3,6 +3,7 @@
 #include "radio_hf.h"
 #include "radio_vhf.h"
 #include "audio.h"
+#include "io.h"
 #include "file_system.h"
 
 #include <Arduino.h>
@@ -20,13 +21,13 @@
 
 radio_audio_bw_t bw = BW_CW;
 radio_rxtx_mode_t rxtx_mode = MODE_STARTUP;
-radio_band_t band = BAND_HF_2;
+radio_band_t band = BAND_UNKNOWN;
 radio_filt_sweep_t sweep_config;
 radio_band_capability_t band_capability[NUMBER_BANDS];
 radio_filt_properties_t if_properties, bpf_properties;
 
 QueueHandle_t xRadioQueue;
-TaskHandle_t xHFTaskHandle;
+TaskHandle_t xRadioTaskHandle;
 TimerHandle_t xQskTimer = NULL;
 
 bool ok_to_tx = false;
@@ -35,15 +36,14 @@ uint64_t freq_dial = 14040000;
 
 void radio_task(void * pvParameter);
 void qsk_timer_callback(TimerHandle_t timer);
-
-
+bool radio_band_is_hf(uint64_t freq_dial);
 
 void radio_init() {
   // find out what bands are enabled by looking at hardware file
   fs_load_bands(HARDWARE_FILE, band_capability);
 
   hf_init();
-//   vhf_init();
+  vhf_init();
 
 #ifdef RADIO_ALLOW_TX
   ok_to_tx = true;
@@ -59,7 +59,7 @@ void radio_init() {
     16384,
     NULL,
     TASK_PRIORITY_RADIO, // priority
-    &xHFTaskHandle,
+    &xRadioTaskHandle,
     TASK_CORE_RADIO // core
   );
 
@@ -91,21 +91,37 @@ void radio_task(void *param) {
         // initiate mode change
         radio_set_rxtx_mode(MODE_QSK_COUNTDOWN);
 
-        // turn off sidetone, LED, TX power amp rail
-        audio_en_sidetone(false);
+        // turn off sidetone, LED, TX power amp rail, VHF tx_en, etc
+        if(radio_band_is_hf(freq_dial)) {
+            audio_en_sidetone(false);
+            digitalWrite(PA_VDD_CTRL, LOW);
+        }
+        else {
+            digitalWrite(VHF_PTT, HIGH);
+            digitalWrite(LED_DBG_0, LOW);
+        }
+        
         digitalWrite(LED_RED, LOW);
-        digitalWrite(PA_VDD_CTRL, LOW);
       }
       if(notifiedValue & NOTIFY_KEY_ON) {
         // initiate mode change
         radio_set_rxtx_mode(MODE_TX);
 
-        // turn off sidetone, LED, TX power amp rail
-        audio_en_sidetone(true);
+        // turn off sidetone, LED, TX power amp rail, VHF tx_en, etc
         digitalWrite(LED_RED, HIGH);
-        // turn on power amp rail if flag allows
-        if(ok_to_tx)
-          digitalWrite(PA_VDD_CTRL, HIGH);
+        if(radio_band_is_hf(freq_dial)) {
+            audio_en_sidetone(true);
+            if(ok_to_tx)
+                digitalWrite(PA_VDD_CTRL, HIGH);
+        }
+        else {
+            if(ok_to_tx) {
+                digitalWrite(VHF_PTT, LOW);
+                digitalWrite(LED_DBG_0, HIGH);
+
+                vTaskDelay(pdMS_TO_TICKS(1000));
+            }
+        }
       }
       if(notifiedValue & NOTIFY_QSK_EXPIRE) {
         radio_set_rxtx_mode(MODE_RX);
@@ -113,23 +129,79 @@ void radio_task(void *param) {
       if(notifiedValue & NOTIFY_FREQ_CHANGE) {
         // wait for zero ticks, don't want to block here
         if(xQueueReceive(xRadioQueue, (void *) &tmp, 0) == pdTRUE) {
-          Serial.print("Queue message: ");
-          Serial.println(tmp.dial_freq);
+            Serial.print("Queue message: ");
+            Serial.println(tmp.dial_freq);
 
-          // TODO: block the frequncy change if it's a different band, and we are already transmitting
+            // double check that frequency is valid.
+            if(!radio_freq_valid(tmp.dial_freq))
+                continue;
 
-          freq_dial = tmp.dial_freq;
-          hf_set_dial_freq(freq_dial);
-          
-          // figure out which band we should be on
-          radio_band_t new_band = radio_get_band(freq_dial);
-          
-          // force a relay update if needed
-          if(new_band != band)
-            radio_set_band(new_band);
+            // reject frequency changes while transmitting if they force a band change
+            radio_band_t new_band = radio_get_band(tmp.dial_freq);
+            if(new_band != band && rxtx_mode == MODE_TX) {
+                Serial.println("***Couldn't change freq while TX");
+                // TODO: put the frequency change request back in the queue?
+                continue;
+            }
 
-          // TODO: unpack any bandwidth changes from tmp.bw
-          // hf_set_clocks() needs to know the audio filter to account for sidetone offset?
+            // different logic depending on HF or VHF requested frequency
+            if(radio_band_is_hf(tmp.dial_freq)) {
+                // TODO: block the frequncy change if it's a different band, and we are already transmitting
+                freq_dial = tmp.dial_freq;
+                hf_set_dial_freq(freq_dial);
+                
+                // force a relay update if needed
+                if(new_band != band)
+                    radio_set_band(new_band);
+
+                // TODO: unpack any bandwidth changes from tmp.bw
+                // hf_set_clocks() needs to know the audio filter to account for sidetone offset?
+            }
+            else {
+              // update relays, enable module (if needed)
+                if(band != BAND_VHF)
+                    radio_set_band(BAND_VHF);
+
+                freq_dial = tmp.dial_freq;
+
+                io_set_blink_mode(BLINK_STARTUP);
+
+                /*
+                // shouldn't be needed...
+                digitalWrite(VHF_EN, HIGH);
+                vTaskDelay(pdMS_TO_TICKS(3000));
+                vhf_handshake();
+                vhf_set_freq(freq_dial);
+                vhf_set_volume(8);
+                */
+
+               // TODO: is hardware serial timing bad, or level was weird?
+               // toggle high->low->high to get predictable poweron timing
+               digitalWrite(VHF_EN, HIGH);
+               vTaskDelay(pdMS_TO_TICKS(500));
+               digitalWrite(VHF_EN, LOW);
+               vTaskDelay(pdMS_TO_TICKS(500));
+               digitalWrite(VHF_EN, HIGH);
+               vTaskDelay(pdMS_TO_TICKS(3000));
+               need to wrap handshake in a loop for retries, with enabling a handful of times
+                vhf_handshake();
+                vhf_set_freq(146580000);
+                vhf_set_volume(8);
+                vhf_get_s_meter();
+                Serial.println("PTT");
+                digitalWrite(VHF_PTT, LOW);
+                digitalWrite(LED_RED, HIGH);
+                vTaskDelay(pdMS_TO_TICKS(1000));
+                digitalWrite(VHF_PTT, HIGH);
+
+                vTaskDelay(pdMS_TO_TICKS(100));
+                vhf_get_s_meter();
+                
+                // disable VHF now that config is complete
+                digitalWrite(VHF_EN, LOW);
+
+                io_set_blink_mode(BLINK_NORMAL);
+            }
         }
       }
       if(notifiedValue & NOTIFY_CAL_XTAL) {
@@ -150,18 +222,16 @@ void radio_task(void *param) {
 }
 
 // when the QSK timer expires, transition into RX mode
-// TODO: test this
 void qsk_timer_callback(TimerHandle_t timer) {
-  xTaskNotify(xHFTaskHandle, NOTIFY_QSK_EXPIRE, eSetBits);
+  xTaskNotify(xRadioTaskHandle, NOTIFY_QSK_EXPIRE, eSetBits);
 }
 
-
 void radio_key_on() {
-  xTaskNotify(xHFTaskHandle, NOTIFY_KEY_ON, eSetBits);
+  xTaskNotify(xRadioTaskHandle, NOTIFY_KEY_ON, eSetBits);
 }
 
 void radio_key_off() {
-  xTaskNotify(xHFTaskHandle, NOTIFY_KEY_OFF, eSetBits);
+  xTaskNotify(xRadioTaskHandle, NOTIFY_KEY_OFF, eSetBits);
 }
 
 // helper function to REQUEST a frequency change
@@ -176,7 +246,7 @@ bool radio_set_dial_freq(uint64_t freq) {
     return false;
   }
 
-  xTaskNotify(xHFTaskHandle, NOTIFY_FREQ_CHANGE, eSetBits);
+  xTaskNotify(xRadioTaskHandle, NOTIFY_FREQ_CHANGE, eSetBits);
 
   return true;
 }
@@ -199,70 +269,87 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
   if(rxtx_mode == MODE_TX && new_mode == MODE_RX)
     new_mode = MODE_QSK_COUNTDOWN;
 
+    // TODO: make a call to audio_configure_codec() to select AUDIO_xHF_xxx
+
   switch(new_mode) {
     case MODE_RX:
-      // stop QSK counter, in case it was still running
-      xTimerStop(xQskTimer, 0);
+        // stop QSK counter, in case it was still running
+        xTimerStop(xQskTimer, 0);
 
-      // update mode so the next function calls assume TX
-      rxtx_mode = MODE_RX;
+        // update mode so the next function calls assume TX
+        rxtx_mode = MODE_RX;
 
-      // set up clocks
-      si5351.output_enable(SI5351_IDX_BFO, 1);
-      si5351.output_enable(SI5351_IDX_VFO, 1);
-      si5351.output_enable(SI5351_IDX_TX, 0);
+        if(radio_band_is_hf(freq_dial)) {
+            // set up clocks
+            // TODO: don't expose si5351 directly to this module
+            si5351.output_enable(SI5351_IDX_BFO, 1);
+            si5351.output_enable(SI5351_IDX_VFO, 1);
+            si5351.output_enable(SI5351_IDX_TX, 0);
 
-      // change over relays if needed. Add some settling time
-      // TODO: rework the radio_set_band(band) fundtion so it is "radio_set_relays(freq)" and looks up band from dial freq
-      radio_set_band(band);
+            // enable RX audio
+            audio_en_rx_audio(true);
+            audio_en_sidetone(false);
+        }
+        else {
+            // TODO: turn off si5351 clocks for VHF mode
+            // no action needed for VHF module?
+        }
+        // change over relays if needed. Add some settling time
+        // TODO: rework the radio_set_band(band) function so it is "radio_set_relays(freq)" and looks up band from dial freq
+        radio_set_band(band);
 
-      // enable RX audio
-      audio_en_rx_audio(true);
-      audio_en_sidetone(false);
-
-      break;
+        break;
     case MODE_QSK_COUNTDOWN:
-      // restart QSK counter upon entry to QSK_COUNTDOWN mode
-      if(xTimerReset(xQskTimer, 0) != pdPASS) {
-        Serial.println("**** failed to restart qsk timer");
-      }
-      // update mode 
-      rxtx_mode = MODE_QSK_COUNTDOWN;
+        // restart QSK counter upon entry to QSK_COUNTDOWN mode
+        if(xTimerReset(xQskTimer, 0) != pdPASS) {
+            Serial.println("**** failed to restart qsk timer");
+        }
+        // update mode 
+        rxtx_mode = MODE_QSK_COUNTDOWN;
 
-      // turn off RX audio
-      // TX power amp rail, sidetone, and TX LED are handled elsewhere
-      audio_en_rx_audio(false);
+        if(radio_band_is_hf(freq_dial)) {
+            // turn off RX audio
+            // TX power amp rail, sidetone, and TX LED are handled elsewhere
+            audio_en_rx_audio(false);
 
-      // no need to update clocks, was just in TX
-      // no need to update relays when mode changes to QSK, was just in TX
+            // no need to update clocks, was just in TX
+            // no need to update relays when mode changes to QSK, was just in TX
 
-      // delay so VDD can discharge
-      // implemented on entry to QSK_COUNTDOWN to guarantee that we can't immediately transition to RX 
-      vTaskDelay(pdMS_TO_TICKS(5));
+            // delay so VDD can discharge
+            // implemented on entry to QSK_COUNTDOWN to guarantee that we can't immediately transition to RX 
+            vTaskDelay(pdMS_TO_TICKS(5));
+        }
+        else {
+            // no action needed for VHF, QSK_COUNTDOWN timer could be zero.
+        }
 
-      break;
-
+        break;
     case MODE_TX:
-      // stop QSK counter
-      xTimerStop(xQskTimer, 0);
+        // stop QSK counter
+        xTimerStop(xQskTimer, 0);
 
-      // update mode so the next function calls assume TX
-      rxtx_mode = MODE_TX;
+        // update mode so the next function calls assume TX
+        rxtx_mode = MODE_TX;
 
-      // turn off RX audio
-      // TX power amp rail, sidetone, and TX LED are handled elsewhere
-      audio_en_rx_audio(false);
+        if(radio_band_is_hf(freq_dial)) {
+            // turn off RX audio
+            // TX power amp rail, sidetone, and TX LED are handled elsewhere
+            audio_en_rx_audio(false);
 
-      // change over relays if needed. Add some settling time
-      // TODO: rework the radio_set_band(band) fundtion so it is "radio_set_relays(freq)" and looks up band from dial freq
-      radio_set_band(band);
+            // set up clocks. TX clock always running in TX mode
+            si5351.output_enable(SI5351_IDX_BFO, 0);
+            si5351.output_enable(SI5351_IDX_VFO, 0);
+            si5351.output_enable(SI5351_IDX_TX, 1);
+        }
+        else {
+          // TODO: turn off si5351 clocks for VHF mode
+        }
 
-      // set up clocks. TX clock always running in TX mode
-      si5351.output_enable(SI5351_IDX_BFO, 0);
-      si5351.output_enable(SI5351_IDX_VFO, 0);
-      si5351.output_enable(SI5351_IDX_TX, 1);
+        // change over relays if needed. Add some settling time
+        // TODO: rework the radio_set_band(band) fundtion so it is "radio_set_relays(freq)" and looks up band from dial freq
+        radio_set_band(band);        
 
-      break;
+        break;
     case MODE_SELF_TEST:
       rxtx_mode = new_mode;
       return;
@@ -273,92 +360,118 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
 // mode change safety is handled by dial frequency updates
 // TODO: this is actually a relay setting function, break out into something that accepts a band and a mode
 void radio_set_band(radio_band_t new_band) {
-  if(rxtx_mode == MODE_RX || rxtx_mode == MODE_QSK_COUNTDOWN) {
-    digitalWrite(TX_RX_SEL, LOW);
-    switch(new_band) {
-      case BAND_HF_1:
-        digitalWrite(BPF_SEL_0, LOW);
-        digitalWrite(BPF_SEL_1, LOW);
-        break;
-      case BAND_HF_2:
-        digitalWrite(BPF_SEL_0, HIGH);
-        digitalWrite(BPF_SEL_1, LOW);
-        break;
-      case BAND_HF_3:
-        digitalWrite(BPF_SEL_0, LOW);
-        digitalWrite(BPF_SEL_1, HIGH);
-        break;
-      default:
-        Serial.print("Invalid band request: ");
-        Serial.println(new_band);
-        return;
-    }
-    digitalWrite(LPF_SEL_0, LOW);
-    digitalWrite(LPF_SEL_1, LOW);
-  }
-  else if(rxtx_mode == MODE_TX) {
-    digitalWrite(TX_RX_SEL, HIGH);
-    switch(new_band) {
-      case BAND_HF_1:
-        digitalWrite(LPF_SEL_0, LOW);
-        digitalWrite(LPF_SEL_1, HIGH);
-        break;
-      case BAND_HF_2:
-        digitalWrite(LPF_SEL_0, HIGH);
-        digitalWrite(LPF_SEL_1, LOW);
-        break;
-      case BAND_HF_3:
-        digitalWrite(LPF_SEL_0, HIGH);
-        digitalWrite(LPF_SEL_1, HIGH);
-        break;
-      default:
-        Serial.print("Invalid band request: ");
-        Serial.println(new_band);
-        return;
-      digitalWrite(BPF_SEL_0, HIGH);
-      digitalWrite(BPF_SEL_1, HIGH);
-    }
-  }
-  else if(rxtx_mode == MODE_SELF_TEST) {
-    // turn this off, just to be safe in selftest mode
-    digitalWrite(PA_VDD_CTRL, LOW);
-    // want to engage both BPF and LPF pathways properly
-    digitalWrite(TX_RX_SEL, LOW);
-    switch(new_band) {
-      case BAND_HF_1:
-        digitalWrite(BPF_SEL_0, LOW);
-        digitalWrite(BPF_SEL_1, LOW);
-        digitalWrite(LPF_SEL_0, LOW);
-        digitalWrite(LPF_SEL_1, HIGH);
-        break;
-      case BAND_HF_2:
-        digitalWrite(BPF_SEL_0, HIGH);
-        digitalWrite(BPF_SEL_1, LOW);
-        digitalWrite(LPF_SEL_0, HIGH);
-        digitalWrite(LPF_SEL_1, LOW);
-        break;
-      case BAND_HF_3:
-        digitalWrite(BPF_SEL_0, LOW);
-        digitalWrite(BPF_SEL_1, HIGH);
-        digitalWrite(LPF_SEL_0, HIGH);
-        digitalWrite(LPF_SEL_1, HIGH);
-        break;
-      case BAND_SELFTEST_LOOPBACK:
-        digitalWrite(BPF_SEL_0, HIGH);
-        digitalWrite(BPF_SEL_1, HIGH);
+    if(rxtx_mode == MODE_RX || rxtx_mode == MODE_QSK_COUNTDOWN) {
+        digitalWrite(TX_RX_SEL, LOW);
+        switch(new_band) {
+            case BAND_HF_1:
+                digitalWrite(BPF_SEL_0, LOW);
+                digitalWrite(BPF_SEL_1, LOW);
+                digitalWrite(VHF_EN, LOW);
+                break;
+            case BAND_HF_2:
+                digitalWrite(BPF_SEL_0, HIGH);
+                digitalWrite(BPF_SEL_1, LOW);
+                digitalWrite(VHF_EN, LOW);
+                break;
+            case BAND_HF_3:
+                digitalWrite(BPF_SEL_0, LOW);
+                digitalWrite(BPF_SEL_1, HIGH);
+                digitalWrite(VHF_EN, LOW);
+                break;
+            case BAND_VHF:
+                digitalWrite(VHF_EN, HIGH);
+                digitalWrite(BPF_SEL_0, HIGH);
+                digitalWrite(BPF_SEL_1, HIGH);
+                break;
+            default:
+                Serial.print("Invalid band request: ");
+                Serial.println(new_band);
+                return;
+        }
         digitalWrite(LPF_SEL_0, LOW);
         digitalWrite(LPF_SEL_1, LOW);
-        break;
-      default:
-        Serial.print("Invalid band request: ");
-        Serial.println(new_band);
-        return;
     }
+    else if(rxtx_mode == MODE_TX) {
+        switch(new_band) {
+            case BAND_HF_1:
+                digitalWrite(LPF_SEL_0, LOW);
+                digitalWrite(LPF_SEL_1, HIGH);
+                digitalWrite(TX_RX_SEL, HIGH);
+                digitalWrite(VHF_EN, LOW);
+                break;
+            case BAND_HF_2:
+                digitalWrite(LPF_SEL_0, HIGH);
+                digitalWrite(LPF_SEL_1, LOW);
+                digitalWrite(TX_RX_SEL, HIGH);
+                digitalWrite(VHF_EN, LOW);
+                break;
+            case BAND_HF_3:
+                digitalWrite(LPF_SEL_0, HIGH);
+                digitalWrite(LPF_SEL_1, HIGH);
+                digitalWrite(TX_RX_SEL, HIGH);
+                digitalWrite(VHF_EN, LOW);
+                break;
+            case BAND_VHF:
+                digitalWrite(VHF_EN, HIGH);
+                digitalWrite(LPF_SEL_0, LOW);
+                digitalWrite(LPF_SEL_1, LOW);
+                break;
+            default:
+                Serial.print("Invalid band request: ");
+                Serial.println(new_band);
+                return;
+            digitalWrite(BPF_SEL_0, HIGH);
+            digitalWrite(BPF_SEL_1, HIGH);
+        }
+    }
+    else if(rxtx_mode == MODE_SELF_TEST) {
+        // turn this off, just to be safe in selftest mode
+        digitalWrite(PA_VDD_CTRL, LOW);
+        digitalWrite(TX_RX_SEL, LOW);
+        digitalWrite(VHF_EN, LOW);
+        switch(new_band) {
+            case BAND_HF_1:
+              digitalWrite(BPF_SEL_0, LOW);
+              digitalWrite(BPF_SEL_1, LOW);
+              digitalWrite(LPF_SEL_0, LOW);
+              digitalWrite(LPF_SEL_1, HIGH);
+              break;
+            case BAND_HF_2:
+              digitalWrite(BPF_SEL_0, HIGH);
+              digitalWrite(BPF_SEL_1, LOW);
+              digitalWrite(LPF_SEL_0, HIGH);
+              digitalWrite(LPF_SEL_1, LOW);
+              break;
+            case BAND_HF_3:
+              digitalWrite(BPF_SEL_0, LOW);
+              digitalWrite(BPF_SEL_1, HIGH);
+              digitalWrite(LPF_SEL_0, HIGH);
+              digitalWrite(LPF_SEL_1, HIGH);
+              break;
+            case BAND_SELFTEST_LOOPBACK:
+              digitalWrite(BPF_SEL_0, HIGH);
+              digitalWrite(BPF_SEL_1, HIGH);
+              digitalWrite(LPF_SEL_0, LOW);
+              digitalWrite(LPF_SEL_1, LOW);
+              break;
+            default:
+              Serial.print("Invalid band request: ");
+              Serial.println(new_band);
+            return;
+        }
+    }
+
+  if(radio_band_is_hf(new_band)) {
+    // add a delay for relay settling on HF band changes
+    // TODO: parametrize this
+    vTaskDelay(pdMS_TO_TICKS(5));
   }
 
-  // add a delay for relay settling
-  // TODO: parametrize this
-  vTaskDelay(pdMS_TO_TICKS(2));
+  // add a delay for VHF module to wake up
+  // TODO: figure out what's an appropriate delay
+  if(new_band == BAND_VHF && band != BAND_VHF) {
+    vTaskDelay(pdMS_TO_TICKS(250));
+  }
 
   // update band
   band = new_band;
@@ -500,11 +613,19 @@ void radio_sweep_analyze(radio_filt_sweep_t sweep, float *data, radio_filt_prope
   Serial.println(meas_upper);
 }
 
-
-
+// TODO: add a flag for enabling TX, this can only disable (until next boot)
 void radio_enable_tx(bool en) {
   if(!en && ok_to_tx)
-    xTaskNotify(xHFTaskHandle, NOTIFY_LOW_BAT, eSetBits);
+    xTaskNotify(xRadioTaskHandle, NOTIFY_LOW_BAT, eSetBits);
+}
+
+bool radio_band_is_hf(uint64_t dial_freq) {
+    radio_band_t checking = radio_get_band(dial_freq);
+
+    if(checking == BAND_VHF)
+        return false;
+    else
+        return true;
 }
 
 void radio_debug(debug_action_t action, void *value) {
@@ -518,7 +639,7 @@ void radio_debug(debug_action_t action, void *value) {
       break;
     }
     case DEBUG_CMD_CAL_XTAL: {
-      xTaskNotify(xHFTaskHandle, NOTIFY_CAL_XTAL, eSetBits);
+      xTaskNotify(xRadioTaskHandle, NOTIFY_CAL_XTAL, eSetBits);
       break;
     }
     case DEBUG_CMD_CAL_IF: {
@@ -529,8 +650,7 @@ void radio_debug(debug_action_t action, void *value) {
         .num_to_avg = 10,
         .rolloff = 3
         };
-
-      xTaskNotify(xHFTaskHandle, NOTIFY_CAL_IF, eSetBits);
+      xTaskNotify(xRadioTaskHandle, NOTIFY_CAL_IF, eSetBits);
       break;
     }
     case DEBUG_CMD_CAL_BPF: {
@@ -541,8 +661,7 @@ void radio_debug(debug_action_t action, void *value) {
         .num_to_avg = 5,
         .rolloff = 3
         };
-
-      xTaskNotify(xHFTaskHandle, NOTIFY_CAL_BPF, eSetBits);
+      xTaskNotify(xRadioTaskHandle, NOTIFY_CAL_BPF, eSetBits);
       break;
     }
     case DEBUG_STOP_CLOCKS: {

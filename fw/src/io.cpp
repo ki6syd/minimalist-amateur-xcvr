@@ -135,6 +135,7 @@ void io_init() {
   Serial.println(ESP.getFreePsram());
 
 
+/*
   // run on core 0
   xTaskCreatePinnedToCore(
       spare_task_core_0,
@@ -156,7 +157,7 @@ void io_init() {
       &xSpareTaskHandle1,
       1 // core
   );
-
+*/
 
   
   xTaskCreatePinnedToCore(

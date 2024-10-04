@@ -87,7 +87,7 @@ void hf_set_dial_freq(uint64_t freq_dial) {
 void hf_calc_clocks() {
   uint64_t freq_dial = radio_get_dial_freq();
   if(freq_dial < 10000000) {
-    freq_vfo = freq_dial - freq_if_lower;
+    freq_vfo = freq_if_lower - freq_dial;
     freq_bfo = freq_if_lower - ((uint64_t) audio_get_sidetone_freq());
   }
   else {
