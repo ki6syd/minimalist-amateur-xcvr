@@ -166,39 +166,27 @@ void radio_task(void *param) {
 
                 io_set_blink_mode(BLINK_STARTUP);
 
-                /*
-                // shouldn't be needed...
-                digitalWrite(VHF_EN, HIGH);
-                vTaskDelay(pdMS_TO_TICKS(3000));
-                vhf_handshake();
-                vhf_set_freq(freq_dial);
-                vhf_set_volume(8);
-                */
+                if(vhf_handshake()) {
+                  vhf_set_freq(146580000);
+                  vTaskDelay(pdMS_TO_TICKS(1000));
+                  Serial.println("PTT");
+                  digitalWrite(VHF_PTT, LOW);
+                  vTaskDelay(pdMS_TO_TICKS(1000));
+                  digitalWrite(VHF_PTT, HIGH);
+                  vTaskDelay(pdMS_TO_TICKS(1000));
+                  digitalWrite(VHF_PTT, LOW);
+                  vTaskDelay(pdMS_TO_TICKS(50));
+                  digitalWrite(VHF_PTT, HIGH);
+                  vTaskDelay(pdMS_TO_TICKS(50));
+                }
+                else {
+                  digitalWrite(LED_RED, HIGH);
+                  vTaskDelay(pdMS_TO_TICKS(500));
+                  digitalWrite(LED_RED, LOW);
+                  vTaskDelay(pdMS_TO_TICKS(500));
+                }
 
-               // TODO: is hardware serial timing bad, or level was weird?
-               // toggle high->low->high to get predictable poweron timing
-               digitalWrite(VHF_EN, HIGH);
-               vTaskDelay(pdMS_TO_TICKS(500));
-               digitalWrite(VHF_EN, LOW);
-               vTaskDelay(pdMS_TO_TICKS(500));
-               digitalWrite(VHF_EN, HIGH);
-               vTaskDelay(pdMS_TO_TICKS(3000));
-               need to wrap handshake in a loop for retries, with enabling a handful of times
-                vhf_handshake();
-                vhf_set_freq(146580000);
-                vhf_set_volume(8);
-                vhf_get_s_meter();
-                Serial.println("PTT");
-                digitalWrite(VHF_PTT, LOW);
-                digitalWrite(LED_RED, HIGH);
-                vTaskDelay(pdMS_TO_TICKS(1000));
-                digitalWrite(VHF_PTT, HIGH);
-
-                vTaskDelay(pdMS_TO_TICKS(100));
-                vhf_get_s_meter();
-                
-                // disable VHF now that config is complete
-                digitalWrite(VHF_EN, LOW);
+                vhf_powerdown();
 
                 io_set_blink_mode(BLINK_NORMAL);
             }
@@ -366,20 +354,19 @@ void radio_set_band(radio_band_t new_band) {
             case BAND_HF_1:
                 digitalWrite(BPF_SEL_0, LOW);
                 digitalWrite(BPF_SEL_1, LOW);
-                digitalWrite(VHF_EN, LOW);
+                vhf_powerdown();
                 break;
             case BAND_HF_2:
                 digitalWrite(BPF_SEL_0, HIGH);
                 digitalWrite(BPF_SEL_1, LOW);
-                digitalWrite(VHF_EN, LOW);
+                vhf_powerdown();
                 break;
             case BAND_HF_3:
                 digitalWrite(BPF_SEL_0, LOW);
                 digitalWrite(BPF_SEL_1, HIGH);
-                digitalWrite(VHF_EN, LOW);
+                vhf_powerdown();
                 break;
             case BAND_VHF:
-                digitalWrite(VHF_EN, HIGH);
                 digitalWrite(BPF_SEL_0, HIGH);
                 digitalWrite(BPF_SEL_1, HIGH);
                 break;
@@ -397,22 +384,21 @@ void radio_set_band(radio_band_t new_band) {
                 digitalWrite(LPF_SEL_0, LOW);
                 digitalWrite(LPF_SEL_1, HIGH);
                 digitalWrite(TX_RX_SEL, HIGH);
-                digitalWrite(VHF_EN, LOW);
+                vhf_powerdown();
                 break;
             case BAND_HF_2:
                 digitalWrite(LPF_SEL_0, HIGH);
                 digitalWrite(LPF_SEL_1, LOW);
                 digitalWrite(TX_RX_SEL, HIGH);
-                digitalWrite(VHF_EN, LOW);
+                vhf_powerdown();
                 break;
             case BAND_HF_3:
                 digitalWrite(LPF_SEL_0, HIGH);
                 digitalWrite(LPF_SEL_1, HIGH);
                 digitalWrite(TX_RX_SEL, HIGH);
-                digitalWrite(VHF_EN, LOW);
+                vhf_powerdown();
                 break;
             case BAND_VHF:
-                digitalWrite(VHF_EN, HIGH);
                 digitalWrite(LPF_SEL_0, LOW);
                 digitalWrite(LPF_SEL_1, LOW);
                 break;
@@ -428,7 +414,7 @@ void radio_set_band(radio_band_t new_band) {
         // turn this off, just to be safe in selftest mode
         digitalWrite(PA_VDD_CTRL, LOW);
         digitalWrite(TX_RX_SEL, LOW);
-        digitalWrite(VHF_EN, LOW);
+        vhf_powerdown();
         switch(new_band) {
             case BAND_HF_1:
               digitalWrite(BPF_SEL_0, LOW);

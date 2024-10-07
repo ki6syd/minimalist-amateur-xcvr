@@ -52,6 +52,7 @@ ICACHE_RAM_ATTR void paddle_isr() {
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
+/*
 static void usbEventCallback(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
   if (event_base == ARDUINO_HW_CDC_EVENTS) {
     switch (event_id) {
@@ -61,6 +62,7 @@ static void usbEventCallback(void *arg, esp_event_base_t event_base, int32_t eve
     }
   }
 }
+*/
 
 const char *_hwcdc_status[] = {
   " USB Plugged but CDC is NOT connected\r\n",
