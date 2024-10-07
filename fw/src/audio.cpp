@@ -431,25 +431,32 @@ void audio_configure_codec(audio_mode_t mode) {
     // then configure output line using driver->setMute()
     // TBD why i2s_stream.begin() needs to be called first.
     if(mode == AUDIO_HF_RXTX_CW) {
-        i2s_config.input_device = ADC_INPUT_LINE1;
+        // i2s_config.input_device = ADC_INPUT_LINE1;
+        i2s_config.input_device = ADC_INPUT_LINE2;
         i2s_stream.begin(i2s_config); // this applies both I2C and I2S configuration
 
         driver->setMute(false, 0);
         driver->setMute(true, 1);
     }
     else if(mode == AUDIO_VHF_RX) {
-        i2s_config.input_device = ADC_INPUT_LINE2;
-        i2s_stream.begin(i2s_config); // this applies both I2C and I2S configuration
+        // i2s_config.input_device = ADC_INPUT_LINE2;
+        // i2s_stream.begin(i2s_config); // this applies both I2C and I2S configuration
 
-        driver->setMute(false, 0);
-        driver->setMute(true, 1);
+        /*
+        CodecConfig cfg = audio_board.codec_cfg;    // accessing private members...
+        cfg.input_device = ADC_INPUT_LINE2;
+        audio_board.setConfig(cfg);
+        */
+
+        // driver->setMute(false, 0);
+        // driver->setMute(true, 1);
     }
     else if(mode == AUDIO_VHF_TX) {
-        i2s_config.input_device = ADC_INPUT_LINE2;
-        i2s_stream.begin(i2s_config); // this applies both I2C and I2S configuration
+        // i2s_config.input_device = ADC_INPUT_LINE2;
+        // i2s_stream.begin(i2s_config); // this applies both I2C and I2S configuration
 
-        driver->setMute(true, 0);
-        driver->setMute(false, 1);
+        // driver->setMute(true, 0);
+        // driver->setMute(false, 1);
     }
 }
 

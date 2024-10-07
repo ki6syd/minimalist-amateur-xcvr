@@ -99,6 +99,6 @@ void info_task(void *param) {
     Serial.println(GIT_VERSION);
     
     Serial.println();
-    vTaskDelay(pdMS_TO_TICKS(20000));
+    vTaskDelay(pdMS_TO_TICKS(10000));
   }
 }

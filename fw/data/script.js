@@ -35,6 +35,8 @@ function freq_in_band(num) {
     return true;
   if(num >= 21 && num <= 21.45)
     return true;
+  if(num >= 144 && num <= 148)
+    return true;
   return false;
 }
 

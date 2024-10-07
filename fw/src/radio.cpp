@@ -92,14 +92,9 @@ void radio_task(void *param) {
         radio_set_rxtx_mode(MODE_QSK_COUNTDOWN);
 
         // turn off sidetone, LED, TX power amp rail, VHF tx_en, etc
-        if(radio_freq_is_hf(freq_dial)) {
-            audio_en_sidetone(false);
-            digitalWrite(PA_VDD_CTRL, LOW);
-        }
-        else {
-            digitalWrite(VHF_PTT, HIGH);
-        }
-        
+        audio_en_sidetone(false);
+        digitalWrite(PA_VDD_CTRL, LOW);
+        digitalWrite(VHF_PTT, HIGH);
         digitalWrite(LED_RED, LOW);
       }
       if(notifiedValue & NOTIFY_KEY_ON) {
@@ -108,14 +103,12 @@ void radio_task(void *param) {
 
         // turn off sidetone, LED, TX power amp rail, VHF tx_en, etc
         digitalWrite(LED_RED, HIGH);
-        if(radio_freq_is_hf(freq_dial)) {
-            audio_en_sidetone(true);
-            if(ok_to_tx)
-                digitalWrite(PA_VDD_CTRL, HIGH);
-        }
-        else {
-            if(ok_to_tx)
-                digitalWrite(VHF_PTT, LOW);
+        audio_en_sidetone(true);
+        if(ok_to_tx) {
+          if(radio_freq_is_hf(freq_dial))
+            digitalWrite(PA_VDD_CTRL, HIGH);
+          else
+            digitalWrite(VHF_PTT, LOW);
         }
       }
       if(notifiedValue & NOTIFY_QSK_EXPIRE) {
@@ -157,12 +150,15 @@ void radio_task(void *param) {
               if(band != BAND_VHF)
                   radio_set_band(BAND_VHF);
 
-              freq_dial = tmp.dial_freq;
-              vhf_set_freq(freq_dial);
+              // only update frequency and reprogram module if configuration success
+              if(vhf_is_configured()) {
+                freq_dial = tmp.dial_freq;
+                vhf_set_freq(freq_dial);
+              }
             }
 
             // call to set_mode() to force an audio path change if needed
-            radio_set_rxtx_mode(rxtx_mode);
+            radio_set_rxtx_mode(MODE_QSK_COUNTDOWN);
         }
       }
       if(notifiedValue & NOTIFY_CAL_XTAL) {
@@ -505,8 +501,10 @@ String radio_freq_string() {
 }
 
 float radio_get_s_meter() {
-    // TODO: check HF vs VHF
+  if(radio_freq_is_hf(freq_dial))
     return hf_get_s_meter();
+  else
+    return vhf_get_s_meter();
 }
 
 // inputs: sweep setup, dataset

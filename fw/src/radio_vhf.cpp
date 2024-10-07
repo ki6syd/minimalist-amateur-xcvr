@@ -5,8 +5,8 @@
 #include <Arduino.h>
 #include <HardwareSerial.h>
 
-#define NUM_PWR_CYCLE       5
-#define NUM_RETRIES         10
+#define NUM_PWR_CYCLE       6
+#define NUM_RETRIES         5
 #define DELAY_WAKEUP        500
 #define DELAY_NEXT_CMD      50
 #define DELAY_POWERDOWN     10
@@ -14,7 +14,7 @@
 HardwareSerial VHFserial(1);
 bool configured = false;
 
-String vhf_command(String command);
+String vhf_command(String command, bool print);
 bool vhf_response_success(String response);
 
 void vhf_init() {
@@ -70,25 +70,30 @@ void vhf_init() {
 }
 
 
-String vhf_command(String command) {
+String vhf_command(String command, bool print=true) {
     // empty buffer before reading, unclear why needed...
     while(VHFserial.available()) VHFserial.read();
 
     // send serial commands
-    Serial.print("VHF Sending: ");
-    Serial.println(command);
+    if(print) {
+        Serial.print("VHF Sending: ");
+        Serial.println(command);
+    }
     VHFserial.print(command + "\r\n");   
     VHFserial.flush();
 
     vTaskDelay(pdMS_TO_TICKS(DELAY_NEXT_CMD));
 
-    Serial.print("VHF Response: ");
+    
     String response = "";
     while(VHFserial.available() > 1) {
         char next_char = VHFserial.read();
         response += next_char;
     }
-    Serial.println(response);
+    if(print) {
+        Serial.print("VHF Response: ");
+        Serial.println(response);
+    }
 
     return response;
 }
@@ -179,10 +184,13 @@ bool vhf_set_freq(uint64_t new_freq) {
 
 float vhf_get_s_meter() {
     String to_send = "RSSI?";
-    
-    String response = vhf_command(to_send);
+    String response = vhf_command(to_send, false);
 
-    return 0.0;
+    int16_t idx = response.indexOf("=");
+    String rssi_string = response.substring(idx + 1);
+    uint16_t rssi = rssi_string.toInt();
+
+    return (float) rssi;
 }
 
 bool vhf_set_volume(uint16_t volume) {
