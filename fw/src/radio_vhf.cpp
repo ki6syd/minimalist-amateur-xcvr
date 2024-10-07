@@ -6,9 +6,10 @@
 #include <HardwareSerial.h>
 
 #define NUM_PWR_CYCLE       5
-#define NUM_RETRIES         20
-#define DELAY_WAKEUP        1000
+#define NUM_RETRIES         10
+#define DELAY_WAKEUP        500
 #define DELAY_NEXT_CMD      50
+#define DELAY_POWERDOWN     10
 
 HardwareSerial VHFserial(1);
 bool configured = false;
@@ -21,6 +22,7 @@ void vhf_init() {
     digitalWrite(VHF_EN, LOW);
 
     // RX pin needs too be low when powering on
+    // some datasheets for SA818V have a note indicating this requirement
     pinMode(VHF_RX_ESP_TX, OUTPUT);
     digitalWrite(VHF_RX_ESP_TX, LOW);
 
@@ -57,7 +59,6 @@ void vhf_init() {
 
     vTaskDelay(pdMS_TO_TICKS(1000));
     digitalWrite(VHF_PTT, LOW);
-    digitalWrite(LED_RED, HIGH);
     vTaskDelay(pdMS_TO_TICKS(1000));
     digitalWrite(VHF_PTT, HIGH);
 
@@ -125,6 +126,7 @@ bool vhf_handshake() {
             String response = vhf_command("AT+DMOCONNECT");
             if(vhf_response_success(response)) {
                 vTaskDelay(pdMS_TO_TICKS(DELAY_NEXT_CMD));
+                Serial.println("VHF configuration success.");
                 configured = true;
                 return true;
             }            
@@ -142,10 +144,16 @@ bool vhf_handshake() {
 
 void vhf_powerdown() {
     configured = false;
-    digitalWrite(VHF_EN, LOW);
+
+    // RX pin needs too be low before powerdown
+    // some datasheets for SA818V have a note indicating this requirement
     VHFserial.end();
     pinMode(VHF_RX_ESP_TX, OUTPUT);
     digitalWrite(VHF_RX_ESP_TX, LOW);
+
+    // delay then powerdown
+    vTaskDelay(pdMS_TO_TICKS(DELAY_POWERDOWN));
+    digitalWrite(VHF_EN, LOW);
 }
 
 bool vhf_is_configured() {

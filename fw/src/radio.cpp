@@ -36,7 +36,7 @@ uint64_t freq_dial = 14040000;
 
 void radio_task(void * pvParameter);
 void qsk_timer_callback(TimerHandle_t timer);
-bool radio_band_is_hf(uint64_t freq_dial);
+bool radio_freq_is_hf(uint64_t freq_dial);
 
 void radio_init() {
   // find out what bands are enabled by looking at hardware file
@@ -92,13 +92,12 @@ void radio_task(void *param) {
         radio_set_rxtx_mode(MODE_QSK_COUNTDOWN);
 
         // turn off sidetone, LED, TX power amp rail, VHF tx_en, etc
-        if(radio_band_is_hf(freq_dial)) {
+        if(radio_freq_is_hf(freq_dial)) {
             audio_en_sidetone(false);
             digitalWrite(PA_VDD_CTRL, LOW);
         }
         else {
             digitalWrite(VHF_PTT, HIGH);
-            digitalWrite(LED_DBG_0, LOW);
         }
         
         digitalWrite(LED_RED, LOW);
@@ -109,18 +108,14 @@ void radio_task(void *param) {
 
         // turn off sidetone, LED, TX power amp rail, VHF tx_en, etc
         digitalWrite(LED_RED, HIGH);
-        if(radio_band_is_hf(freq_dial)) {
+        if(radio_freq_is_hf(freq_dial)) {
             audio_en_sidetone(true);
             if(ok_to_tx)
                 digitalWrite(PA_VDD_CTRL, HIGH);
         }
         else {
-            if(ok_to_tx) {
+            if(ok_to_tx)
                 digitalWrite(VHF_PTT, LOW);
-                digitalWrite(LED_DBG_0, HIGH);
-
-                vTaskDelay(pdMS_TO_TICKS(1000));
-            }
         }
       }
       if(notifiedValue & NOTIFY_QSK_EXPIRE) {
@@ -145,7 +140,7 @@ void radio_task(void *param) {
             }
 
             // different logic depending on HF or VHF requested frequency
-            if(radio_band_is_hf(tmp.dial_freq)) {
+            if(radio_freq_is_hf(tmp.dial_freq)) {
                 // TODO: block the frequncy change if it's a different band, and we are already transmitting
                 freq_dial = tmp.dial_freq;
                 hf_set_dial_freq(freq_dial);
@@ -159,37 +154,15 @@ void radio_task(void *param) {
             }
             else {
               // update relays, enable module (if needed)
-                if(band != BAND_VHF)
-                    radio_set_band(BAND_VHF);
+              if(band != BAND_VHF)
+                  radio_set_band(BAND_VHF);
 
-                freq_dial = tmp.dial_freq;
-
-                io_set_blink_mode(BLINK_STARTUP);
-
-                if(vhf_handshake()) {
-                  vhf_set_freq(146580000);
-                  vTaskDelay(pdMS_TO_TICKS(1000));
-                  Serial.println("PTT");
-                  digitalWrite(VHF_PTT, LOW);
-                  vTaskDelay(pdMS_TO_TICKS(1000));
-                  digitalWrite(VHF_PTT, HIGH);
-                  vTaskDelay(pdMS_TO_TICKS(1000));
-                  digitalWrite(VHF_PTT, LOW);
-                  vTaskDelay(pdMS_TO_TICKS(50));
-                  digitalWrite(VHF_PTT, HIGH);
-                  vTaskDelay(pdMS_TO_TICKS(50));
-                }
-                else {
-                  digitalWrite(LED_RED, HIGH);
-                  vTaskDelay(pdMS_TO_TICKS(500));
-                  digitalWrite(LED_RED, LOW);
-                  vTaskDelay(pdMS_TO_TICKS(500));
-                }
-
-                vhf_powerdown();
-
-                io_set_blink_mode(BLINK_NORMAL);
+              freq_dial = tmp.dial_freq;
+              vhf_set_freq(freq_dial);
             }
+
+            // call to set_mode() to force an audio path change if needed
+            radio_set_rxtx_mode(rxtx_mode);
         }
       }
       if(notifiedValue & NOTIFY_CAL_XTAL) {
@@ -257,7 +230,7 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
   if(rxtx_mode == MODE_TX && new_mode == MODE_RX)
     new_mode = MODE_QSK_COUNTDOWN;
 
-    // TODO: make a call to audio_configure_codec() to select AUDIO_xHF_xxx
+  // TODO: make a call to audio_configure_codec() to select AUDIO_xHF_xxx
 
   switch(new_mode) {
     case MODE_RX:
@@ -267,20 +240,24 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
         // update mode so the next function calls assume TX
         rxtx_mode = MODE_RX;
 
-        if(radio_band_is_hf(freq_dial)) {
-            // set up clocks
-            // TODO: don't expose si5351 directly to this module
-            si5351.output_enable(SI5351_IDX_BFO, 1);
-            si5351.output_enable(SI5351_IDX_VFO, 1);
-            si5351.output_enable(SI5351_IDX_TX, 0);
+        if(radio_freq_is_hf(freq_dial)) {
+          // change audio mode, function will ignore if there's no change
+          audio_set_mode(AUDIO_HF_RXTX_CW);
 
-            // enable RX audio
-            audio_en_rx_audio(true);
-            audio_en_sidetone(false);
+          // set up clocks
+          // TODO: don't expose si5351 directly to this module
+          si5351.output_enable(SI5351_IDX_BFO, 1);
+          si5351.output_enable(SI5351_IDX_VFO, 1);
+          si5351.output_enable(SI5351_IDX_TX, 0);
+
+          // enable RX audio
+          audio_en_rx_audio(true);
+          audio_en_sidetone(false);
         }
         else {
+            audio_set_mode(AUDIO_VHF_RX);
+            
             // TODO: turn off si5351 clocks for VHF mode
-            // no action needed for VHF module?
         }
         // change over relays if needed. Add some settling time
         // TODO: rework the radio_set_band(band) function so it is "radio_set_relays(freq)" and looks up band from dial freq
@@ -295,7 +272,7 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
         // update mode 
         rxtx_mode = MODE_QSK_COUNTDOWN;
 
-        if(radio_band_is_hf(freq_dial)) {
+        if(radio_freq_is_hf(freq_dial)) {
             // turn off RX audio
             // TX power amp rail, sidetone, and TX LED are handled elsewhere
             audio_en_rx_audio(false);
@@ -319,17 +296,22 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
         // update mode so the next function calls assume TX
         rxtx_mode = MODE_TX;
 
-        if(radio_band_is_hf(freq_dial)) {
-            // turn off RX audio
-            // TX power amp rail, sidetone, and TX LED are handled elsewhere
-            audio_en_rx_audio(false);
+        if(radio_freq_is_hf(freq_dial)) {
+          // change audio mode, function will ignore if there's no change
+          audio_set_mode(AUDIO_HF_RXTX_CW);
 
-            // set up clocks. TX clock always running in TX mode
-            si5351.output_enable(SI5351_IDX_BFO, 0);
-            si5351.output_enable(SI5351_IDX_VFO, 0);
-            si5351.output_enable(SI5351_IDX_TX, 1);
+          // turn off RX audio
+          // TX power amp rail, sidetone, and TX LED are handled elsewhere
+          audio_en_rx_audio(false);
+
+          // set up clocks. TX clock always running in TX mode
+          si5351.output_enable(SI5351_IDX_BFO, 0);
+          si5351.output_enable(SI5351_IDX_VFO, 0);
+          si5351.output_enable(SI5351_IDX_TX, 1);
         }
         else {
+          audio_set_mode(AUDIO_VHF_TX);
+
           // TODO: turn off si5351 clocks for VHF mode
         }
 
@@ -347,6 +329,7 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
 // this function does NOT care whether transmit is active currently. Blindly sets the correct relays/mux based on the band selection
 // mode change safety is handled by dial frequency updates
 // TODO: this is actually a relay setting function, break out into something that accepts a band and a mode
+// setting band to anything but BAND_VHF will result in powerdown
 void radio_set_band(radio_band_t new_band) {
     if(rxtx_mode == MODE_RX || rxtx_mode == MODE_QSK_COUNTDOWN) {
         digitalWrite(TX_RX_SEL, LOW);
@@ -354,17 +337,14 @@ void radio_set_band(radio_band_t new_band) {
             case BAND_HF_1:
                 digitalWrite(BPF_SEL_0, LOW);
                 digitalWrite(BPF_SEL_1, LOW);
-                vhf_powerdown();
                 break;
             case BAND_HF_2:
                 digitalWrite(BPF_SEL_0, HIGH);
                 digitalWrite(BPF_SEL_1, LOW);
-                vhf_powerdown();
                 break;
             case BAND_HF_3:
                 digitalWrite(BPF_SEL_0, LOW);
                 digitalWrite(BPF_SEL_1, HIGH);
-                vhf_powerdown();
                 break;
             case BAND_VHF:
                 digitalWrite(BPF_SEL_0, HIGH);
@@ -384,19 +364,16 @@ void radio_set_band(radio_band_t new_band) {
                 digitalWrite(LPF_SEL_0, LOW);
                 digitalWrite(LPF_SEL_1, HIGH);
                 digitalWrite(TX_RX_SEL, HIGH);
-                vhf_powerdown();
                 break;
             case BAND_HF_2:
                 digitalWrite(LPF_SEL_0, HIGH);
                 digitalWrite(LPF_SEL_1, LOW);
                 digitalWrite(TX_RX_SEL, HIGH);
-                vhf_powerdown();
                 break;
             case BAND_HF_3:
                 digitalWrite(LPF_SEL_0, HIGH);
                 digitalWrite(LPF_SEL_1, HIGH);
                 digitalWrite(TX_RX_SEL, HIGH);
-                vhf_powerdown();
                 break;
             case BAND_VHF:
                 digitalWrite(LPF_SEL_0, LOW);
@@ -414,7 +391,7 @@ void radio_set_band(radio_band_t new_band) {
         // turn this off, just to be safe in selftest mode
         digitalWrite(PA_VDD_CTRL, LOW);
         digitalWrite(TX_RX_SEL, LOW);
-        vhf_powerdown();
+        
         switch(new_band) {
             case BAND_HF_1:
               digitalWrite(BPF_SEL_0, LOW);
@@ -447,16 +424,29 @@ void radio_set_band(radio_band_t new_band) {
         }
     }
 
-  if(radio_band_is_hf(new_band)) {
+  if(new_band != BAND_VHF) {
     // add a delay for relay settling on HF band changes
     // TODO: parametrize this
     vTaskDelay(pdMS_TO_TICKS(5));
-  }
 
-  // add a delay for VHF module to wake up
-  // TODO: figure out what's an appropriate delay
-  if(new_band == BAND_VHF && band != BAND_VHF) {
-    vTaskDelay(pdMS_TO_TICKS(250));
+    // powerdown VHF module for anything but VHF
+    vhf_powerdown();
+  }
+  else {
+    // connect to VHF module if it's not already configured
+    if(!vhf_is_configured()) {
+      io_set_blink_mode(BLINK_STARTUP);
+      // attempt to connect, powerdown if it doesn't work
+      if(vhf_handshake()) {
+        vhf_set_volume(8);
+        io_set_blink_mode(BLINK_NORMAL);
+      }
+      else {
+        io_set_blink_mode(BLINK_ERROR);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        vhf_powerdown();
+      }
+    }
   }
 
   // update band
@@ -505,7 +495,12 @@ String radio_bandwidth_to_string(radio_audio_bw_t bw) {
 
 
 String radio_freq_string() {
-    // TODO: check HF vs VHF
+  if(band == BAND_VHF) {
+    String result = "TX: ";
+    result += String(freq_dial);
+    return result;
+  }
+  else
     return hf_freq_string();
 }
 
@@ -605,7 +600,7 @@ void radio_enable_tx(bool en) {
     xTaskNotify(xRadioTaskHandle, NOTIFY_LOW_BAT, eSetBits);
 }
 
-bool radio_band_is_hf(uint64_t dial_freq) {
+bool radio_freq_is_hf(uint64_t dial_freq) {
     radio_band_t checking = radio_get_band(dial_freq);
 
     if(checking == BAND_VHF)

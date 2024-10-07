@@ -95,6 +95,7 @@ bool sidetone_en = false;
 bool pga_en = false;
 float global_vol = AUDIO_VOL_DEFAULT;
 audio_filt_t cur_filt = AUDIO_FILT_DEFAULT;
+audio_mode_t cur_audio_mode = AUDIO_STARTUP;
 float last_volume_dB = 0;
 // TODO: max_safe_vol would be good to put in json preferences
 uint32_t max_safe_vol = 5000;                   // 32768 allows full volume output (int32_t)
@@ -411,6 +412,11 @@ void audio_gain_task(void *pvParameter) {
 }
 
 void audio_configure_codec(audio_mode_t mode) {
+    // skip all of this if there's no mode change
+    if(mode == cur_audio_mode)
+        return;
+    cur_audio_mode = mode;
+
     Serial.println("Configuring codec...");
     auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
     i2s_config.copyFrom(info_stereo);

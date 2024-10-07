@@ -18,7 +18,8 @@ typedef enum {
     AUDIO_HF_RX_SSB,
     AUDIO_HF_TX_SSB,
     AUDIO_VHF_RX,
-    AUDIO_VHF_TX
+    AUDIO_VHF_TX,
+    AUDIO_STARTUP
 } audio_mode_t;
 
 // audio_filt_t: simple definition for now, assumes that sidetone frequency is always centered in the CW filter passband
