@@ -154,11 +154,10 @@ void radio_task(void *param) {
               if(vhf_is_configured()) {
                 freq_dial = tmp.dial_freq;
                 vhf_set_freq(freq_dial);
-                vTaskDelay(pdMS_TO_TICKS(1000));
               }
             }
 
-            // call to set_mode() to force an audio path change if needed
+            // call to set_rxtx_mode() to force an audio path change if needed
             radio_set_rxtx_mode(MODE_QSK_COUNTDOWN);
         }
       }
@@ -435,7 +434,6 @@ void radio_set_band(radio_band_t new_band) {
       io_set_blink_mode(BLINK_STARTUP);
       // attempt to connect, powerdown if it doesn't work
       if(vhf_handshake()) {
-        vhf_set_volume(2);
         io_set_blink_mode(BLINK_NORMAL);
       }
       else {

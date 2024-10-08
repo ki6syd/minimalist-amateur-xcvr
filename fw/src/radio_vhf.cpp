@@ -1,6 +1,7 @@
 #include "globals.h"
 #include "radio_vhf.h"
 #include "audio.h"
+#include "file_system.h"
 
 #include <Arduino.h>
 #include <HardwareSerial.h>
@@ -13,11 +14,17 @@
 
 HardwareSerial VHFserial(1);
 bool configured = false;
+uint64_t vhf_default_freq = 146580000;
+uint16_t vhf_default_vol = 1;
 
 String vhf_command(String command, bool print);
 bool vhf_response_success(String response);
 
 void vhf_init() {
+    // load defaults from JSON
+    vhf_default_vol = (uint16_t) fs_load_setting(PREFERENCE_FILE, "vhf_default_vol").toInt();
+    vhf_default_freq = (uint16_t) fs_load_setting(PREFERENCE_FILE, "vhf_default_freq").toInt();
+
     pinMode(VHF_EN, OUTPUT);
     digitalWrite(VHF_EN, LOW);
 
@@ -109,6 +116,10 @@ bool vhf_handshake() {
                 vTaskDelay(pdMS_TO_TICKS(DELAY_NEXT_CMD));
                 Serial.println("VHF configuration success.");
                 configured = true;
+
+                // set volume so other modules don't need to worry about this
+                vhf_set_volume(vhf_default_vol);
+
                 return true;
             }            
             // if we got here: delay, then send again
@@ -151,7 +162,7 @@ bool vhf_set_freq(uint64_t new_freq) {
     String formatted_freq = String(((float) new_freq) / 1000000, 4);
     String prefix = "AT+DMOSETGROUP=0,";    // 12.5kHz wide
     String suffix = ",0000,1,0000";         // no CTCSS on TX or RX. Squelch level 1
-    suffix = ",0000,0,0000";         // no CTCSS on TX or RX. Squelch level 0
+    // suffix = ",0000,0,0000";         // no CTCSS on TX or RX. Squelch level 0
     String to_send = prefix + formatted_freq + "," + formatted_freq + suffix;   // assume TX and RX on the same frequency
 
     String response = vhf_command(to_send);

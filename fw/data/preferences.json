@@ -1,4 +1,6 @@
 {
 	"mdns_hostname": "radio",
-	"max_audio_output": "0.04"
+	"max_audio_output": "0.04",
+	"vhf_default_vol": "6",
+	"vhf_default_freq": "146580000"
 }

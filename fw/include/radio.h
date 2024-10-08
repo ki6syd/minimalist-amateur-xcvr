@@ -5,7 +5,7 @@
 #include <Arduino.h>
 
 // comment out to prevent accidental TX
-// #define RADIO_ALLOW_TX
+#define RADIO_ALLOW_TX
 
 #define SI5351_IDX_BFO        SI5351_CLK0
 #define SI5351_IDX_VFO        SI5351_CLK1
