@@ -69,17 +69,20 @@ const int ip_port = 7000;
 SineWaveGenerator<int16_t>    sine_wave;
 GeneratedSoundStream<int16_t> sound_stream(sine_wave);
 
-ChannelSplitOutput            input_split;                              // splits the stereo input stream into two mono streams
+ChannelSplitOutput            *input_split;                              // splits the stereo input stream into two mono streams
 VolumeStream                  out_vol;                                  // output volume control
 VolumeStream                  input_l_vol, input_r_vol;
 VolumeMeter                   audio_filt_meas(out_vol);                 // measures the volume output of the audio filter, outputs into out_vol volume control
-MultiOutput                   multi_output;                             // splits the final output into audio jack, vban output, csv stream
+MultiOutput                   *multi_output;                             // splits the final output into audio jack, vban output, csv stream
 FilteredStream<int16_t, float> audio_filt(audio_filt_meas, info_mono.channels); // filter outputting into audio_filt_meas volume detection
-OutputMixer<int16_t>          side_l_r_mix(audio_filt, 3);              // sidetone, left, right, audio mixing into audio_filt
+// OutputMixer<int16_t>          side_l_r_mix(audio_filt, 3);              // sidetone, left, right, audio mixing into audio_filt
+OutputMixer<int16_t>          *side_l_r_mix;              // sidetone, left, right, audio mixing into audio_filt
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
 AudioEffectStream             effects(mono_to_stereo);                  // effects --> mono_to_stereo             
-StreamCopy copier_1(side_l_r_mix, sound_stream, 128);                   // move sine wave from sound_stream into the sidetone mixer
-StreamCopy copier_2(input_split, i2s_stream, 256);                      // moves data through the streams. To: input_split, from: i2s_stream
+// StreamCopy copier_1(*side_l_r_mix, sound_stream, 128);                   // move sine wave from sound_stream into the sidetone mixer
+StreamCopy copier_1(128);
+// StreamCopy copier_2(input_split, i2s_stream, 256);                      // moves data through the streams. To: input_split, from: i2s_stream
+StreamCopy copier_2(256);
 #ifdef AUDIO_PATH_IQ
 FilteredStream<int16_t, float> hilbert_n45deg(input_l_vol, info_mono.channels);
 FilteredStream<int16_t, float> hilbert_p45deg(input_r_vol, info_mono.channels);
@@ -93,14 +96,16 @@ float sidetone_vol = AUDIO_SIDE_DEFAULT;
 float sidetone_freq = F_SIDETONE_DEFAULT;
 bool sidetone_en = false;
 bool pga_en = false;
+bool i2s_configured = false;
 float global_vol = AUDIO_VOL_DEFAULT;
 audio_filt_t cur_filt = AUDIO_FILT_DEFAULT;
-audio_mode_t cur_audio_mode = AUDIO_STARTUP;
+audio_mode_t cur_audio_mode = AUDIO_HF_RXTX_CW;
 float last_volume_dB = 0;
 // TODO: max_safe_vol would be good to put in json preferences
 uint32_t max_safe_vol = 5000;                   // 32768 allows full volume output (int32_t)
 
 void audio_dsp_task(void * pvParameter);
+void audio_dsp_task_restart();
 void audio_logic_task(void *pvParameter);
 void audio_gain_task(void *pvParameter);
 void audio_configure_codec(audio_mode_t mode);
@@ -119,7 +124,7 @@ void audio_init() {
     xTaskCreatePinnedToCore(
         audio_dsp_task,
         "Audio Stream Updater Task",
-        32768,
+        65536,
         NULL,
         TASK_PRIORITY_DSP, // priority
         &xDSPTaskHandle,
@@ -151,18 +156,43 @@ void audio_init() {
 }
 
 void audio_dsp_task(void *param) {
+    Serial.println("Starting Audio DSP task");
+    vTaskDelay(pdMS_TO_TICKS(5000));
+
     AudioLogger::instance().begin(Serial, AudioLogger::Warning);
     LOGLEVEL_AUDIODRIVER = AudioDriverWarning;    // AudioDriverInfo  // AudioDriverWarning // AudioDriverDebug    // AudioDriverError
+
+    // allocate side_l_r_mix, it'll disappear
+    side_l_r_mix = new OutputMixer<int16_t>(audio_filt, 3);
+    input_split = new ChannelSplitOutput();
+
+    // tie side_l_r_mix to copier now that it's allocated
+    copier_1.begin(*side_l_r_mix, sound_stream);
+    copier_2.begin(*input_split, i2s_stream);                      // moves data through the streams. To: input_split, from: i2s_stream
 
     my_pins.addI2C(PinFunction::CODEC, CODEC_SCL, CODEC_SDA, CODEC_ADDR, CODEC_I2C_SPEED, codecI2C);
     my_pins.addI2S(PinFunction::CODEC, CODEC_MCLK, CODEC_BCLK, CODEC_WS, CODEC_DO, CODEC_DI);
     my_pins.begin();
     audio_board.begin();
 
-    // subsequent calls should be to audio_set_mode(), the thread-safe one exposed externally
-    // force a configuration of the codec
-    audio_configure_codec(AUDIO_HF_RXTX_CW);
+    // codec setup
+    auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
+    i2s_config.copyFrom(info_stereo);
+    i2s_config.buffer_size = 256;
+    i2s_config.buffer_count = 4;
+    i2s_config.port_no = 0;
+    if(cur_audio_mode == AUDIO_HF_RXTX_CW)
+        i2s_config.input_device = ADC_INPUT_LINE1;
+    else
+        i2s_config.input_device = ADC_INPUT_LINE2;
+    i2s_stream.begin(i2s_config); // this applies both I2C and I2S configuration
 
+    AudioDriver *driver = audio_board.getDriver();
+    // TODO: base this on cur_audio_mode
+    driver->setMute(false, 0);
+    driver->setMute(true, 1);
+
+    // another audio source
     sine_wave.begin(info_mono, sidetone_freq);
 
 #ifdef AUDIO_EN_OUT_VBAN
@@ -190,10 +220,10 @@ void audio_dsp_task(void *param) {
     input_split.addOutput(input_r_vol, 1);
     
 #else
-    input_split.addOutput(side_l_r_mix, 0);
-    input_split.addOutput(side_l_r_mix, 1);
+    input_split->addOutput(*side_l_r_mix, 0);
+    input_split->addOutput(*side_l_r_mix, 1);
 #endif
-    input_split.begin(info_stereo);
+    input_split->begin(info_stereo);
 
 
 #ifdef AUDIO_PATH_IQ
@@ -216,23 +246,29 @@ void audio_dsp_task(void *param) {
 
     // left + right + sidetone --> side_l_r_mix (mono). declaration links to audio_filt
     // HF I, Q, sidetone all set to zero weight. audio_set_mode() will properly apply weights.
-    side_l_r_mix.begin();
-    side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, 0);      // input 0: sidetone from sound_stream
-    side_l_r_mix.setWeight(MIXER_IDX_LEFT, 0);          // input 1: INx-L codec channel
-    side_l_r_mix.setWeight(MIXER_IDX_RIGHT, 0);         // input 2: INx-R codec channel
+    // side_l_r_mix.begin();
+    // side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, 0);      // input 0: sidetone from sound_stream
+    // side_l_r_mix.setWeight(MIXER_IDX_LEFT, 0);          // input 1: INx-L codec channel
+    // side_l_r_mix.setWeight(MIXER_IDX_RIGHT, 0);         // input 2: INx-R codec channel
+    side_l_r_mix->begin();
+    side_l_r_mix->setWeight(MIXER_IDX_SIDETONE, 0);      // input 0: sidetone from sound_stream
+    side_l_r_mix->setWeight(MIXER_IDX_LEFT, 0);          // input 1: INx-L codec channel
+    side_l_r_mix->setWeight(MIXER_IDX_RIGHT, 0);         // input 2: INx-R codec channel
+
 
     // audio_filt declaration has already linked it to out_vol (mono)
     audio_set_filt(AUDIO_FILT_DEFAULT);
 
     // audio_filt (mono) --> audio_filt_meas (mono) --> out_vol (mono) --> multi_output (mono)
     audio_set_volume(AUDIO_VOL_DEFAULT);
-    out_vol.setOutput(multi_output);
+    multi_output = new MultiOutput();
+    out_vol.setOutput(*multi_output);
     out_vol.begin(info_mono);
     audio_filt_meas.setAudioInfo(info_mono);
     audio_filt_meas.begin();
 
     // multi_output goes to mono_to_stereo (mono, via the clipping effect), and any optional outputs
-    multi_output.add(effects);    
+    multi_output->add(effects);    
 #ifdef AUDIO_EN_OUT_VBAN
     multi_output.add(vban);
 #endif
@@ -314,17 +350,71 @@ void audio_dsp_task(void *param) {
     audio_en_sidetone(false);
     audio_en_rx_audio(true);
 
-    uint32_t start_tick, stop_tick;
+    Serial.println("Starting to copy audio...");
+    // copier_1.begin();
+    // copier_2.begin();
+
+    uint32_t start_tick, stop_tick, c1_processed, c2_processed;
     while(true) {
         start_tick = xTaskGetTickCount();
         // TODO (for IP): the .copy() calls will block if the client disconnects
-        copier_1.copy();
-        copier_2.copy();
+        c1_processed = copier_1.copy();
+        c2_processed = copier_2.copy();
         stop_tick = xTaskGetTickCount();
-        // Serial.println(stop_tick - start_tick);
+
+        /*
+        Serial.print(stop_tick - start_tick);
+        Serial.print("\t");
+        Serial.print(c1_processed);
+        Serial.print("\t");
+        Serial.println(c2_processed);
+        */
 
         vTaskDelay(pdMS_TO_TICKS(1));
     }
+}
+
+// properly disables and restarts the DSP task 
+void audio_dsp_task_restart() {
+    // all of these needed?
+    // copier_1.end();
+    // copier_2.end();
+    audio_board.end();
+    i2s_stream.end();
+    sine_wave.end();
+    Serial.println("1");
+    // side_l_r_mix.end();      // library has problematic use of malloc/free
+    Serial.println("2");
+    // audio_filt_meas.end();
+    Serial.println("3");
+    // input_split.end();
+    Serial.println("4");
+    // multi_output.end();
+    // multi_output.~MultiOutput();
+    Serial.println("5");
+    // out_vol.end();
+    Serial.println("6");
+    // effects.end();
+    Serial.println("7");
+    // mono_to_stereo.end();
+
+    Serial.println("deleting task");
+    vTaskDelete(xDSPTaskHandle);
+
+    // helps with debug
+    vTaskDelay(pdMS_TO_TICKS(5000));
+
+    Serial.println("restarting task");
+
+    xTaskCreatePinnedToCore(
+        audio_dsp_task,
+        "Audio Stream Updater Task",
+        65536,
+        NULL,
+        TASK_PRIORITY_DSP, // priority
+        &xDSPTaskHandle,
+        TASK_CORE_DSP // core
+    );
 }
 
 void audio_logic_task(void *pvParameter) {
@@ -347,12 +437,16 @@ void audio_logic_task(void *pvParameter) {
                 driver->setInputVolume(0); // changes PGA in the codec
                 pga_en = false;
             }
-            if(notifiedValue & NOTIFY_MODE_HF_RXTX_CW)
-                audio_configure_codec(AUDIO_HF_RXTX_CW);
-            if(notifiedValue & NOTIFY_MODE_VHF_RX)
-                audio_configure_codec(AUDIO_VHF_RX);
-            if(notifiedValue & NOTIFY_MODE_VHF_TX)
-                audio_configure_codec(AUDIO_VHF_TX);
+            if(notifiedValue & NOTIFY_MODE_HF_RXTX_CW) {
+                cur_audio_mode = AUDIO_HF_RXTX_CW;
+                audio_dsp_task_restart();
+            }
+            if(notifiedValue & NOTIFY_MODE_VHF_RX) {
+                cur_audio_mode = AUDIO_VHF_RX;
+                audio_dsp_task_restart();
+            }
+            // if(notifiedValue & NOTIFY_MODE_VHF_TX)
+            //     audio_configure_codec(AUDIO_VHF_TX);
             if(notifiedValue & NOTIFY_DBG_MAX_VOL) {
                 Serial.println("Testing max volume");
 
@@ -416,14 +510,26 @@ void audio_configure_codec(audio_mode_t mode) {
     if(mode == cur_audio_mode)
         return;
     cur_audio_mode = mode;
-
     Serial.println("Configuring codec...");
-    auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
-    i2s_config.copyFrom(info_stereo);
-    
-    i2s_config.buffer_size = 256;
-    i2s_config.buffer_count = 4;
-    i2s_config.port_no = 0;
+
+    // only do some of this the first time
+    if(!i2s_configured) {
+        my_pins.addI2C(PinFunction::CODEC, CODEC_SCL, CODEC_SDA, CODEC_ADDR, CODEC_I2C_SPEED, codecI2C);
+        my_pins.addI2S(PinFunction::CODEC, CODEC_MCLK, CODEC_BCLK, CODEC_WS, CODEC_DO, CODEC_DI);
+        my_pins.begin();
+        audio_board.begin();
+
+        auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
+        i2s_config.copyFrom(info_stereo);
+        i2s_config.buffer_size = 256;
+        i2s_config.buffer_count = 4;
+        i2s_config.port_no = 0;
+
+        i2s_config.input_device = ADC_INPUT_LINE2;
+        i2s_stream.begin(i2s_config); // this applies both I2C and I2S configuration
+
+        i2s_configured = true;
+    }
 
     AudioDriver *driver = audio_board.getDriver();
 
@@ -431,22 +537,29 @@ void audio_configure_codec(audio_mode_t mode) {
     // then configure output line using driver->setMute()
     // TBD why i2s_stream.begin() needs to be called first.
     if(mode == AUDIO_HF_RXTX_CW) {
-        // i2s_config.input_device = ADC_INPUT_LINE1;
-        i2s_config.input_device = ADC_INPUT_LINE2;
-        i2s_stream.begin(i2s_config); // this applies both I2C and I2S configuration
-
         driver->setMute(false, 0);
         driver->setMute(true, 1);
     }
     else if(mode == AUDIO_VHF_RX) {
-        // i2s_config.input_device = ADC_INPUT_LINE2;
-        // i2s_stream.begin(i2s_config); // this applies both I2C and I2S configuration
+        copier_1.end();
+        copier_2.end();
+        i2s_stream.end();
+        sine_wave.end();
 
-        /*
-        CodecConfig cfg = audio_board.codec_cfg;    // accessing private members...
-        cfg.input_device = ADC_INPUT_LINE2;
-        audio_board.setConfig(cfg);
-        */
+        auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
+        i2s_config.copyFrom(info_stereo);
+        i2s_config.buffer_size = 256;
+        i2s_config.buffer_count = 4;
+        i2s_config.port_no = 0;
+
+        i2s_config.input_device = ADC_INPUT_LINE2;
+        i2s_stream.begin(i2s_config); // this applies both I2C and I2S configuration
+        sine_wave.begin(info_mono, sidetone_freq);
+        copier_1.begin();
+        copier_2.begin();
+
+        Serial.println("Done reconfiguring");
+
 
         // driver->setMute(false, 0);
         // driver->setMute(true, 1);
@@ -464,8 +577,9 @@ void audio_configure_codec(audio_mode_t mode) {
 void audio_set_mode(audio_mode_t mode) {
     if(mode == AUDIO_HF_RXTX_CW)
         xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_HF_RXTX_CW, eSetBits);
-    else if(mode == AUDIO_VHF_RX)
+    else if(mode == AUDIO_VHF_RX) {
         xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_VHF_RX, eSetBits);
+    }
     else if(mode == AUDIO_VHF_TX)
         xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_VHF_TX, eSetBits);
 }
@@ -546,33 +660,38 @@ void audio_en_pga(bool gain) {
 
 // ONLY affects sidetone, does not affect muting of rx audio
 void audio_en_sidetone(bool tone) {
-    sidetone_en = tone;
+    if(side_l_r_mix == nullptr)
+        return;
 
     if(tone) {
-        side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, sidetone_vol);
+        side_l_r_mix->setWeight(MIXER_IDX_SIDETONE, sidetone_vol);
     }
     else {
-        side_l_r_mix.setWeight(MIXER_IDX_SIDETONE, 0);
+        side_l_r_mix->setWeight(MIXER_IDX_SIDETONE, 0);
     }
 
+    sidetone_en = tone;
 }
 
 // ONLY affects muting of rx audio, does not affect sidetone
 void audio_en_rx_audio(bool en) {
+    if(side_l_r_mix == nullptr)
+        return;
+
     if(en) {
         // unmute input mixer channels. LEFT channel depends on whether IQ audio is in use
-        side_l_r_mix.setWeight(MIXER_IDX_RIGHT, 1.0);
+        side_l_r_mix->setWeight(MIXER_IDX_RIGHT, 1.0);
 #ifdef AUDIO_PATH_IQ
         side_l_r_mix.setWeight(MIXER_IDX_LEFT, 1.0);
 #else
-        side_l_r_mix.setWeight(MIXER_IDX_LEFT, 0.0);
+        side_l_r_mix->setWeight(MIXER_IDX_LEFT, 0.0);
 #endif
 
     }
     else {
         // mute all input mixer channels, regardless of IQ audio
-        side_l_r_mix.setWeight(MIXER_IDX_LEFT, 0.0);
-        side_l_r_mix.setWeight(MIXER_IDX_RIGHT, 0.0);
+        side_l_r_mix->setWeight(MIXER_IDX_LEFT, 0.0);
+        side_l_r_mix->setWeight(MIXER_IDX_RIGHT, 0.0);
     }
 }
 

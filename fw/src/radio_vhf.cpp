@@ -5,8 +5,8 @@
 #include <Arduino.h>
 #include <HardwareSerial.h>
 
-#define NUM_PWR_CYCLE       6
-#define NUM_RETRIES         5
+#define NUM_PWR_CYCLE       10
+#define NUM_RETRIES         4
 #define DELAY_WAKEUP        500
 #define DELAY_NEXT_CMD      50
 #define DELAY_POWERDOWN     10
@@ -29,7 +29,6 @@ void vhf_init() {
     pinMode(VHF_PTT, OUTPUT);
     digitalWrite(VHF_PTT, HIGH);  // RX mode, then delay before enabling - don't want to accidentally transmit
     vTaskDelay(pdMS_TO_TICKS(10));
-    
 
     // attempt to handshake
     if(!vhf_handshake()) {
@@ -41,29 +40,6 @@ void vhf_init() {
     // for debug: print out version
     vhf_get_version();
     vTaskDelay(pdMS_TO_TICKS(DELAY_NEXT_CMD));
-
-    // attempt to set frequency
-    if(!vhf_set_freq(146580000)) {
-        vhf_powerdown();
-        return;
-    }
-    vTaskDelay(pdMS_TO_TICKS(DELAY_NEXT_CMD));
-
-    // attempt to set volume
-    // TODO: parametrize, get rid of magic number
-    if(!vhf_set_volume(8)) {
-        vhf_powerdown();
-        return;
-    }
-    vTaskDelay(pdMS_TO_TICKS(DELAY_NEXT_CMD));
-
-    vTaskDelay(pdMS_TO_TICKS(1000));
-    digitalWrite(VHF_PTT, LOW);
-    vTaskDelay(pdMS_TO_TICKS(1000));
-    digitalWrite(VHF_PTT, HIGH);
-
-    vTaskDelay(pdMS_TO_TICKS(100));
-    vhf_get_s_meter();
 
     // disable VHF now that config is complete
     vhf_powerdown();
@@ -175,6 +151,7 @@ bool vhf_set_freq(uint64_t new_freq) {
     String formatted_freq = String(((float) new_freq) / 1000000, 4);
     String prefix = "AT+DMOSETGROUP=0,";    // 12.5kHz wide
     String suffix = ",0000,1,0000";         // no CTCSS on TX or RX. Squelch level 1
+    suffix = ",0000,0,0000";         // no CTCSS on TX or RX. Squelch level 0
     String to_send = prefix + formatted_freq + "," + formatted_freq + suffix;   // assume TX and RX on the same frequency
 
     String response = vhf_command(to_send);
@@ -213,5 +190,10 @@ bool vhf_set_volume(uint16_t volume) {
 // TODO: return something
 void vhf_get_version() {
     String version = "AT+VERSION";
+    vhf_command(version);
+}
+
+void vhf_set_tail() {
+    String version = "AT+SETTAIL=1";
     vhf_command(version);
 }
