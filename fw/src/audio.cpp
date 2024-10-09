@@ -29,6 +29,8 @@
 #define NOTIFY_MODE_VHF_TX      (1 << 4)
 #define NOTIFY_DBG_MAX_VOL      (1 << 5)
 
+#define BUFFER_CHUNK            64
+
 TwoWire codecI2C = TwoWire(1);  // "Wire" is used in si5351 library. Defined through TwoWire(0), so the other peripheral is still available
 
 TaskHandle_t xDSPTaskHandle, xAudioTaskHandle, xGainTaskHandle;
@@ -75,11 +77,12 @@ VolumeStream                  input_l_vol, input_r_vol;
 VolumeMeter                   audio_filt_meas(out_vol);                 // measures the volume output of the audio filter, outputs into out_vol volume control
 MultiOutput                   *multi_output;                             // splits the final output into audio jack, vban output, csv stream
 FilteredStream<int16_t, float> audio_filt(audio_filt_meas, info_mono.channels); // filter outputting into audio_filt_meas volume detection
+// TODO: inject sidetone after the audio filter, to avoid delays
 OutputMixer<int16_t>          *side_l_r_mix;              // sidetone, left, right, audio mixing into audio_filt
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
 AudioEffectStream             effects(mono_to_stereo);                  // effects --> mono_to_stereo             
-StreamCopy copier_1(128);
-StreamCopy copier_2(256);
+StreamCopy copier_1(BUFFER_CHUNK);
+StreamCopy copier_2(BUFFER_CHUNK * 2);
 #ifdef AUDIO_PATH_IQ
 FilteredStream<int16_t, float> hilbert_n45deg(input_l_vol, info_mono.channels);
 FilteredStream<int16_t, float> hilbert_p45deg(input_r_vol, info_mono.channels);
@@ -174,7 +177,7 @@ void audio_dsp_task(void *param) {
     // codec setup
     auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
     i2s_config.copyFrom(info_stereo);
-    i2s_config.buffer_size = 256;
+    i2s_config.buffer_size = BUFFER_CHUNK * 2;
     i2s_config.buffer_count = 4;
     i2s_config.port_no = 0;
     if(cur_audio_mode == AUDIO_HF_RXTX_CW)
@@ -619,7 +622,6 @@ void audio_en_rx_audio(bool en) {
     if(en) {
         // unmute input mixer channels. LEFT channel depends on whether IQ audio is in use
         if(cur_audio_mode == AUDIO_VHF_TX) {
-            Serial.println("turning off RIGHT");
             side_l_r_mix->setWeight(MIXER_IDX_RIGHT, 0.0);
         }
         else

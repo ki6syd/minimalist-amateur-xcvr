@@ -88,16 +88,22 @@ void radio_task(void *param) {
     // example: https://freertos.org/Documentation/02-Kernel/02-Kernel-features/03-Direct-to-task-notifications/04-As-event-group
     if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(5)) == pdTRUE) {
       if(notifiedValue & NOTIFY_KEY_OFF) {
+        // set sidetone, before doing anything else. Minimize audio delay.
+        audio_en_sidetone(false);
+
         // initiate mode change
         radio_set_rxtx_mode(MODE_QSK_COUNTDOWN);
 
         // turn off sidetone, LED, TX power amp rail, VHF tx_en, etc
-        audio_en_sidetone(false);
         digitalWrite(PA_VDD_CTRL, LOW);
         digitalWrite(VHF_PTT, HIGH);
         digitalWrite(LED_RED, LOW);
       }
       if(notifiedValue & NOTIFY_KEY_ON) {
+        // set sidetone, before doing anything else. Minimize audio delay.
+        if(ok_to_tx && radio_freq_is_hf(freq_dial))
+          audio_en_sidetone(true);
+
         // initiate mode change
         radio_set_rxtx_mode(MODE_TX);
 
@@ -105,10 +111,8 @@ void radio_task(void *param) {
         digitalWrite(LED_RED, HIGH);
         
         if(ok_to_tx) {
-          if(radio_freq_is_hf(freq_dial)) {
-            audio_en_sidetone(true);
+          if(radio_freq_is_hf(freq_dial))
             digitalWrite(PA_VDD_CTRL, HIGH);
-          }
           else
             digitalWrite(VHF_PTT, LOW);          
         }
@@ -425,15 +429,16 @@ void radio_set_band(radio_band_t new_band) {
         }
     }
 
-  if(new_band != BAND_VHF) {
-    // add a delay for relay settling on HF band changes
-    // TODO: parametrize this
+  // delay if there's a transition in bands (to let relays settle)
+  if(band != new_band) 
     vTaskDelay(pdMS_TO_TICKS(5));
 
-    // powerdown VHF module for anything but VHF
+  // VHF --> HF
+  if(band == BAND_VHF && new_band != BAND_VHF)
     vhf_powerdown();
-  }
-  else {
+
+  // HF --> VHF
+  if(band != BAND_VHF && new_band == BAND_VHF) {
     // connect to VHF module if it's not already configured
     if(!vhf_is_configured()) {
       io_set_blink_mode(BLINK_STARTUP);

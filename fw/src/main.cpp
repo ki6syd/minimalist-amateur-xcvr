@@ -100,6 +100,15 @@ void info_task(void *param) {
 
     Serial.print("Firmware: ");
     Serial.println(GIT_VERSION);
+
+    Serial.print("Dit: ");
+    Serial.print(digitalRead(KEY_DIT));
+    Serial.print("\tDah: ");
+    Serial.print(digitalRead(KEY_DAH));
+    Serial.print("\tBOOT: ");
+    Serial.print(digitalRead(BOOT_BTN));
+    Serial.print("\tPTT: ");
+    Serial.println(digitalRead(MIC_PTT));
     
     Serial.println();
     vTaskDelay(pdMS_TO_TICKS(10000));
