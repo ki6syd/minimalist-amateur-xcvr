@@ -25,7 +25,7 @@ void wifi_init() {
 
     WiFi.begin(WIFI_STA_SSID, WIFI_STA_PASS);
 
-    for (int i = 0; i < 25; i++) {
+    for (int i = 0; i < 50; i++) {
         if (WiFi.status() == WL_CONNECTED)
             break;
         vTaskDelay(pdMS_TO_TICKS(100));

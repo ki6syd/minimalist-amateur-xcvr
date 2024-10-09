@@ -250,7 +250,7 @@ void audio_dsp_task(void *param) {
     audio_set_filt(cur_filt);
 
     // audio_filt (mono) --> audio_filt_meas (mono) --> out_vol (mono) --> multi_output (mono)
-    audio_set_volume(AUDIO_VOL_DEFAULT);
+    audio_set_volume(global_vol);
     multi_output = new MultiOutput();
     out_vol.setOutput(*multi_output);
     out_vol.begin(info_mono);
@@ -362,6 +362,7 @@ void audio_dsp_task(void *param) {
 
 // properly disables and restarts the DSP task 
 void audio_dsp_task_restart() {
+    // disable audio to avoid any noise during restart
     audio_en_rx_audio(false);
 
     // Are any of these even needed? 
@@ -420,7 +421,7 @@ void audio_logic_task(void *pvParameter) {
                 audio_dsp_task_restart();
             }
             if(notifiedValue & NOTIFY_MODE_VHF_RX && cur_audio_mode != AUDIO_VHF_RX) {
-                // HF --> VHF: need to switch to other audio inputs
+                // HF --> VHF: need to switch to other audio inputs, requires codec input reconfiguration
                 if(cur_audio_mode == AUDIO_HF_RXTX_CW) {
                     cur_audio_mode = AUDIO_VHF_RX;
                     cur_filt = AUDIO_FILT_SSB;
@@ -430,10 +431,13 @@ void audio_logic_task(void *pvParameter) {
                 else if(cur_audio_mode == AUDIO_VHF_TX) {
                     cur_audio_mode = AUDIO_VHF_RX;
                     audio_set_dacs(cur_audio_mode);
+                    audio_en_rx_audio(true);
+                    // in TX->RX transition, we should have stored the volume
+                    audio_set_volume(global_vol);
                 }
             }
             if(notifiedValue & NOTIFY_MODE_VHF_TX && cur_audio_mode != AUDIO_VHF_TX) {
-                // HF --> VHF: need to switch to other audio inputs
+                // HF --> VHF: need to switch to other audio inputs, requires codec input reconfiguration
                 if(cur_audio_mode == AUDIO_HF_RXTX_CW) {
                     cur_audio_mode = AUDIO_VHF_TX;
                     cur_filt = AUDIO_FILT_SSB;
@@ -443,6 +447,10 @@ void audio_logic_task(void *pvParameter) {
                 else if(cur_audio_mode == AUDIO_VHF_RX) {
                     cur_audio_mode = AUDIO_VHF_TX;
                     audio_set_dacs(cur_audio_mode);
+                    // turn on audio. TODO: clean up naming, we need "rx" audio on because it controls the side_l_r mixer
+                    audio_en_rx_audio(true);
+                    // TODO: some sort of mic gain control set in json file
+                    out_vol.setVolume(1.0);     // equivalent to calling audio_set_volume(), but doesn't override global_vol
                 }
             }
             if(notifiedValue & NOTIFY_DBG_MAX_VOL) {
@@ -603,17 +611,29 @@ void audio_en_sidetone(bool tone) {
 }
 
 // ONLY affects muting of rx audio, does not affect sidetone
+// TODO: remove "rx" from the name, kind of confusing, we also set en_rx_audio(true) during VHF TX
 void audio_en_rx_audio(bool en) {
     if(side_l_r_mix == nullptr)
         return;
 
     if(en) {
         // unmute input mixer channels. LEFT channel depends on whether IQ audio is in use
-        side_l_r_mix->setWeight(MIXER_IDX_RIGHT, 1.0);
+        if(cur_audio_mode == AUDIO_VHF_TX) {
+            Serial.println("turning off RIGHT");
+            side_l_r_mix->setWeight(MIXER_IDX_RIGHT, 0.0);
+        }
+        else
+            side_l_r_mix->setWeight(MIXER_IDX_RIGHT, 1.0);
+        
 #ifdef AUDIO_PATH_IQ
         side_l_r_mix.setWeight(MIXER_IDX_LEFT, 1.0);
 #else
-        side_l_r_mix->setWeight(MIXER_IDX_LEFT, 0.0);
+        // use LEFT input for VHF audio, only in TX mode
+        if(cur_audio_mode == AUDIO_VHF_TX) {
+            side_l_r_mix->setWeight(MIXER_IDX_LEFT, 1.0);
+        }
+        else
+            side_l_r_mix->setWeight(MIXER_IDX_LEFT, 0.0);
 #endif
 
     }
@@ -707,6 +727,7 @@ void audio_set_dacs(audio_mode_t mode) {
         driver->setMute(true, 1);
     }
     else if(mode == AUDIO_VHF_TX) {
+        // driver->setMute(false, 0);       // set to false --> TX audio monitor feature (hear what you're saying). No volume control, this would adjust outgoing audio too.
         driver->setMute(true, 0);
         driver->setMute(false, 1);
     }

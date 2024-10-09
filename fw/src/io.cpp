@@ -248,9 +248,9 @@ void blink_task(void *param) {
 void tx_pulse_task(void *param) {
   while(true) {
     if(xSemaphoreTake(btn_semaphore, portMAX_DELAY) == pdPASS) {
-      if(digitalRead(BOOT_BTN) == LOW)
+      if(digitalRead(BOOT_BTN) == LOW || digitalRead(MIC_PTT) == LOW)
         radio_key_on();
-      if(digitalRead(BOOT_BTN) == HIGH)
+      if(digitalRead(BOOT_BTN) == HIGH && digitalRead(MIC_PTT) == HIGH)
         radio_key_off();
 
       attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, CHANGE);

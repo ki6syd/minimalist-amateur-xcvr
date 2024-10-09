@@ -84,6 +84,9 @@ void info_task(void *param) {
     Serial.print("Audio dB: ");
     Serial.println(audio_get_loudness());
 
+    Serial.print("PGA: ");
+    Serial.println(audio_get_pga());
+
     Serial.println(radio_freq_string());
 
     Serial.print("Current band: ");

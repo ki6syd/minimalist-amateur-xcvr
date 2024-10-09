@@ -86,7 +86,7 @@ void radio_task(void *param) {
   while(true) {
     // look for flags. Don't clear on entry; clear on exit
     // example: https://freertos.org/Documentation/02-Kernel/02-Kernel-features/03-Direct-to-task-notifications/04-As-event-group
-    if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(10)) == pdTRUE) {
+    if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(5)) == pdTRUE) {
       if(notifiedValue & NOTIFY_KEY_OFF) {
         // initiate mode change
         radio_set_rxtx_mode(MODE_QSK_COUNTDOWN);
@@ -103,12 +103,14 @@ void radio_task(void *param) {
 
         // turn off sidetone, LED, TX power amp rail, VHF tx_en, etc
         digitalWrite(LED_RED, HIGH);
-        audio_en_sidetone(true);
+        
         if(ok_to_tx) {
-          if(radio_freq_is_hf(freq_dial))
+          if(radio_freq_is_hf(freq_dial)) {
+            audio_en_sidetone(true);
             digitalWrite(PA_VDD_CTRL, HIGH);
+          }
           else
-            digitalWrite(VHF_PTT, LOW);
+            digitalWrite(VHF_PTT, LOW);          
         }
       }
       if(notifiedValue & NOTIFY_QSK_EXPIRE) {
@@ -246,15 +248,18 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
           si5351.output_enable(SI5351_IDX_VFO, 1);
           si5351.output_enable(SI5351_IDX_TX, 0);
 
-          // enable RX audio
+          // allow audio to pass through
           audio_en_rx_audio(true);
-          audio_en_sidetone(false);
         }
         else {
             audio_set_mode(AUDIO_VHF_RX);
             
             // TODO: turn off si5351 clocks for VHF mode
         }
+        // no sidetone in RX mode, regardless of VHF or HF
+        // TODO: delete this? sidetone controls happen at key_on and key_off
+        audio_en_sidetone(false);
+
         // change over relays if needed. Add some settling time
         // TODO: rework the radio_set_band(band) function so it is "radio_set_relays(freq)" and looks up band from dial freq
         radio_set_band(band);

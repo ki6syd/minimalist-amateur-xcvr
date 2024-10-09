@@ -7,10 +7,10 @@
 #include <HardwareSerial.h>
 
 #define NUM_PWR_CYCLE       10
-#define NUM_RETRIES         4
-#define DELAY_WAKEUP        500
+#define NUM_RETRIES         5
+#define DELAY_WAKEUP        100
 #define DELAY_NEXT_CMD      50
-#define DELAY_POWERDOWN     10
+#define DELAY_POWERDOWN     50
 
 HardwareSerial VHFserial(1);
 bool configured = false;
@@ -37,6 +37,8 @@ void vhf_init() {
     digitalWrite(VHF_PTT, HIGH);  // RX mode, then delay before enabling - don't want to accidentally transmit
     vTaskDelay(pdMS_TO_TICKS(10));
 
+    /*
+
     // attempt to handshake
     if(!vhf_handshake()) {
         vhf_powerdown();
@@ -47,6 +49,7 @@ void vhf_init() {
     // for debug: print out version
     vhf_get_version();
     vTaskDelay(pdMS_TO_TICKS(DELAY_NEXT_CMD));
+    */
 
     // disable VHF now that config is complete
     vhf_powerdown();
