@@ -43,7 +43,6 @@ void wifi_init() {
     }
 
     // start access point if we have failed to connect
-    // TODO: look at using waitForConnectResult. https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/station-class.html#waitforconnectresult
     if (WiFi.status() != WL_CONNECTED) {
         Serial.println("[WIFI] Failed to connect to home network. Starting AP.");
         // begin by forgetting old credentials
@@ -67,18 +66,17 @@ void wifi_init() {
         Serial.println(WiFi.channel());
     }
 
-    // lower power to prevent audio noise (TODO: test if this is present in latest hardware)
-    // maximum power is WIFI_POWER_19_5dBm
     // higher power level helps with TCP audio streaming, lower power makes less audible noise
-    // WiFi.setTxPower(WIFI_POWER_13dBm);
-    WiFi.setTxPower(WIFI_POWER_17dBm);
+    if(fs_setting_exists(PREFERENCE_FILE, "wifi_power"))
+        WiFi.setTxPower((wifi_power_t) fs_load_setting(PREFERENCE_FILE, "wifi_power").toInt());
+    else    
+        WiFi.setTxPower(WIFI_POWER_19_5dBm);
 
 #ifdef WIFI_SCAN
     wifi_scan();
 #endif
 
     // avoiding power saving mode helps with ESP-NOW
-    // TODO: parametrize with an ESP_NOW feature flag
     esp_wifi_set_ps(WIFI_PS_NONE);
 
     // start MDNS

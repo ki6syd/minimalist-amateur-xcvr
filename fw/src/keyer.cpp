@@ -16,7 +16,7 @@
 uint16_t keyer_speed = 16;
 
 void keyer_init() {
-    // Todo: load keyer parameters from file system
+    // Todo: load keyer parameters (min/max speed) from file system
 }
 
 bool keyer_set_speed(uint16_t wpm) {

@@ -85,7 +85,10 @@ void info_task(void *param) {
     Serial.println(audio_get_loudness());
 
     Serial.print("PGA: ");
-    Serial.println(audio_get_pga());
+    Serial.print(audio_get_pga());
+
+    Serial.print("\tVolume: ");
+    Serial.println(audio_get_volume());
 
     Serial.println(radio_freq_string());
 

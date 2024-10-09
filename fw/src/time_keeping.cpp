@@ -9,10 +9,8 @@ void time_init() {
 
 }
 
-bool time_update(uint64_t current_time) {
-    Serial.print("[TIME] time error was: ");
-    Serial.println((float) now() - (float) current_time);
-
+// accepts epoch *seconds*
+bool time_update(uint64_t current_time) { 
     setTime(current_time);
 
     //TODO: do something smarter than returning true all the time

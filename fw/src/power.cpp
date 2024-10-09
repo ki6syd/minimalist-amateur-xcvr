@@ -74,7 +74,7 @@ void analog_sense_task(void *param) {
 
 
 // updates buck converters to a new switching frequency [Hz]
-// TODO: test this
+// TODO: test this, implement logic to set it based on dial frequency
 void power_update_freq(uint32_t new_freq) {
     if(new_freq < 1e6 && new_freq > 100e3) {
         freq_buck = new_freq;

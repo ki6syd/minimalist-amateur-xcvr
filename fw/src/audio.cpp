@@ -104,8 +104,7 @@ float global_vol = AUDIO_VOL_DEFAULT;
 audio_filt_t cur_filt = AUDIO_FILT_DEFAULT;
 audio_mode_t cur_audio_mode = AUDIO_HF_RXTX_CW;
 float last_volume_dB = 0;
-// TODO: max_safe_vol would be good to put in json preferences
-uint32_t max_safe_vol = 5000;                   // 32768 allows full volume output (int32_t)
+uint32_t max_safe_vol = 32768;                   // 32768 allows full volume output (int32_t)
 
 void audio_dsp_task(void * pvParameter);
 void audio_dsp_task_restart();
@@ -118,7 +117,6 @@ void audio_init() {
     // load maximum volume (a float from 0-1.0) and scale by maximum int32_t
     // TODO: make sure this ended up between 0-32768
     max_safe_vol = (uint32_t) (fs_load_setting(PREFERENCE_FILE, "max_audio_output").toFloat() * 32768); 
-
 
     // note: platformio + arduino puts wifi on core 0
     // run on core 1
@@ -521,7 +519,6 @@ void audio_gain_task(void *pvParameter) {
     }
 }
 
-// TODO: think about thread safety with this function. It's the only one in the file that accesses the hardware
 void audio_set_mode(audio_mode_t mode) {
     if(mode == AUDIO_HF_RXTX_CW)
         xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_HF_RXTX_CW, eSetBits);
@@ -532,7 +529,7 @@ void audio_set_mode(audio_mode_t mode) {
 }
 
 // changes the audio FIR in use
-// TODO: definitely creating a memory issue by creating new filters repeatedly...
+// note that calling setFilter() will free memory associated with the previuosly registered filter, so this isn't causing memory leaks
 bool audio_set_filt(audio_filt_t filt) {
     switch(filt) {
         case AUDIO_FILT_CW:

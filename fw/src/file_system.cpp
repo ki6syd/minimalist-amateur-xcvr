@@ -19,6 +19,7 @@ void print_band_capability(radio_band_capability_t (&bands)[NUMBER_BANDS]);
 void fs_task(void *pvParameter);
 
 // TODO: have fs_init() load everything into memory
+// TODO: make this thread-safe
 // then lookups don't need to access the file system repeatedly, and less thread-safety issue accessing file system
 // maybe useful library for this: https://github.com/arkhipenko/Dictionary
 void fs_init() {
@@ -88,6 +89,13 @@ String fs_load_setting(String file_name, String param_name) {
     Serial.print(": ");
     Serial.println(tmp);
     return tmp;
+}
+
+bool fs_setting_exists(String file_name, String param_name) {
+    String tmp = fs_load_setting(file_name, param_name);
+    if(tmp == "")
+        return false;
+    return true;
 }
 
 radio_band_t string_to_radio_band(const char* band_str) {

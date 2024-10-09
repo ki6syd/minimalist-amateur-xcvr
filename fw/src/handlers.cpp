@@ -129,11 +129,14 @@ void handler_time_set(AsyncWebServerRequest *request) {
     Serial.print("New time: ");
     Serial.println(request->getParam("timeNow")->value());
 
-    uint64_t new_time = request->getParam("timeNow")->value().toInt();
+    // TODO - delete the hack substring once the time module works in millseconds
+    String time_string = request->getParam("timeNow")->value();
+    time_string = time_string.substring(0, time_string.length()-3);
+    uint64_t new_time = time_string.toInt();
     if(time_update(new_time))
         request->send(201, "text/plain", "OK");
     else {
-        request->send(400, "text/plain", "Frequency out of range");
+        request->send(400, "text/plain", "Unable to update time");
     }
 }
 

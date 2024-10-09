@@ -140,7 +140,6 @@ void radio_task(void *param) {
 
             // different logic depending on HF or VHF requested frequency
             if(radio_freq_is_hf(tmp.dial_freq)) {
-                // TODO: block the frequncy change if it's a different band, and we are already transmitting
                 freq_dial = tmp.dial_freq;
                 hf_set_dial_freq(freq_dial);
                 
@@ -232,8 +231,6 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
   if(rxtx_mode == MODE_TX && new_mode == MODE_RX)
     new_mode = MODE_QSK_COUNTDOWN;
 
-  // TODO: make a call to audio_configure_codec() to select AUDIO_xHF_xxx
-
   switch(new_mode) {
     case MODE_RX:
         // stop QSK counter, in case it was still running
@@ -264,7 +261,7 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
         // TODO: delete this? sidetone controls happen at key_on and key_off
         audio_en_sidetone(false);
 
-        // change over relays if needed. Add some settling time
+        // change over relays if needed
         // TODO: rework the radio_set_band(band) function so it is "radio_set_relays(freq)" and looks up band from dial freq
         radio_set_band(band);
 
@@ -367,7 +364,7 @@ void radio_set_band(radio_band_t new_band) {
         switch(new_band) {
             case BAND_HF_1:
                 digitalWrite(LPF_SEL_0, LOW);
-                digitalWrite(LPF_SEL_1, HIGH);
+                digitalWrite(LPF_SEL_1, LOW);
                 digitalWrite(TX_RX_SEL, HIGH);
                 break;
             case BAND_HF_2:
@@ -402,7 +399,7 @@ void radio_set_band(radio_band_t new_band) {
               digitalWrite(BPF_SEL_0, LOW);
               digitalWrite(BPF_SEL_1, LOW);
               digitalWrite(LPF_SEL_0, LOW);
-              digitalWrite(LPF_SEL_1, HIGH);
+              digitalWrite(LPF_SEL_1, LOW);
               break;
             case BAND_HF_2:
               digitalWrite(BPF_SEL_0, HIGH);
@@ -414,7 +411,7 @@ void radio_set_band(radio_band_t new_band) {
               digitalWrite(BPF_SEL_0, LOW);
               digitalWrite(BPF_SEL_1, HIGH);
               digitalWrite(LPF_SEL_0, HIGH);
-              digitalWrite(LPF_SEL_1, HIGH);
+              digitalWrite(LPF_SEL_1, LOW);
               break;
             case BAND_SELFTEST_LOOPBACK:
               digitalWrite(BPF_SEL_0, HIGH);
@@ -450,6 +447,8 @@ void radio_set_band(radio_band_t new_band) {
         io_set_blink_mode(BLINK_ERROR);
         vTaskDelay(pdMS_TO_TICKS(1000));
         vhf_powerdown();
+        // return now, before "band" can be updated
+        return;
       }
     }
   }

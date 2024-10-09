@@ -201,7 +201,6 @@ bool vhf_set_volume(uint16_t volume) {
     return vhf_response_success(response);
 }
 
-// TODO: return something
 void vhf_get_version() {
     String version = "AT+VERSION";
     vhf_command(version);
