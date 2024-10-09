@@ -23,6 +23,7 @@ void wifi_init() {
     Serial.println("[WIFI] Attempting to connect to home network.");
     WiFi.mode(WIFI_STA);
 
+    // TODO: use credentials from json file, if they exist
     WiFi.begin(WIFI_STA_SSID, WIFI_STA_PASS);
 
     for (int i = 0; i < 50; i++) {
@@ -42,6 +43,7 @@ void wifi_init() {
         // set up AP with hardcoded 192.168.1.1 address
         WiFi.mode(WIFI_AP);
         WiFi.softAPConfig(IPAddress(192, 168, 1, 1), IPAddress(192, 168, 1, 1), IPAddress(255, 255, 255, 0));
+        // TODO: use credentials from json file
         WiFi.softAP("TEST", "password", 11);
         ip = WiFi.softAPIP();
     }

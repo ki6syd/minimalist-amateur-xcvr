@@ -29,6 +29,8 @@
 #define NOTIFY_MODE_VHF_TX      (1 << 4)
 #define NOTIFY_DBG_MAX_VOL      (1 << 5)
 
+#define INT16T_MAX              32767
+
 #define BUFFER_CHUNK            64
 
 TwoWire codecI2C = TwoWire(1);  // "Wire" is used in si5351 library. Defined through TwoWire(0), so the other peripheral is still available
@@ -81,6 +83,7 @@ FilteredStream<int16_t, float> audio_filt(audio_filt_meas, info_mono.channels); 
 OutputMixer<int16_t>          *side_l_r_mix;              // sidetone, left, right, audio mixing into audio_filt
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);      // turns a mono stream into a stereo stream
 AudioEffectStream             effects(mono_to_stereo);                  // effects --> mono_to_stereo             
+Distortion                    *volume_limiter;
 StreamCopy copier_1(BUFFER_CHUNK);
 StreamCopy copier_2(BUFFER_CHUNK * 2);
 #ifdef AUDIO_PATH_IQ
@@ -116,8 +119,6 @@ void audio_init() {
     // TODO: make sure this ended up between 0-32768
     max_safe_vol = (uint32_t) (fs_load_setting(PREFERENCE_FILE, "max_audio_output").toFloat() * 32768); 
 
-    Serial.print("Maximum safe volume: ");
-    Serial.println(max_safe_vol);
 
     // note: platformio + arduino puts wifi on core 0
     // run on core 1
@@ -331,7 +332,8 @@ void audio_dsp_task(void *param) {
 #endif
 
     // Distortion (clipping) operates *after* volume control is applied, making it the same threshold regardless of volume setting
-    effects.addEffect(new Distortion(max_safe_vol, max_safe_vol));
+    volume_limiter = new Distortion(max_safe_vol, max_safe_vol);
+    effects.addEffect(*volume_limiter);
     effects.begin(info_mono);
 
     // take a mono audio stream and make it stereo
@@ -379,10 +381,11 @@ void audio_dsp_task_restart() {
     // input_split.end();
     // multi_output.end();
     // out_vol.end();
-    // effects.end();
+    effects.clear();
     // mono_to_stereo.end();
     delete side_l_r_mix;
     delete input_split;
+    delete volume_limiter;
 
     Serial.println("\nDeleting existing DSP task...");
 
@@ -435,8 +438,10 @@ void audio_logic_task(void *pvParameter) {
                     cur_audio_mode = AUDIO_VHF_RX;
                     audio_set_dacs(cur_audio_mode);
                     audio_en_rx_audio(true);
-                    // in TX->RX transition, we should have stored the volume
+                    // in TX->RX transition, restore volume
                     audio_set_volume(global_vol);
+                    // restore volume limiter
+                    volume_limiter->setClipThreashold(max_safe_vol);
                 }
             }
             if(notifiedValue & NOTIFY_MODE_VHF_TX && cur_audio_mode != AUDIO_VHF_TX) {
@@ -454,6 +459,8 @@ void audio_logic_task(void *pvParameter) {
                     audio_en_rx_audio(true);
                     // TODO: some sort of mic gain control set in json file
                     out_vol.setVolume(1.0);     // equivalent to calling audio_set_volume(), but doesn't override global_vol
+                    // allow full volume output
+                    volume_limiter->setClipThreashold(INT16T_MAX);
                 }
             }
             if(notifiedValue & NOTIFY_DBG_MAX_VOL) {
