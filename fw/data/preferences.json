@@ -1,5 +1,11 @@
 {
 	"mdns_hostname": "radio",
+	"home_ssid": "SSID_HERE",
+	"home_password": "PASSWORD_HERE",
+	"ap_ssid": "max-4b_ki6syd",
+	"ap_password": "summitsontheair",
+	"ap_channel": "11",
+	"wifi_power": "68",
 	"max_audio_output": "0.04",
 	"vhf_default_vol": "6",
 	"vhf_default_freq": "146580000"

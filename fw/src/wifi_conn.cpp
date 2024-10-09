@@ -20,18 +20,27 @@ void wifi_init() {
     WiFi.persistent(false);
 
     // attempt to connect to home wifi network
-    Serial.println("[WIFI] Attempting to connect to home network.");
+    Serial.println("[WIFI] Attempting to connect to home network (FLASH credentials)");
     WiFi.mode(WIFI_STA);
 
-    // TODO: use credentials from json file, if they exist
+    // try credentials assigned at compile time
     WiFi.begin(WIFI_STA_SSID, WIFI_STA_PASS);
-
     for (int i = 0; i < 50; i++) {
         if (WiFi.status() == WL_CONNECTED)
             break;
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 
+    // try credentials from JSON file
+    if(WiFi.status() != WL_CONNECTED) {
+        Serial.println("[WIFI] Attempting to connect to home network (JSON credentials)");
+        WiFi.begin(fs_load_setting(PREFERENCE_FILE, "home_ssid"), fs_load_setting(PREFERENCE_FILE, "home_password"));
+        for (int i = 0; i < 50; i++) {
+            if (WiFi.status() == WL_CONNECTED)
+                break;
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
+    }
 
     // start access point if we have failed to connect
     // TODO: look at using waitForConnectResult. https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/station-class.html#waitforconnectresult
@@ -43,8 +52,7 @@ void wifi_init() {
         // set up AP with hardcoded 192.168.1.1 address
         WiFi.mode(WIFI_AP);
         WiFi.softAPConfig(IPAddress(192, 168, 1, 1), IPAddress(192, 168, 1, 1), IPAddress(255, 255, 255, 0));
-        // TODO: use credentials from json file
-        WiFi.softAP("TEST", "password", 11);
+        WiFi.softAP(fs_load_setting(PREFERENCE_FILE, "ap_ssid"), fs_load_setting(PREFERENCE_FILE, "ap_password"), 11);
         ip = WiFi.softAPIP();
     }
     else {
