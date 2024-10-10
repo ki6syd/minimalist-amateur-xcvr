@@ -334,7 +334,6 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
 // setting band to anything but BAND_VHF will result in powerdown
 void radio_set_band(radio_band_t new_band) {
     if(rxtx_mode == MODE_RX || rxtx_mode == MODE_QSK_COUNTDOWN) {
-        digitalWrite(TX_RX_SEL, LOW);
         switch(new_band) {
             case BAND_HF_1:
                 digitalWrite(BPF_SEL_0, LOW);
@@ -359,6 +358,7 @@ void radio_set_band(radio_band_t new_band) {
         }
         digitalWrite(LPF_SEL_0, LOW);
         digitalWrite(LPF_SEL_1, LOW);
+        digitalWrite(TX_RX_SEL, LOW);
     }
     else if(rxtx_mode == MODE_TX) {
         switch(new_band) {
@@ -373,21 +373,22 @@ void radio_set_band(radio_band_t new_band) {
                 digitalWrite(TX_RX_SEL, HIGH);
                 break;
             case BAND_HF_3:
-                digitalWrite(LPF_SEL_0, HIGH);
+                digitalWrite(LPF_SEL_0, LOW);
                 digitalWrite(LPF_SEL_1, HIGH);
                 digitalWrite(TX_RX_SEL, HIGH);
                 break;
             case BAND_VHF:
                 digitalWrite(LPF_SEL_0, LOW);
                 digitalWrite(LPF_SEL_1, LOW);
+                digitalWrite(TX_RX_SEL, LOW);
                 break;
             default:
                 Serial.print("Invalid band request: ");
                 Serial.println(new_band);
                 return;
-            digitalWrite(BPF_SEL_0, HIGH);
-            digitalWrite(BPF_SEL_1, HIGH);
         }
+        digitalWrite(BPF_SEL_0, HIGH);
+        digitalWrite(BPF_SEL_1, HIGH);
     }
     else if(rxtx_mode == MODE_SELF_TEST) {
         // turn this off, just to be safe in selftest mode
@@ -411,7 +412,7 @@ void radio_set_band(radio_band_t new_band) {
               digitalWrite(BPF_SEL_0, LOW);
               digitalWrite(BPF_SEL_1, HIGH);
               digitalWrite(LPF_SEL_0, HIGH);
-              digitalWrite(LPF_SEL_1, LOW);
+              digitalWrite(LPF_SEL_1, HIGH);
               break;
             case BAND_SELFTEST_LOOPBACK:
               digitalWrite(BPF_SEL_0, HIGH);

@@ -66,7 +66,7 @@ void hf_si5351_init() {
 
   si5351.drive_strength(SI5351_IDX_BFO, SI5351_DRIVE_2MA);
   si5351.drive_strength(SI5351_IDX_VFO, SI5351_DRIVE_2MA);
-  si5351.drive_strength(SI5351_IDX_TX, SI5351_DRIVE_2MA);
+  si5351.drive_strength(SI5351_IDX_TX, SI5351_DRIVE_8MA);
 
   hf_calc_clocks();
   hf_set_clocks(freq_bfo, freq_vfo, radio_get_dial_freq());
