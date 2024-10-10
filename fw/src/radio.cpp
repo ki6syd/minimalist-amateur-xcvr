@@ -391,10 +391,11 @@ void radio_set_band(radio_band_t new_band) {
         digitalWrite(BPF_SEL_1, HIGH);
     }
     else if(rxtx_mode == MODE_SELF_TEST) {
+      Serial.println(radio_band_to_string(new_band));
         // turn this off, just to be safe in selftest mode
         digitalWrite(PA_VDD_CTRL, LOW);
-        digitalWrite(TX_RX_SEL, LOW);
-        
+        // set TX_RX_SEL to LOW to get more signal
+        digitalWrite(TX_RX_SEL, HIGH);    
         switch(new_band) {
             case BAND_HF_1:
               digitalWrite(BPF_SEL_0, LOW);
@@ -411,7 +412,7 @@ void radio_set_band(radio_band_t new_band) {
             case BAND_HF_3:
               digitalWrite(BPF_SEL_0, LOW);
               digitalWrite(BPF_SEL_1, HIGH);
-              digitalWrite(LPF_SEL_0, HIGH);
+              digitalWrite(LPF_SEL_0, LOW);
               digitalWrite(LPF_SEL_1, HIGH);
               break;
             case BAND_SELFTEST_LOOPBACK:

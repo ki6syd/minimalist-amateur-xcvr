@@ -21,7 +21,6 @@ uint64_t freq_bfo = 0;
 float audio_level_sREF = -49.4;
 
 void hf_si5351_init();
-void hf_calc_clocks();
 void hf_set_clocks(uint64_t freq_bfo, uint64_t freq_vfo, uint64_t freq_rf);
 void radio_sweep_analyze(radio_filt_sweep_t sweep, float *data, radio_filt_properties_t *properties);
 
@@ -68,24 +67,19 @@ void hf_si5351_init() {
   si5351.drive_strength(SI5351_IDX_VFO, SI5351_DRIVE_2MA);
   si5351.drive_strength(SI5351_IDX_TX, SI5351_DRIVE_8MA);
 
-  hf_calc_clocks();
-  hf_set_clocks(freq_bfo, freq_vfo, radio_get_dial_freq());
+  hf_set_dial_freq(radio_get_dial_freq());
+
   // the first call to si5351.set_freq() will enable the clocks. Turn them off
   si5351.output_enable(SI5351_IDX_BFO, 0);
   si5351.output_enable(SI5351_IDX_VFO, 0);
   si5351.output_enable(SI5351_IDX_TX, 0);
 }
 
-void hf_set_dial_freq(uint64_t freq_dial) {
-  hf_calc_clocks();
-  hf_set_clocks(freq_bfo, freq_vfo, freq_dial);
-}
-
+// helper function that only radio.cpp or radio_hf.cpp should call
 // inputs: dial frequency, crystal edge frequencies, sidetone frequency, CW vs SSB
 // result: sets the VFO and BFO frequencies
 // assumes typical logic of USB above 10MHz and LSB below 10MHz. Will need an update for FT8
-void hf_calc_clocks() {
-  uint64_t freq_dial = radio_get_dial_freq();
+void hf_set_dial_freq(uint64_t freq_dial) {
   if(freq_dial < 10000000) {
     freq_vfo = freq_if_lower - freq_dial;
     freq_bfo = freq_if_lower - ((uint64_t) audio_get_sidetone_freq());
@@ -99,7 +93,9 @@ void hf_calc_clocks() {
   freq_bfo = 4 * (freq_dial + ((uint64_t) audio_get_sidetone_freq()));
 #endif
 
+  hf_set_clocks(freq_bfo, freq_vfo, freq_dial);
 }
+
 
 void hf_set_clocks(uint64_t freq_bfo, uint64_t freq_vfo, uint64_t freq_rf) {
   si5351.set_freq(freq_bfo * 100, SI5351_IDX_BFO);
@@ -207,7 +203,7 @@ void hf_cal_if_filt(radio_filt_sweep_t sweep, radio_filt_properties_t *propertie
 
   // TODO: logic to broaden the search if the upper or lower index are at the edges of the sweep
   digitalWrite(LED_RED, LOW);
-  // radio_set_dial_freq(sweep.f_center);
+  radio_set_band(radio_get_band(radio_get_dial_freq()));
   radio_set_rxtx_mode(MODE_RX);
   audio_set_filt(AUDIO_FILT_DEFAULT);
   audio_en_pga(pga_init);
@@ -216,6 +212,7 @@ void hf_cal_if_filt(radio_filt_sweep_t sweep, radio_filt_properties_t *propertie
   Serial.println("Routine complete.\n\n");
 }
 
+// data matches less well than the IF filter calibration. Better to do VNA and testpoints.
 void hf_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_properties_t *properties) {
   // ensure VDD is turned off
   digitalWrite(PA_VDD_CTRL, LOW);
@@ -233,6 +230,7 @@ void hf_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_pro
 
   audio_en_pga(false);
   audio_en_sidetone(false);
+  audio_en_vol_clipping(false);
   audio_set_volume(AUDIO_VOL_DURING_CAL);  // can mute for quiet startup
   audio_en_rx_audio(true);
   audio_set_filt(AUDIO_FILT_SSB);
@@ -242,24 +240,23 @@ void hf_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_pro
   si5351.output_enable(SI5351_IDX_VFO, 1);
   si5351.output_enable(SI5351_IDX_TX, 1);
 
+  // reduce clock strength
+  si5351.drive_strength(SI5351_IDX_TX, SI5351_DRIVE_2MA);
+
   // wait to let audio settle
   vTaskDelay(100 / portTICK_PERIOD_MS);
 
   int64_t step_size = ((int64_t) sweep.f_span) / sweep.num_steps;
   float measurements[sweep.num_steps];
-  // TODO: remove the hack of shifting +/-5kHz on the IF filter. Doing this to get less signal.
-  freq_if_upper += 2000;
   for(uint16_t i = 0; i < sweep.num_steps; i++)
   {
     int64_t dF = step_size * (((int64_t) i) - (int64_t) sweep.num_steps/2);
-    float freq_dial = (uint64_t) sweep.f_center + dF;
-    hf_calc_clocks();
-    hf_set_clocks(freq_bfo, freq_vfo, freq_dial);
+    uint64_t freq_dial = (uint64_t) (sweep.f_center + dF);
+    hf_set_dial_freq(freq_dial);
     vTaskDelay(pdMS_TO_TICKS(50));
 
     measurements[i] = audio_get_rx_db(sweep.num_to_avg, 10);
   }
-  freq_if_upper -= 2000;
 
   radio_sweep_analyze(sweep, measurements, properties);
 
@@ -268,6 +265,7 @@ void hf_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_pro
   radio_set_rxtx_mode(MODE_RX);
   audio_set_filt(AUDIO_FILT_DEFAULT);
   audio_en_pga(pga_init);
+  audio_en_vol_clipping(true);
   audio_set_volume(volume_init);
   audio_en_rx_audio(true);
   Serial.println("Routine complete.\n\n");

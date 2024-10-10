@@ -439,7 +439,7 @@ void audio_logic_task(void *pvParameter) {
                     // in TX->RX transition, restore volume
                     audio_set_volume(global_vol);
                     // restore volume limiter
-                    volume_limiter->setClipThreashold(max_safe_vol);
+                    audio_en_vol_clipping(true);
                 }
             }
             if(notifiedValue & NOTIFY_MODE_VHF_TX && cur_audio_mode != AUDIO_VHF_TX) {
@@ -458,7 +458,7 @@ void audio_logic_task(void *pvParameter) {
                     // TODO: some sort of mic gain control set in json file
                     out_vol.setVolume(1.0);     // equivalent to calling audio_set_volume(), but doesn't override global_vol
                     // allow full volume output
-                    volume_limiter->setClipThreashold(INT16T_MAX);
+                    audio_en_vol_clipping(false);
                 }
             }
             if(notifiedValue & NOTIFY_DBG_MAX_VOL) {
@@ -737,6 +737,13 @@ void audio_set_dacs(audio_mode_t mode) {
         driver->setMute(true, 0);
         driver->setMute(false, 1);
     }
+}
+
+void audio_en_vol_clipping(bool enable) {
+    if(enable)
+        volume_limiter->setClipThreashold(max_safe_vol);
+    else
+        volume_limiter->setClipThreashold(INT16T_MAX);
 }
 
 void audio_debug(debug_action_t command_num) {

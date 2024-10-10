@@ -45,6 +45,7 @@ float audio_get_rx_vol();
 float audio_get_loudness();
 float audio_get_sidetone_freq();
 float audio_get_volume();
+void audio_en_vol_clipping(bool enable);
 void audio_debug(debug_action_t command_num);
 
 void audio_test(bool swap);
