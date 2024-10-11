@@ -8,8 +8,6 @@
 #include <ESPmDNS.h>
 #include <esp_now.h>
 
-// #define WIFI_SCAN
-
 IPAddress ip;
 
 void wifi_init() {

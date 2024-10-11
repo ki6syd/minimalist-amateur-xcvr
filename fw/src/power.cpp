@@ -2,27 +2,33 @@
 #include "power.h"
 #include "radio.h"
 #include "io.h"
+#include "file_system.h"
 
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
 #define POWER_BUCK_FSW      510e3
-// TODO: move this into JSON preferences
-#define VBAT_CELL_LOW       2.6
-#define VBAT_NUM_CELL       3
 #define VDIODE              0.6
-#define VUSB                5.5
+#define VUSB_MAX                5.5
 
 TaskHandle_t xAnalogSenseTaskHandle;
 
 uint32_t freq_buck = POWER_BUCK_FSW;
 float input_volt = 0;
+float vbat_cell_low = 3.0;
+uint16_t num_cell = 3;
 uint32_t num_low_samples = 0;
 
 void analog_sense_task(void *pvParameter);
 
 void power_init() {
+  // load configuration from JSON file
+  if(fs_setting_exists(PREFERENCE_FILE, "vbat_cell_low"))
+    vbat_cell_low = fs_load_setting(PREFERENCE_FILE, "vbat_cell_low").toFloat();
+  if(fs_setting_exists(PREFERENCE_FILE, "vbat_cell_low"))
+    num_cell = fs_load_setting(PREFERENCE_FILE, "num_battery").toInt();
+
     // set up a PWM channel that drives buck converter sync pin
     // feature for the future: select this frequency based on the dial frequency
     ledcSetup(PWM_CHANNEL_SYNC, freq_buck, 2);
@@ -48,9 +54,9 @@ void analog_sense_task(void *param) {
     // TODO: mute when power goes down, to avoid pop
 
     // figure out whether we're on USB power? Don't run this logic if voltage is very low
-    if(input_volt + VDIODE > VUSB) {
+    if(input_volt + VDIODE > VUSB_MAX) {
       // increment counter if input voltage (corrected for diode drop) is too low
-      if(input_volt + VDIODE < (VBAT_NUM_CELL * VBAT_CELL_LOW)) {
+      if(input_volt + VDIODE < (num_cell * vbat_cell_low)) {
         num_low_samples++;
       }
       else {

@@ -8,5 +8,6 @@
 	"wifi_power": "68",
 	"max_audio_output": "0.04",
 	"vhf_default_vol": "6",
-	"vhf_default_freq": "146580000"
+	"vbat_cell_low": "2.6",
+	"num_battery": "3"
 }

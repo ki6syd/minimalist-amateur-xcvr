@@ -27,15 +27,31 @@
 #define TASK_CORE_DIGI          1
 #define TASK_CORE_KEY_IO        1
 
-
-// audio settings used at startup
-#define AUDIO_FILT_DEFAULT      AUDIO_FILT_SSB
+#define F_AUDIO                 8000
+#define F_SIDETONE_DEFAULT      499
+#define AUDIO_FILT_DEFAULT      AUDIO_FILT_CW
 #define AUDIO_VOL_DEFAULT       0.3
 #define AUDIO_SIDE_DEFAULT      0.2
 #define AUDIO_VOL_DURING_CAL    0.01
 #define AUDIO_PGA_DEFAULT       true
+// #define AUDIO_EN_OUT_VBAN            // flakey
+// #define AUDIO_EN_OUT_CSV             // too slow to print over serial
+// #define AUDIO_EN_OUT_ESPNOW          // doesn't work
+// #define AUDIO_EN_OUT_UDP             // works except for dropped packets causing choppy audio
+// #define AUDIO_EN_OUT_IP              // works fairly well. Commented out normally because the audio module has no graceful to handle losing connection to rcvr after gaining it
 
-#define NUMBER_BANDS        4
+// comment out to prevent accidental TX
+#define RADIO_ALLOW_TX
+
+#define DIGI_QUEUE_LEN          10
+
+#define VHF_DEFAULT_FREQ        146580000
+#define HF_DEFAULT_FREQ         14060000
+
+#define MORSE_SPEED_MIN         5
+#define MORSE_SPEED_MAX         30
+
+// #define WIFI_SCAN                // comment in #define to print out scan on connection
 
 #define FILE_SYSTEM             LittleFS
 
@@ -46,7 +62,6 @@
 
 // signals that the radio and audio modules should expect quadrature sampling detector (QSD) as BFO
 // #define RX_ARCHITECTURE_QSD
-
 
 typedef enum {
     DEBUG_CMD_TXCLK=1,

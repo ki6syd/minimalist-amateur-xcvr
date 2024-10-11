@@ -7,9 +7,9 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#define NOTIFY_DIT            1
-#define NOTIFY_DAH            2
-#define NOTIFY_SK             4
+#define NOTIFY_DIT            (1 << 0)
+#define NOTIFY_DAH            (1 << 1)
+#define NOTIFY_SK             (1 << 2)
 
 TaskHandle_t xBlinkTaskHandle, xSpareTaskHandle0, xSpareTaskHandle1, xTxPulseTaskHandle, xKeyTaskHandle;
 SemaphoreHandle_t btn_semaphore;

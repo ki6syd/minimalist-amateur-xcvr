@@ -4,7 +4,6 @@
 #include "radio.h"
 #include <Arduino.h>
 
-
 void hf_init();
 void hf_set_dial_freq(uint64_t freq_dial);  // calling radio_set_dial_freq() is thread-safe
 float hf_get_s_meter();

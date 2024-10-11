@@ -14,7 +14,7 @@
 
 HardwareSerial VHFserial(1);
 bool configured = false;
-uint64_t vhf_default_freq = 146580000;
+uint64_t vhf_default_freq = VHF_DEFAULT_FREQ;
 uint16_t vhf_default_vol = 1;
 
 String vhf_command(String command, bool print);
@@ -23,7 +23,6 @@ bool vhf_response_success(String response);
 void vhf_init() {
     // load defaults from JSON
     vhf_default_vol = (uint16_t) fs_load_setting(PREFERENCE_FILE, "vhf_default_vol").toInt();
-    vhf_default_freq = (uint16_t) fs_load_setting(PREFERENCE_FILE, "vhf_default_freq").toInt();
 
     pinMode(VHF_EN, OUTPUT);
     digitalWrite(VHF_EN, LOW);
@@ -181,6 +180,7 @@ float vhf_get_s_meter() {
     String rssi_string = response.substring(idx + 1);
     uint16_t rssi = rssi_string.toInt();
 
+    // TODO: scale RSSI into S-meter
     return (float) rssi;
 }
 

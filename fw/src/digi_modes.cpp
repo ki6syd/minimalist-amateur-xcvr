@@ -8,8 +8,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#define DIGI_QUEUE_LEN      10
-
 QueueHandle_t xDigiMessageQueue;
 TaskHandle_t xDigiModeTaskHandle;
 

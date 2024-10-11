@@ -6,7 +6,6 @@
 #include "power.h"
 #include "wifi_conn.h"
 #include "time_keeping.h"
-#include "git-version.h"
 #include "file_system.h"
 #include "digi_modes.h"
 #include "ft8.h"
@@ -249,7 +248,7 @@ void handler_mac_get(AsyncWebServerRequest *request) {
 }
 
 void handler_githash_get(AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", GIT_VERSION);
+    request->send(200, "text/plain", AUTO_VERSION);
 }
 
 void handler_heap_get(AsyncWebServerRequest *request) {

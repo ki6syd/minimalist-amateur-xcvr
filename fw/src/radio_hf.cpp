@@ -7,6 +7,7 @@
 #include <Arduino.h>
 #include <si5351.h>
 
+// TODO: pull these into the .ini file, or JSON?
 #define S_UNIT_PER_DB         (1.0 / 6.0)
 #define S_UNIT_REF            7
 

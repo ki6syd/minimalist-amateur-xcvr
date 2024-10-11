@@ -1,7 +1,6 @@
 #include <Arduino.h>
 
 #include "globals.h"
-#include "git-version.h"
 #include "io.h"
 #include "power.h"
 #include "wifi_conn.h"
@@ -17,7 +16,6 @@ int counter = 0;
 
 TaskHandle_t xInfoTaskHandle;
 
-
 void info_task(void *pvParameter);
 
 void setup() {
@@ -27,13 +25,8 @@ void setup() {
   io_init();
   wifi_init();
   server_init();
-
   audio_init();
-  audio_set_sidetone_volume(AUDIO_SIDE_DEFAULT);
-  audio_set_volume(AUDIO_VOL_DEFAULT);
-
   radio_init();
-
   time_init();
   digi_mode_init();
 
@@ -102,7 +95,7 @@ void info_task(void *param) {
     Serial.println(wifi_get_mac());
 
     Serial.print("Firmware: ");
-    Serial.println(GIT_VERSION);
+    Serial.println(AUTO_VERSION);
 
     Serial.print("Dit: ");
     Serial.print(digitalRead(KEY_DIT));

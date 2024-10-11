@@ -4,9 +4,6 @@
 #include <si5351.h>
 #include <Arduino.h>
 
-// comment out to prevent accidental TX
-#define RADIO_ALLOW_TX
-
 #define SI5351_IDX_BFO        SI5351_CLK0
 #define SI5351_IDX_VFO        SI5351_CLK1
 #define SI5351_IDX_TX         SI5351_CLK2
@@ -18,7 +15,6 @@ typedef enum {
     MODE_SELF_TEST,
     MODE_STARTUP
 } radio_rxtx_mode_t;
-
 
 // band numbering in schematic is 1-indexed. Control GPIOs are 0-indexed.
 typedef enum {

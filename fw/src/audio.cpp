@@ -164,7 +164,7 @@ void audio_dsp_task(void *param) {
     side_l_r_mix = new OutputMixer<int16_t>(audio_filt, 3);
     input_split = new ChannelSplitOutput();
 
-    // tie side_l_r_mix to copier now that it's allocated
+    // tie side_l_r_mix to copier now that it's allocated. Puts sidetone as first index of side_l_r_mix
     copier_1.begin(*side_l_r_mix, sound_stream);
     copier_2.begin(*input_split, i2s_stream);                      // moves data through the streams. To: input_split, from: i2s_stream
 
@@ -188,7 +188,7 @@ void audio_dsp_task(void *param) {
     // mute specific channels (by powering DAC on/off) based on audio mode
     audio_set_dacs(cur_audio_mode);
 
-    // another audio source
+    // sidetone audio source
     sine_wave.begin(info_mono, sidetone_freq);
 
 #ifdef AUDIO_EN_OUT_VBAN
@@ -243,7 +243,7 @@ void audio_dsp_task(void *param) {
     // left + right + sidetone --> side_l_r_mix (mono). declaration links to audio_filt
     // HF I, Q, sidetone all set to zero weight. audio_set_mode() will properly apply weights.
     side_l_r_mix->begin();
-    side_l_r_mix->setWeight(MIXER_IDX_SIDETONE, 0);      // input 0: sidetone from sound_stream
+    side_l_r_mix->setWeight(MIXER_IDX_SIDETONE, 1);      // input 0: sidetone from sound_stream. Set to 1.0, sidetone volume control happens on the sine wave
     side_l_r_mix->setWeight(MIXER_IDX_LEFT, 0);          // input 1: INx-L codec channel
     side_l_r_mix->setWeight(MIXER_IDX_RIGHT, 0);         // input 2: INx-R codec channel
 
@@ -321,7 +321,7 @@ void audio_dsp_task(void *param) {
     // only proceed if client connected
     if(connected) {
         Serial.println("IP Key Connection success");
-        multi_output.add(client);
+        multi_output->add(client);
     }
     else {
         Serial.println("Unable to connect to IP key");
@@ -342,6 +342,8 @@ void audio_dsp_task(void *param) {
     audio_en_pga(true);
     audio_en_sidetone(false);
     audio_en_rx_audio(true);
+    audio_set_sidetone_volume(AUDIO_SIDE_DEFAULT);
+    audio_set_volume(AUDIO_VOL_DEFAULT);
 
     uint32_t start_tick, stop_tick, c1_processed, c2_processed;
     while(true) {
@@ -608,11 +610,12 @@ void audio_en_sidetone(bool tone) {
         return;
 
     if(tone) {
-        side_l_r_mix->setWeight(MIXER_IDX_SIDETONE, sidetone_vol);
+        int16_t tmp = (int16_t) (sidetone_vol * INT16T_MAX);
+        Serial.println(tmp);
+        sine_wave.setAmplitude(tmp);
     }
-    else {
-        side_l_r_mix->setWeight(MIXER_IDX_SIDETONE, 0);
-    }
+    else
+        sine_wave.setAmplitude(0);
 
     sidetone_en = tone;
 }
@@ -663,8 +666,9 @@ bool audio_set_sidetone_volume(float vol) {
     if(vol >= 0.0 && vol <= 1.0) {
         sidetone_vol = vol;
 
-        // call to audio_en_sidetone() with its current state will adjust weights
+        // make a call to sidetone_en() to update the sine wave's amplitude
         audio_en_sidetone(sidetone_en);
+
         return true;
     }
     return false;

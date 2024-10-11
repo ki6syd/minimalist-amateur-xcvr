@@ -17,8 +17,6 @@
 #define NOTIFY_CAL_BPF        (1 << 6)
 #define NOTIFY_LOW_BAT        (1 << 7)
 
-
-
 radio_audio_bw_t bw = BW_CW;
 radio_rxtx_mode_t rxtx_mode = MODE_STARTUP;
 radio_band_t band = BAND_UNKNOWN;
@@ -32,7 +30,7 @@ TimerHandle_t xQskTimer = NULL;
 
 bool ok_to_tx = false;
 
-uint64_t freq_dial = 14040000;
+uint64_t freq_dial = HF_DEFAULT_FREQ;
 
 void radio_task(void * pvParameter);
 void qsk_timer_callback(TimerHandle_t timer);
@@ -73,7 +71,7 @@ void radio_init() {
   );
   xTimerStart(xQskTimer, 0);
 
-  radio_set_dial_freq(14060000);
+  radio_set_dial_freq(HF_DEFAULT_FREQ);
   radio_set_rxtx_mode(MODE_RX);
   radio_set_band(band);
 }
@@ -100,17 +98,17 @@ void radio_task(void *param) {
         digitalWrite(LED_RED, LOW);
       }
       if(notifiedValue & NOTIFY_KEY_ON) {
-        // set sidetone, before doing anything else. Minimize audio delay.
+        // set sidetone, before doing anything else. Minimizes audio delay.
         if(ok_to_tx && radio_freq_is_hf(freq_dial))
           audio_en_sidetone(true);
 
         // initiate mode change
         radio_set_rxtx_mode(MODE_TX);
 
-        // turn off sidetone, LED, TX power amp rail, VHF tx_en, etc
-        digitalWrite(LED_RED, HIGH);
-        
         if(ok_to_tx) {
+          // turn off sidetone, LED, TX power amp rail, VHF tx_en, etc
+          digitalWrite(LED_RED, HIGH);
+
           if(radio_freq_is_hf(freq_dial))
             digitalWrite(PA_VDD_CTRL, HIGH);
           else

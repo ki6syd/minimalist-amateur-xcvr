@@ -15,7 +15,6 @@ typedef enum {
     API_V2 = 2
 } api_number_t;
 
-
 typedef struct {
     api_number_t api_version;
     WebRequestMethodComposite method;
@@ -23,11 +22,8 @@ typedef struct {
     ArRequestHandlerFunction handler_function;
 } server_handler_t;
 
-
 String api_prefix = "/api/v";
 AsyncWebServer server(80);
-AsyncEventSource events("/events");
-
 
 static const server_handler_t handlers[] = {
     {API_V1,    HTTP_POST,  "ft8",              handler_ft8_post},

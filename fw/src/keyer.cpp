@@ -10,8 +10,6 @@
 #define MORSE_DAH_LEN               3
 #define MORSE_INTERCHAR_LEN         3
 #define MORSE_INTERWORD_LEN         7
-#define MORSE_SPEED_MIN             5
-#define MORSE_SPEED_MAX             30
 
 uint16_t keyer_speed = 16;
 
