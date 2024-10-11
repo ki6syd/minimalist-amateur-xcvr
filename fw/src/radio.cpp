@@ -160,8 +160,8 @@ void radio_task(void *param) {
               }
             }
 
-            // call to set_rxtx_mode() to force an audio path change if needed
-            radio_set_rxtx_mode(MODE_QSK_COUNTDOWN);
+            // call to set_rxtx_mode() to force an audio path change, if needed
+            radio_set_rxtx_mode(rxtx_mode);
         }
       }
       if(notifiedValue & NOTIFY_CAL_XTAL) {
@@ -221,6 +221,7 @@ radio_audio_bw_t radio_get_bw() {
 
 
 void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
+
   // return immediately if there was no change requested
   if(new_mode == rxtx_mode)
     return;

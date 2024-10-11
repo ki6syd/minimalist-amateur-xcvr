@@ -27,6 +27,7 @@ AsyncWebServer server(80);
 
 static const server_handler_t handlers[] = {
     {API_V1,    HTTP_POST,  "ft8",              handler_ft8_post},
+    {API_V1,    HTTP_POST,  "prepareft8",       handler_ft8_post},
     {API_V1,    HTTP_POST,  "cw",               handler_cw_post},
     {API_V1,    HTTP_GET,   "queue",            handler_queue_get},
     {API_V1,    HTTP_DELETE, "queue",           handler_queue_delete},

@@ -45,7 +45,7 @@ void handler_ft8_post(AsyncWebServerRequest *request) {
         }
     }
     else {
-        tmp.freq = 0;
+        tmp.freq = radio_get_dial_freq();
     }
 
     if(request->hasParam("ignoreTime") && request->getParam("ignoreTime")->value() == "true")

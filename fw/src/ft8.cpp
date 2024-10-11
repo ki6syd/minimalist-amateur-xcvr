@@ -3,6 +3,7 @@
 #include "digi_modes.h"
 #include "time_keeping.h"
 #include "radio_hf.h"
+#include "audio.h"
 
 #include <Arduino.h>
 #include <JTEncode.h>
@@ -14,12 +15,16 @@
 
 JTEncode jtencode;
 
+bool ft8_cancel_flag = false;
+
 void ft8_init() {
 
 }
 
 void ft8_send_msg(digi_msg_t *to_send) {
-    // TODO: sidetone should follow the audio freq
+    ft8_cancel_flag = false;
+
+    float f_sidetone_original = audio_get_sidetone_freq();
 
     // wait for FT8 window to begin
     if(!to_send->ignore_time)
@@ -37,16 +42,21 @@ void ft8_send_msg(digi_msg_t *to_send) {
 
     for(uint8_t i = 0; i < FT8_SYMBOL_COUNT; i++)
     {
-        // TODO: abort sending on keypress or a semaphore signaling to abort
+        if(ft8_cancel_flag)
+            break;
         
         // TODO: fine clock setting (sub-hz)
-        radio_set_dial_freq(to_send->freq + (to_send->buf[i] * FT8_TONE_SPACING));
+        radio_set_dial_freq(to_send->freq + (to_send->buf[i] * FT8_TONE_SPACING) / 100);
+
+        // set sidetone to follow ft8 audio frequency
+        audio_set_sidetone_freq(f_sidetone_original + (to_send->buf[i] * FT8_TONE_SPACING) / 100);
 
         // delay until next increment of FT8_DELAY
         vTaskDelayUntil(&xLastWakeTime, xSymbolFrequency);
     }
 
     radio_key_off();
+    audio_set_sidetone_freq(f_sidetone_original);
 }
 
 void ft8_string_process(String &message_text, digi_msg_t *msg_struct) {
@@ -70,4 +80,9 @@ void ft8_string_process(String &message_text, digi_msg_t *msg_struct) {
         Serial.print(" ");
     }
     Serial.println();
+}
+
+// TODO: use a semaphore or other freertos item
+void ft8_cancel() {
+    ft8_cancel_flag = true;
 }

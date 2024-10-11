@@ -611,7 +611,6 @@ void audio_en_sidetone(bool tone) {
 
     if(tone) {
         int16_t tmp = (int16_t) (sidetone_vol * INT16T_MAX);
-        Serial.println(tmp);
         sine_wave.setAmplitude(tmp);
     }
     else
@@ -679,8 +678,8 @@ float audio_get_sidetone_volume() {
 }
 
 bool audio_set_sidetone_freq(float freq) {
-    // enforce 0-2kHz range 
-    if(freq > 0 && freq < 2000) {
+    // enforce 0-3kHz range 
+    if(freq > 0 && freq < 3000) {
         sidetone_freq = freq;
         sine_wave.setFrequency(sidetone_freq);
         return true;

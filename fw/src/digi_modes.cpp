@@ -86,7 +86,6 @@ void digi_mode_print(const digi_msg_t* msg) {
         if (msg->buf[i] == 0) break; // Stop if null terminator is found
         Serial.print((char)msg->buf[i]);
     }
-    
     Serial.println();
 }
 
@@ -96,5 +95,7 @@ uint16_t digi_mode_queue_size() {
 
 void digi_mode_queue_clear() {
     xQueueReset(xDigiMessageQueue);
-    // TODO: set a flag that stops whatever the digimode queue is working on
+    
+    // set flags
+    ft8_cancel();
 }

@@ -80,14 +80,15 @@ void hf_si5351_init() {
 // inputs: dial frequency, crystal edge frequencies, sidetone frequency, CW vs SSB
 // result: sets the VFO and BFO frequencies
 // assumes typical logic of USB above 10MHz and LSB below 10MHz. Will need an update for FT8
+// note that we use F_SIDETONE_DEFAULT rather than get_sidetone_freq() because sidetone freq() is changing during FT8
 void hf_set_dial_freq(uint64_t freq_dial) {
   if(freq_dial < 10000000) {
     freq_vfo = freq_if_lower - freq_dial;
-    freq_bfo = freq_if_lower - ((uint64_t) audio_get_sidetone_freq());
+    freq_bfo = freq_if_lower - ((uint64_t) F_SIDETONE_DEFAULT);
   }
   else {
     freq_vfo = freq_dial + freq_if_upper;
-    freq_bfo = freq_if_upper + ((uint64_t) audio_get_sidetone_freq());
+    freq_bfo = freq_if_upper + ((uint64_t) F_SIDETONE_DEFAULT);
   }
 #ifdef RX_ARCHITECTURE_QSD
   // multiple BFO frequency by 4x if we are using a QSD and 90deg divider circuit

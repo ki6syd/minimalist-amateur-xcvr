@@ -2,6 +2,7 @@
 #include "io.h"
 #include "radio.h"
 #include "keyer.h"
+#include "digi_modes.h"
 
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
@@ -245,6 +246,7 @@ void blink_task(void *param) {
   }
 }
 
+// TODO: rename, or merge with the CW paddle task
 void tx_pulse_task(void *param) {
   while(true) {
     if(xSemaphoreTake(btn_semaphore, portMAX_DELAY) == pdPASS) {
@@ -255,6 +257,9 @@ void tx_pulse_task(void *param) {
 
       attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, CHANGE);
       attachInterrupt(digitalPinToInterrupt(MIC_PTT), buttonISR, FALLING);
+
+      // any value of notified_value should cancel currently sending messages
+      digi_mode_queue_clear();
     }
   }
 }
@@ -274,6 +279,9 @@ void key_task(void *param) {
         io_enable_dit_isr(true);
         io_enable_dah_isr(true);
       }
+
+      // any value of notified_value should cancel currently sending messages
+      digi_mode_queue_clear();
     }
     vTaskDelay(pdMS_TO_TICKS(10));
   }
