@@ -30,7 +30,7 @@ void ft8_send_msg(digi_msg_t *to_send) {
     if(!to_send->ignore_time)
         time_delay_ft8();
 
-    // key on, slight delay to ensure frequency change and keying are complete
+    // key on, slight delay to ensure frequency change and keying are complete (needed??)
     // TODO: implement interface from radio module that indicates it's done with the queued requests
     radio_set_dial_freq(to_send->freq + (to_send->buf[0] * FT8_TONE_SPACING));
     radio_key_on();

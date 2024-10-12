@@ -40,8 +40,9 @@ void digi_mode_task(void *pvParameter) {
             digi_mode_print(&tmp);
 
             // change frequency, if the message has one
+            float original_freq = radio_get_dial_freq();
             if(tmp.freq != 0)
-            radio_set_dial_freq(tmp.freq);
+                radio_set_dial_freq(tmp.freq);
 
             if(tmp.type == DIGI_MODE_CW) {
                 keyer_send_msg(&tmp);
@@ -49,6 +50,9 @@ void digi_mode_task(void *pvParameter) {
             else if(tmp.type == DIGI_MODE_FT8) {
                 ft8_send_msg(&tmp);
             }
+
+            // return to original frequency
+            radio_set_dial_freq(original_freq);
         }
     }
 }
