@@ -118,6 +118,11 @@ void audio_init() {
     // TODO: make sure this ended up between 0-32768
     max_safe_vol = (uint32_t) (fs_load_setting(PREFERENCE_FILE, "max_audio_output").toFloat() * 32768); 
 
+    // load sidetone volume
+    // TODO: enforce bounds
+    if(fs_setting_exists(PREFERENCE_FILE, "sidetone_level"))
+        sidetone_vol = fs_load_setting(PREFERENCE_FILE, "sidetone_level").toInt();
+
     // note: platformio + arduino puts wifi on core 0
     // run on core 1
     xTaskCreatePinnedToCore(
