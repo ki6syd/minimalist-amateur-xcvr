@@ -213,14 +213,12 @@ void audio_dsp_task(void *param) {
 #endif
 
     // input_split (stereo) --> two (mono) volume control pathways
-    // note that the indices of side_l_r_mix are set by the declaration above, then the following two lines
-    // omit the input_x_vol controls if we are not using IQ data
 #ifdef AUDIO_PATH_IQ
-    // order of these will determine which side_l_r_mix is working
     input_split->addOutput(input_l_vol, 0);
     input_split->addOutput(input_r_vol, 1);
-    
 #else
+    // note that the indices of side_l_r_mix are set by the declaration above, then the following two lines
+    // omit the input_x_vol controls if we are not using IQ data
     input_split->addOutput(*side_l_r_mix, 0);
     input_split->addOutput(*side_l_r_mix, 1);
 #endif
@@ -228,12 +226,13 @@ void audio_dsp_task(void *param) {
 
 
 #ifdef AUDIO_PATH_IQ
-    // l/r volume pathways feed into hilbert transforms
-    input_l_vol.setOutput(hilbert_n45deg);
+    // l/r volume pathways feed into hilbert transforms. Left is Q, right is I
+    // important hardware errata:  initial QSD test hardware had I/Q labeling swapped. "I" audio should correspond to p45deg, "Q" audio should correspond to n45deg
+    input_l_vol.setOutput(hilbert_p45deg);  // swap me after fixing hardware
     input_l_vol.begin(info_mono);
     input_l_vol.setVolume(q_channel_correction);
 
-    input_r_vol.setOutput(hilbert_p45deg);
+    input_r_vol.setOutput(hilbert_n45deg);  // swap me after fixing hardware
     input_r_vol.begin(info_mono);
     input_r_vol.setVolume(i_channel_correction);
 
