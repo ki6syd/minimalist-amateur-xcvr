@@ -217,8 +217,8 @@ void audio_dsp_task(void *param) {
     // omit the input_x_vol controls if we are not using IQ data
 #ifdef AUDIO_PATH_IQ
     // order of these will determine which side_l_r_mix is working
-    input_split.addOutput(input_l_vol, 0);
-    input_split.addOutput(input_r_vol, 1);
+    input_split->addOutput(input_l_vol, 0);
+    input_split->addOutput(input_r_vol, 1);
     
 #else
     input_split->addOutput(*side_l_r_mix, 0);
@@ -239,10 +239,10 @@ void audio_dsp_task(void *param) {
 
     // hilbert transforms feed into the sidetone+left+right mixer
     hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
-    hilbert_n45deg.setOutput(side_l_r_mix);
+    hilbert_n45deg.setOutput(*side_l_r_mix);
 
     hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
-    hilbert_p45deg.setOutput(side_l_r_mix);
+    hilbert_p45deg.setOutput(*side_l_r_mix);
 #endif
 
     // left + right + sidetone --> side_l_r_mix (mono). declaration links to audio_filt
@@ -437,6 +437,9 @@ void audio_logic_task(void *pvParameter) {
                     cur_audio_mode = AUDIO_VHF_RX;
                     cur_filt = AUDIO_FILT_SSB;
                     audio_dsp_task_restart();
+                    vTaskDelay(pdMS_TO_TICKS(500));
+                    audio_en_rx_audio(true);
+                    audio_set_dacs(cur_audio_mode);
                 }
                 // VHF TX --> VHF RX: only need to adjust DACs, don't need to reconfigured pathways
                 else if(cur_audio_mode == AUDIO_VHF_TX) {
@@ -631,27 +634,24 @@ void audio_en_rx_audio(bool en) {
         return;
 
     if(en) {
-        // unmute input mixer channels. LEFT channel depends on whether IQ audio is in use
-        if(cur_audio_mode == AUDIO_VHF_TX) {
-            side_l_r_mix->setWeight(MIXER_IDX_RIGHT, 0.0);
-        }
-        else
-            side_l_r_mix->setWeight(MIXER_IDX_RIGHT, 1.0);
-        
-#ifdef AUDIO_PATH_IQ
-        side_l_r_mix.setWeight(MIXER_IDX_LEFT, 1.0);
-#else
-        // use LEFT input for VHF audio, only in TX mode
         if(cur_audio_mode == AUDIO_VHF_TX) {
             side_l_r_mix->setWeight(MIXER_IDX_LEFT, 1.0);
+            side_l_r_mix->setWeight(MIXER_IDX_RIGHT, 0.0);
+            side_l_r_mix->setWeight(MIXER_IDX_SIDETONE, 0.0);       // set sidetone to zero weight, will increase effective weight of IDX_LEFT
         }
-        else
+        else {
+            side_l_r_mix->setWeight(MIXER_IDX_SIDETONE, 1.0);
+            side_l_r_mix->setWeight(MIXER_IDX_RIGHT, 1.0);
+#ifdef AUDIO_PATH_IQ
+            side_l_r_mix->setWeight(MIXER_IDX_LEFT, 1.0);
+#else
             side_l_r_mix->setWeight(MIXER_IDX_LEFT, 0.0);
 #endif
-
+        }
     }
     else {
         // mute all input mixer channels, regardless of IQ audio
+        side_l_r_mix->setWeight(MIXER_IDX_SIDETONE, 1.0);
         side_l_r_mix->setWeight(MIXER_IDX_LEFT, 0.0);
         side_l_r_mix->setWeight(MIXER_IDX_RIGHT, 0.0);
     }

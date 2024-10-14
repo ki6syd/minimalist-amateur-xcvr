@@ -92,7 +92,7 @@ void hf_set_dial_freq(uint64_t freq_dial) {
   }
 #ifdef RX_ARCHITECTURE_QSD
   // multiple BFO frequency by 4x if we are using a QSD and 90deg divider circuit
-  freq_bfo = 4 * (freq_dial + ((uint64_t) audio_get_sidetone_freq()));
+  freq_bfo = 4 * (freq_dial + ((uint64_t) F_SIDETONE_DEFAULT));
 #endif
 
   hf_set_clocks(freq_bfo, freq_vfo, freq_dial);
