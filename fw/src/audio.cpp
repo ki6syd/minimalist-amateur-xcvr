@@ -302,7 +302,7 @@ void audio_dsp_task(void *param) {
     for(uint16_t i = 0; i < 3; i++) {
         // try to find the client. assumes MDNS has started
         // TODO: move this sort of logicto wifi_conn.cpp, don't hard-code
-        search_address = MDNS.queryHost("key", 250);    //500ms timeout
+        search_address = MDNS.queryHost(fs_load_setting(PREFERENCE_FILE, "audio_receiver_hostname"), 250);    //500ms timeout
         if(search_address != IPAddress(0, 0, 0, 0)) {
             Serial.print("Found address: ");
             Serial.println(search_address.toString());

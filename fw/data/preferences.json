@@ -6,6 +6,7 @@
 	"ap_password": "summitsontheair",
 	"ap_channel": "11",
 	"wifi_power": "68",
+	"audio_receiver_hostname": "max-x1",
 	"max_audio_output": "0.04",
 	"sidetone_level": "0.2",
 	"vhf_default_vol": "6",
