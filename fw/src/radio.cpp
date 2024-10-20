@@ -652,7 +652,7 @@ void radio_debug(debug_action_t action, void *value) {
       xTaskNotify(xRadioTaskHandle, NOTIFY_CAL_BPF, eSetBits);
       break;
     }
-    case DEBUG_STOP_CLOCKS: {
+    case DEBUG_CMD_STOP_CLOCKS: {
       si5351.output_enable(SI5351_IDX_TX, 0);
       si5351.output_enable(SI5351_IDX_BFO, 0);
       si5351.output_enable(SI5351_IDX_VFO, 0);

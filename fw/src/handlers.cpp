@@ -296,10 +296,27 @@ void handler_debug_post(AsyncWebServerRequest *request) {
         }
         radio_debug(DEBUG_CMD_TXCLK, &on_off);
     }
+    else if(command_num == DEBUG_CMD_SET_CLOCKS) {
+        if(!handler_require_param(request, "clk0") && !handler_require_param(request, "clk1") && !handler_require_param(request, "clk2"))
+            return;
+
+        uint64_t clk0_request = request->getParam("clk0")->value().toInt();
+        uint64_t clk1_request = request->getParam("clk1")->value().toInt();
+        uint64_t clk2_request = request->getParam("clk2")->value().toInt();
+
+        si5351.set_freq(clk0_request * 100, SI5351_CLK0);
+        si5351.set_freq(clk1_request * 100, SI5351_CLK1);
+        si5351.set_freq(clk2_request * 100, SI5351_CLK2);
+        
+        Serial.println("Setting clocks via debug routine: ");
+        Serial.println(clk0_request);
+        Serial.println(clk1_request);
+        Serial.println(clk2_request);
+    }
     else if(command_num == DEBUG_CMD_REBOOT) {
         esp_restart();
     }
-    else if(command_num == DEBUG_CMD_CAL_XTAL || command_num == DEBUG_CMD_CAL_IF || command_num == DEBUG_CMD_CAL_BPF || command_num == DEBUG_STOP_CLOCKS) {
+    else if(command_num == DEBUG_CMD_CAL_XTAL || command_num == DEBUG_CMD_CAL_IF || command_num == DEBUG_CMD_CAL_BPF || command_num == DEBUG_CMD_STOP_CLOCKS) {
         radio_debug((debug_action_t) command_num, nullptr);
     }
     else if(command_num == DEBUG_CMD_MAX_VOL) {

@@ -38,7 +38,7 @@
 // #define AUDIO_EN_OUT_CSV             // too slow to print over serial
 // #define AUDIO_EN_OUT_ESPNOW          // doesn't work
 // #define AUDIO_EN_OUT_UDP             // works except for dropped packets causing choppy audio
-// #define AUDIO_EN_OUT_IP              // works fairly well. Commented out normally because the audio module has no graceful to handle losing connection to rcvr after gaining it
+#define AUDIO_EN_OUT_IP              // works fairly well. Commented out normally because the audio module has no graceful to handle losing connection to rcvr after gaining it
 
 // comment out to prevent accidental TX
 #define RADIO_ALLOW_TX
@@ -71,5 +71,6 @@ typedef enum {
     DEBUG_CMD_CAL_BPF=5,
     DEBUG_CMD_MAX_VOL=6,
     DEBUG_CMD_SPOT=7,
-    DEBUG_STOP_CLOCKS=8
+    DEBUG_CMD_STOP_CLOCKS=8,
+    DEBUG_CMD_SET_CLOCKS=9
 } debug_action_t;
