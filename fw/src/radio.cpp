@@ -393,8 +393,8 @@ void radio_set_band(radio_band_t new_band) {
       Serial.println(radio_band_to_string(new_band));
         // turn this off, just to be safe in selftest mode
         digitalWrite(PA_VDD_CTRL, LOW);
-        // set TX_RX_SEL to LOW to get more signal
-        digitalWrite(TX_RX_SEL, HIGH);    
+        // set TX_RX_SEL to LOW, can pass a signal into BNC external jack
+        digitalWrite(TX_RX_SEL, LOW);
         switch(new_band) {
             case BAND_HF_1:
               digitalWrite(BPF_SEL_0, LOW);
