@@ -72,5 +72,6 @@ typedef enum {
     DEBUG_CMD_MAX_VOL=6,
     DEBUG_CMD_SPOT=7,
     DEBUG_CMD_STOP_CLOCKS=8,
-    DEBUG_CMD_SET_CLOCKS=9
+    DEBUG_CMD_SET_CLOCKS=9,
+    DEBUG_CMD_IQ_CLOCKS=10
 } debug_action_t;

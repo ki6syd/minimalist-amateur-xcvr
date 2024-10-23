@@ -17,6 +17,8 @@
 #define NOTIFY_CAL_BPF        (1 << 6)
 #define NOTIFY_LOW_BAT        (1 << 7)
 
+#define FREQ_PLL          (SI5351_PLL_FIXED)
+
 radio_audio_bw_t bw = BW_CW;
 radio_rxtx_mode_t rxtx_mode = MODE_STARTUP;
 radio_band_t band = BAND_UNKNOWN;
@@ -656,6 +658,24 @@ void radio_debug(debug_action_t action, void *value) {
       si5351.output_enable(SI5351_IDX_TX, 0);
       si5351.output_enable(SI5351_IDX_BFO, 0);
       si5351.output_enable(SI5351_IDX_VFO, 0);
+      break;
+    }
+    case DEBUG_CMD_IQ_CLOCKS: {
+      // routine to test 90deg spaced clocks
+
+      si5351.set_freq(10000000 * 100, SI5351_IDX_BFO);
+      si5351.set_freq(10000000 * 100, SI5351_IDX_VFO);
+
+      si5351.set_phase(SI5351_IDX_BFO, 0);
+      // si5351.set_phase(SI5351_IDX_VFO, 115);  // why?
+
+      uint16_t phase_delay = (uint16_t) (SI5351_PLL_FIXED / 10000000);
+      si5351.set_phase(SI5351_IDX_VFO, phase_delay);
+
+      si5351.output_enable(SI5351_IDX_TX, 0);
+      si5351.output_enable(SI5351_IDX_BFO, 1);
+      si5351.output_enable(SI5351_IDX_VFO, 1);
+      break;
     }
   }
 }
