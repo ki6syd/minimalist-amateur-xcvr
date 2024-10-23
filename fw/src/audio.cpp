@@ -43,6 +43,13 @@ DriverPins                    my_pins;                                  // board
 AudioBoard                    audio_board(AudioDriverES8388, my_pins);  // audio board
 I2SCodecStream                i2s_stream(audio_board);                  // i2s codec
 
+// PCM1502 test
+I2SStream                   pcm1502;
+SineWaveGenerator<int16_t> pcm_wave(32000);
+GeneratedSoundStream<int16_t> pcm_sound(pcm_wave);
+// StreamCopy pcm_copier(pcm1502, pcm_sound, BUFFER_CHUNK);
+// end PCM1502 test
+
 #ifdef AUDIO_EN_OUT_VBAN
 VBANStream                    vban;                                     // audio over wifi
 #endif
@@ -193,6 +200,21 @@ void audio_dsp_task(void *param) {
     // mute specific channels (by powering DAC on/off) based on audio mode
     audio_set_dacs(cur_audio_mode);
 
+    // PCM1502 test (mono to be compatible with multi_output, but can be stereo)
+    auto cfg_tx = pcm1502.defaultConfig(TX_MODE);
+    cfg_tx.copyFrom(info_mono);
+    cfg_tx.port_no = 1;
+    cfg_tx.channel_format = I2S_CHANNEL_FMT_ONLY_LEFT;  // comment out this line (and .channels=1) for stereo. 
+    cfg_tx.channels = 1;
+    cfg_tx.buffer_count = 4;
+    cfg_tx.buffer_size = BUFFER_CHUNK;
+    cfg_tx.pin_bck = 42;
+    cfg_tx.pin_data = 40;
+    cfg_tx.pin_ws = 41;
+    pcm1502.begin(cfg_tx);
+    pcm_wave.begin(info_mono, N_B4);        // replace with info_stereo, for stereo audio
+    // end PCM1502 test
+
     // sidetone audio source
     sine_wave.begin(info_mono, sidetone_freq);
 
@@ -333,6 +355,9 @@ void audio_dsp_task(void *param) {
     }
 #endif
 
+    // pcm1502 test
+    multi_output->add(pcm1502);
+
     // Distortion (clipping) operates *after* volume control is applied, making it the same threshold regardless of volume setting
     volume_limiter = new Distortion(max_safe_vol, max_safe_vol);
     effects.addEffect(*volume_limiter);
@@ -355,6 +380,7 @@ void audio_dsp_task(void *param) {
         // TODO (for IP): the .copy() calls will block if the client disconnects
         c1_processed = copier_1.copy();
         c2_processed = copier_2.copy();
+        // pcm_copier.copy();  // pcm1502 test
         stop_tick = xTaskGetTickCount();
 
         /*
