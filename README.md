@@ -1,10 +1,13 @@
  # minimalist-amateur-xcvr
 
-![Annotations (1) (1)](https://github.com/ki6syd/minimalist-amateur-xcvr/assets/5254153/d92623b1-990b-46a0-a639-ad6044dce4d6)
+## MAX-4B
 
-The radio hardware and user interface communicate with this API: https://app.swaggerhub.com/apis-docs/KI6SYD_1/MAX-3B/1.0.2
+This branch supports MAX-4B development (work-in-progress).
 
-See http://max-3b.ki6syd.com for instructions on assembling the hardware and building firmware, in addition to background on the radio. The GitHub project just contains design files and code.
+![IMG_5742](https://github.com/user-attachments/assets/a1d4a744-64ac-481b-b767-a33720bf08f2)
+
+
+## Licenses
 
 Software in this project is licensed under the GPLv3 License. https://www.gnu.org/licenses/quick-guide-gplv3.html
 
