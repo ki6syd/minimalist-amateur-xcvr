@@ -31,9 +31,6 @@ void hf_init() {
   pinMode(LPF_SEL_0, OUTPUT);
   pinMode(LPF_SEL_1, OUTPUT);
   pinMode(TX_RX_SEL, OUTPUT);
-  pinMode(PA_VDD_CTRL, OUTPUT);
-
-  digitalWrite(PA_VDD_CTRL, LOW);   // VDD off
   digitalWrite(TX_RX_SEL, LOW);     // RX mode
 
   hf_si5351_init();

@@ -83,5 +83,4 @@ float radio_get_s_meter();
 void radio_enable_tx(bool en);
 void radio_debug(debug_action_t action, void *value);
 
-extern TaskHandle_t xHFTaskHandle;
 extern Si5351 si5351;   // TODO: get rid of this by avoiding any mention in radio.cpp

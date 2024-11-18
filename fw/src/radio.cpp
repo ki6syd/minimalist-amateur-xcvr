@@ -5,6 +5,7 @@
 #include "audio.h"
 #include "io.h"
 #include "file_system.h"
+#include "power.h"
 
 #include <Arduino.h>
 
@@ -302,6 +303,11 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
         rxtx_mode = MODE_TX;
 
         if(radio_freq_is_hf(freq_dial)) {
+          // check power amplifier bias, update if needed
+          // TODO: set current based on mode
+          // TODO: let this run as a task in parallel, check on exit
+          power_bias_to_current(BIAS_CURRENT_CW);
+
           // change audio mode, function will ignore if there's no change
           audio_set_mode(AUDIO_HF_RXTX_CW);
 

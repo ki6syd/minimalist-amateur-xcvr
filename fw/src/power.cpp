@@ -14,10 +14,11 @@
 
 #define BIAS_CTRL_BITS      8
 #define BIAS_CTRL_FREQ      100e3
+#define BIAS_TOLERANCE_PCT  0.1
 
 #define NUM_BIAS_OUTPUTS    2
 #define BIAS_KP             0.5
-#define BIAS_DUTY_INITIAL   0
+#define BIAS_DUTY_INITIAL   0.25
 
 typedef enum {
     BIAS_CHANNEL_0 = 0,
@@ -26,6 +27,7 @@ typedef enum {
 
 power_bias_channel_t bias_outputs[] = {BIAS_CHANNEL_0, BIAS_CHANNEL_1};
 float pa_curr_error = 0, pa_last_duty = 0.25, pa_duty = 0.25, pa_integral = 0;
+float pa_current_offset = 0;
 float bias_duties[NUM_BIAS_OUTPUTS];
 
 TaskHandle_t xAnalogSenseTaskHandle;
@@ -37,10 +39,15 @@ uint16_t num_cell = 3;
 uint32_t num_low_samples = 0;
 
 void analog_sense_task(void *pvParameter);
+void biasing_task(void *pvParameter);
 float pa_curr_conversion();
 void power_set_bias_duty(power_bias_channel_t channel, float duty);
+void measure_pa_offset();
 
 void power_init() {
+  pinMode(PA_VDD_CTRL, OUTPUT);
+  digitalWrite(PA_VDD_CTRL, LOW);   // VDD off
+
   // load configuration from JSON file
   if(fs_setting_exists(PREFERENCE_FILE, "vbat_cell_low"))
     vbat_cell_low = fs_load_setting(PREFERENCE_FILE, "vbat_cell_low").toFloat();
@@ -70,14 +77,19 @@ void power_init() {
   for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++)
     power_set_bias_duty(bias_outputs[i], 0);
 
+  // find gate bias point
+  Serial.println("biasing");
+  measure_pa_offset();
+  power_bias_to_current(BIAS_CURRENT_CW);
+
   xTaskCreatePinnedToCore(
       analog_sense_task,
       "Analog Sensing",
       4096,
       NULL,
-      TASK_PRIORITY_POWER, // priority
+      TASK_PRIORITY_ADC, // priority
       &xAnalogSenseTaskHandle,
-      TASK_CORE_POWER // core
+      TASK_CORE_ADC // core
   );
 }
 
@@ -111,8 +123,6 @@ void analog_sense_task(void *param) {
   }
 }
 
-
-
 // updates buck converters to a new switching frequency [Hz]
 // TODO: test this, implement logic to set it based on dial frequency
 void power_update_freq(uint32_t new_freq) {
@@ -123,7 +133,8 @@ void power_update_freq(uint32_t new_freq) {
 }
 
 float pa_curr_conversion() {
-  return (float) analogRead(ADC_PA_SNS) * ADC_MAX_VOLT / ADC_PA_CURR_SCALE / ADC_FS_COUNTS;
+  float measurement = (float) analogRead(ADC_PA_SNS) * ADC_MAX_VOLT / ADC_PA_CURR_SCALE / ADC_FS_COUNTS;
+  return measurement - pa_current_offset;
 }
 
 float power_get_input_volt() {
@@ -150,29 +161,58 @@ void power_set_bias_duty(power_bias_channel_t channel, float duty) {
   }
 }
 
-// sweeps gate voltage until each half of the power amplifier draws total_current/2
-// then leaves the amplifier at this bias point, no longer actively controls
-void power_bias_to_current(float total_current) {
-  float target_current = total_current / 2;
-  float offset_current = 0;
-  float measured_current = 0;
+// finds any offset present in the PA current measurement
+void measure_pa_offset() {
+  float sum = 0;
+  digitalWrite(PA_VDD_CTRL, HIGH);
 
-  // TODO: put bounds on current to avoid breaking something
-
-  // turn off bias for all channels before testing
+  // turn off bias outputs, add settling time
   for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++)
     power_set_bias_duty(bias_outputs[i], 0);
   vTaskDelay(pdMS_TO_TICKS(10));
-  offset_current = pa_curr_conversion();
+
+  // average 10 readings
+  pa_current_offset= 0;
+  for(uint16_t j = 0; j < 10; j++)
+        sum += pa_curr_conversion();
+  pa_current_offset = pa_curr_conversion() / 10;
 
   Serial.print("Baseline PA current: ");
-  Serial.print(offset_current);
-  Serial.print("\t");
+  Serial.print(pa_current_offset);
+
+  digitalWrite(PA_VDD_CTRL, LOW);
+}
+
+// sweeps gate voltage until each half of the power amplifier draws total_current/2
+// then leaves the amplifier at this bias point, no longer actively controls
+// this function only returns when current is stable
+void power_bias_to_current(float total_current) {
+  float measured_current = 0;
 
   digitalWrite(PA_VDD_CTRL, HIGH);
-  
+  digitalWrite(LED_RED, HIGH);
+
+/*
+  // check if TOTAL biasing is correct. can exit if it is
+  vTaskDelay(pdMS_TO_TICKS(5));
+  measured_current = pa_curr_conversion();
+  if(abs(measured_current - total_current) < (BIAS_TOLERANCE_PCT * total_current)) {
+    Serial.print("Bias current already in spec: ");
+    Serial.println(measured_current);
+    return;
+  }
+*/
+
+  // turn off all bias channels, to start
+  for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++)
+    power_set_bias_duty(bias_outputs[i], 0);
+
   // find bias point for each channel
+  float target_current = total_current / 2;
   for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++) {
+    Serial.print("biasing channel ");
+    Serial.println(i);
+    vTaskDelay(pdMS_TO_TICKS(10));
     float error = 0;
     do {
       // set duty cycle
@@ -180,9 +220,11 @@ void power_bias_to_current(float total_current) {
       vTaskDelay(pdMS_TO_TICKS(5));
 
       // measure current, adjust duty as needed
-      for(uint16_t j = 0; j < 10; j++)
-        measured_current += (pa_curr_conversion() - offset_current);
-      measured_current /= 10;
+      for(uint16_t j = 0; j < 5; j++)
+        measured_current += pa_curr_conversion();
+      measured_current /= 5;
+      Serial.print("measured_current: ");
+      Serial.println(measured_current);
       
       error = target_current - measured_current;
       bias_duties[i] += error * BIAS_KP;
@@ -193,18 +235,29 @@ void power_bias_to_current(float total_current) {
         break;
       }
     }
-    while(abs(error) > 0.005);
+    while(abs(error) > (BIAS_TOLERANCE_PCT * target_current));
 
-    // shut down bias current to set the next one
+    // shut down PWM before moving to next one
     power_set_bias_duty(bias_outputs[i], 0);
   }
 
   // implement bias points we've found already
-  Serial.print("Bias duty cycles: ");
+  Serial.print("\tBias duty cycles: ");
   for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++) {
     power_set_bias_duty(bias_outputs[i], bias_duties[i]);
     Serial.print(bias_duties[i]);
     Serial.print("\t");
   }
-  Serial.println();
+
+/*
+  // this part isn't strictly needed
+  // measure current and report it
+  Serial.print("\tBias current after routine: ");
+  vTaskDelay(pdMS_TO_TICKS(2));
+  measured_current = pa_curr_conversion();
+  Serial.println(measured_current);
+  */
+
+  digitalWrite(LED_RED, LOW);
+  digitalWrite(PA_VDD_CTRL, LOW);
 }

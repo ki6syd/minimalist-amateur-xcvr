@@ -20,9 +20,9 @@ void info_task(void *pvParameter);
 
 void setup() {
   // TODO: make sure any slow initializations are happening in parallel
+  io_init();
   fs_init();
   power_init();
-  io_init();
   wifi_init();
   server_init();
   audio_init();
@@ -108,9 +108,6 @@ void info_task(void *param) {
     Serial.print(digitalRead(BOOT_BTN));
     Serial.print("\tPTT: ");
     Serial.println(digitalRead(PTT_MIC));
-
-    // delete me, test only
-    power_bias_to_current(0.2);
     
     Serial.println();
 
