@@ -212,7 +212,7 @@ void power_bias_to_current(float total_current) {
   for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++) {
     Serial.print("biasing channel ");
     Serial.println(i);
-    vTaskDelay(pdMS_TO_TICKS(10));
+    vTaskDelay(pdMS_TO_TICKS(5));
     float error = 0;
     do {
       // set duty cycle
