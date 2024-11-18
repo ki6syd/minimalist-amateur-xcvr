@@ -108,11 +108,11 @@ void info_task(void *param) {
     Serial.print(digitalRead(BOOT_BTN));
     Serial.print("\tPTT: ");
     Serial.println(digitalRead(PTT_MIC));
-    
-    Serial.println();
 
     // delete me, test only
-    power_bias_to_current(0.15);
+    power_bias_to_current(0.2);
+    
+    Serial.println();
 
     vTaskDelay(pdMS_TO_TICKS(5000));
   }

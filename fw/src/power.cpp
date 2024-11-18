@@ -12,12 +12,12 @@
 #define VDIODE              0.6
 #define VUSB_MAX            5.5
 
-#define BIAS_CTRL_BITS      12
+#define BIAS_CTRL_BITS      8
 #define BIAS_CTRL_FREQ      100e3
 
 #define NUM_BIAS_OUTPUTS    2
-#define BIAS_KP             0.8
-#define BIAS_DUTY_INITIAL   0.2
+#define BIAS_KP             0.5
+#define BIAS_DUTY_INITIAL   0
 
 typedef enum {
     BIAS_CHANNEL_0 = 0,
@@ -40,9 +40,6 @@ void analog_sense_task(void *pvParameter);
 void power_set_bias_duty(power_bias_channel_t channel, float duty);
 
 void power_init() {
-  for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++)
-    bias_duties[i] = BIAS_DUTY_INITIAL;
-
   // load configuration from JSON file
   if(fs_setting_exists(PREFERENCE_FILE, "vbat_cell_low"))
     vbat_cell_low = fs_load_setting(PREFERENCE_FILE, "vbat_cell_low").toFloat();
@@ -66,6 +63,11 @@ void power_init() {
   ledcAttachPin(BIAS_CTRL_1, PWM_CHANNEL_BIAS_1);
   ledcWrite(PWM_CHANNEL_BIAS_1, 1);
   gpio_set_drive_capability((gpio_num_t) BIAS_CTRL_1, GPIO_DRIVE_CAP_0);
+
+  for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++)
+    bias_duties[i] = BIAS_DUTY_INITIAL;
+  for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++)
+    power_set_bias_duty(bias_outputs[i], 0);
 
   xTaskCreatePinnedToCore(
       analog_sense_task,
@@ -154,6 +156,7 @@ void power_bias_to_current(float total_current) {
   // turn off bias for all channels before testing
   for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++)
     power_set_bias_duty(bias_outputs[i], 0);
+  vTaskDelay(pdMS_TO_TICKS(10));
 
   digitalWrite(PA_VDD_CTRL, HIGH);
   
@@ -166,9 +169,9 @@ void power_bias_to_current(float total_current) {
       vTaskDelay(pdMS_TO_TICKS(1));
 
       // measure current, adjust duty as needed
-      for(uint16_t j = 0; j < 3; j++)
+      for(uint16_t j = 0; j < 5; j++)
         measured_current += (float) analogRead(ADC_PA_SNS) * ADC_MAX_VOLT / ADC_PA_CURR_SCALE / ADC_FS_COUNTS;
-      measured_current /= 3;
+      measured_current /= 5;
       
       error = target_current - measured_current;
       bias_duties[i] += error * BIAS_KP;
