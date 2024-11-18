@@ -71,6 +71,9 @@ void info_task(void *param) {
     Serial.print("Input voltage: ");
     Serial.println(power_get_input_volt());
 
+    Serial.print("PA Current: ");
+    Serial.println(power_get_pa_current());
+
     Serial.print("S-meter: ");
     Serial.println(radio_get_s_meter());
 
@@ -104,9 +107,13 @@ void info_task(void *param) {
     Serial.print("\tBOOT: ");
     Serial.print(digitalRead(BOOT_BTN));
     Serial.print("\tPTT: ");
-    Serial.println(digitalRead(MIC_PTT));
+    Serial.println(digitalRead(PTT_MIC));
     
     Serial.println();
-    vTaskDelay(pdMS_TO_TICKS(10000));
+
+    // delete me, test only
+    power_bias_to_current(0.15);
+
+    vTaskDelay(pdMS_TO_TICKS(5000));
   }
 }

@@ -26,8 +26,8 @@ void hf_set_clocks(uint64_t freq_bfo, uint64_t freq_vfo, uint64_t freq_rf);
 void radio_sweep_analyze(radio_filt_sweep_t sweep, float *data, radio_filt_properties_t *properties);
 
 void hf_init() {
-  pinMode(BPF_SEL_0, OUTPUT);
-  pinMode(BPF_SEL_1, OUTPUT);
+  // pinMode(BPF_SEL_0, OUTPUT);
+  // pinMode(BPF_SEL_1, OUTPUT);
   pinMode(LPF_SEL_0, OUTPUT);
   pinMode(LPF_SEL_1, OUTPUT);
   pinMode(TX_RX_SEL, OUTPUT);
@@ -214,6 +214,7 @@ void hf_cal_if_filt(radio_filt_sweep_t sweep, radio_filt_properties_t *propertie
   Serial.println("Routine complete.\n\n");
 }
 
+/*
 // data matches less well than the IF filter calibration. Better to do VNA and testpoints.
 void hf_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_properties_t *properties) {
   // ensure VDD is turned off
@@ -272,3 +273,4 @@ void hf_cal_bpf_filt(radio_band_t band, radio_filt_sweep_t sweep, radio_filt_pro
   audio_en_rx_audio(true);
   Serial.println("Routine complete.\n\n");
 }
+*/

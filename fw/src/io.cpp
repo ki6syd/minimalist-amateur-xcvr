@@ -29,7 +29,7 @@ void io_enable_dah_isr(bool enable);
 ICACHE_RAM_ATTR void buttonISR() {
   // detach interrupt here, reattaches after taking semaphore
   detachInterrupt(digitalPinToInterrupt(BOOT_BTN));
-  detachInterrupt(digitalPinToInterrupt(MIC_PTT));
+  detachInterrupt(digitalPinToInterrupt(PTT_MIC));
 
   xSemaphoreGiveFromISR(btn_semaphore, NULL);
 }
@@ -86,14 +86,13 @@ void io_init() {
   
   pinMode(LED_GRN, OUTPUT);
   pinMode(LED_RED, OUTPUT);
-  pinMode(LED_DBG_0, OUTPUT);
-  pinMode(LED_DBG_1, OUTPUT);
   pinMode(SPARE_0, OUTPUT);
 
   pinMode(BOOT_BTN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, CHANGE);
-  pinMode(MIC_PTT, INPUT);
-  attachInterrupt(digitalPinToInterrupt(MIC_PTT), buttonISR, FALLING);
+  pinMode(PTT_MIC, INPUT);
+  attachInterrupt(digitalPinToInterrupt(PTT_MIC), buttonISR, FALLING);
+  // TODO: also include PTT_PT
   
   pinMode(KEY_DAH, INPUT);
   pinMode(KEY_DIT, INPUT);
@@ -101,8 +100,6 @@ void io_init() {
   io_enable_dah_isr(true);
 
   digitalWrite(SPARE_0, LOW);
-  digitalWrite(LED_DBG_0, LOW);
-  digitalWrite(LED_DBG_1, LOW);
   digitalWrite(LED_GRN, HIGH);
 
   // check if USB is plugged in before attempting to configure Serial
@@ -204,6 +201,7 @@ void io_set_blink_mode(blink_type_t mode) {
 }
 
 // if LED_DBG_x is *not* illuminated, spareTask is starved
+/*
 void spare_task_core_0(void *param) {
   while(true) {
     digitalWrite(LED_DBG_0, HIGH);
@@ -220,6 +218,7 @@ void spare_task_core_1(void *param) {
     taskYIELD();
   }
 }
+*/
 
 void blink_task(void *param) {
   uint16_t on_duration, off_duration;
@@ -250,13 +249,13 @@ void blink_task(void *param) {
 void tx_pulse_task(void *param) {
   while(true) {
     if(xSemaphoreTake(btn_semaphore, portMAX_DELAY) == pdPASS) {
-      if(digitalRead(BOOT_BTN) == LOW || digitalRead(MIC_PTT) == LOW)
+      if(digitalRead(BOOT_BTN) == LOW || digitalRead(PTT_MIC) == LOW)
         radio_key_on();
-      if(digitalRead(BOOT_BTN) == HIGH && digitalRead(MIC_PTT) == HIGH)
+      if(digitalRead(BOOT_BTN) == HIGH && digitalRead(PTT_MIC) == HIGH)
         radio_key_off();
 
       attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, CHANGE);
-      attachInterrupt(digitalPinToInterrupt(MIC_PTT), buttonISR, FALLING);
+      attachInterrupt(digitalPinToInterrupt(PTT_MIC), buttonISR, FALLING);
 
       // any value of notified_value should cancel currently sending messages
       digi_mode_queue_clear();

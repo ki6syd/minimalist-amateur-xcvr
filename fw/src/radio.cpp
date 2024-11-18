@@ -14,7 +14,7 @@
 #define NOTIFY_FREQ_CHANGE    (1 << 3)
 #define NOTIFY_CAL_XTAL       (1 << 4)
 #define NOTIFY_CAL_IF         (1 << 5)
-#define NOTIFY_CAL_BPF        (1 << 6)
+// #define NOTIFY_CAL_BPF        (1 << 6)
 #define NOTIFY_LOW_BAT        (1 << 7)
 
 #define FREQ_PLL          (SI5351_PLL_FIXED)
@@ -24,7 +24,7 @@ radio_rxtx_mode_t rxtx_mode = MODE_STARTUP;
 radio_band_t band = BAND_UNKNOWN;
 radio_filt_sweep_t sweep_config;
 radio_band_capability_t band_capability[NUMBER_BANDS];
-radio_filt_properties_t if_properties, bpf_properties;
+radio_filt_properties_t if_properties; // , bpf_properties;
 
 QueueHandle_t xRadioQueue;
 TaskHandle_t xRadioTaskHandle;
@@ -172,10 +172,12 @@ void radio_task(void *param) {
       if(notifiedValue & NOTIFY_CAL_IF) {
         hf_cal_if_filt(sweep_config, &if_properties);
       }
+      /*
       if(notifiedValue & NOTIFY_CAL_BPF) {
         radio_band_t band_to_sweep = radio_get_band(sweep_config.f_center);
         hf_cal_bpf_filt(band_to_sweep, sweep_config, &bpf_properties);
       }
+      */
       if(notifiedValue & NOTIFY_LOW_BAT) {
         ok_to_tx = false;
       }
@@ -335,6 +337,7 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
 // setting band to anything but BAND_VHF will result in powerdown
 void radio_set_band(radio_band_t new_band) {
     if(rxtx_mode == MODE_RX || rxtx_mode == MODE_QSK_COUNTDOWN) {
+        /*
         switch(new_band) {
             case BAND_HF_1:
                 digitalWrite(BPF_SEL_0, LOW);
@@ -357,6 +360,7 @@ void radio_set_band(radio_band_t new_band) {
                 Serial.println(new_band);
                 return;
         }
+        */
         digitalWrite(LPF_SEL_0, LOW);
         digitalWrite(LPF_SEL_1, LOW);
         digitalWrite(TX_RX_SEL, LOW);
@@ -388,8 +392,8 @@ void radio_set_band(radio_band_t new_band) {
                 Serial.println(new_band);
                 return;
         }
-        digitalWrite(BPF_SEL_0, HIGH);
-        digitalWrite(BPF_SEL_1, HIGH);
+        // digitalWrite(BPF_SEL_0, HIGH);
+        // digitalWrite(BPF_SEL_1, HIGH);
     }
     else if(rxtx_mode == MODE_SELF_TEST) {
       Serial.println(radio_band_to_string(new_band));
@@ -399,26 +403,26 @@ void radio_set_band(radio_band_t new_band) {
         digitalWrite(TX_RX_SEL, LOW);
         switch(new_band) {
             case BAND_HF_1:
-              digitalWrite(BPF_SEL_0, LOW);
-              digitalWrite(BPF_SEL_1, LOW);
+              // digitalWrite(BPF_SEL_0, LOW);
+              // digitalWrite(BPF_SEL_1, LOW);
               digitalWrite(LPF_SEL_0, LOW);
               digitalWrite(LPF_SEL_1, LOW);
               break;
             case BAND_HF_2:
-              digitalWrite(BPF_SEL_0, HIGH);
-              digitalWrite(BPF_SEL_1, LOW);
+              // digitalWrite(BPF_SEL_0, HIGH);
+              // digitalWrite(BPF_SEL_1, LOW);
               digitalWrite(LPF_SEL_0, HIGH);
               digitalWrite(LPF_SEL_1, LOW);
               break;
             case BAND_HF_3:
-              digitalWrite(BPF_SEL_0, LOW);
-              digitalWrite(BPF_SEL_1, HIGH);
+              // digitalWrite(BPF_SEL_0, LOW);
+              // digitalWrite(BPF_SEL_1, HIGH);
               digitalWrite(LPF_SEL_0, LOW);
               digitalWrite(LPF_SEL_1, HIGH);
               break;
             case BAND_SELFTEST_LOOPBACK:
-              digitalWrite(BPF_SEL_0, HIGH);
-              digitalWrite(BPF_SEL_1, HIGH);
+              // digitalWrite(BPF_SEL_0, HIGH);
+              // digitalWrite(BPF_SEL_1, HIGH);
               digitalWrite(LPF_SEL_0, LOW);
               digitalWrite(LPF_SEL_1, LOW);
               break;
@@ -643,6 +647,7 @@ void radio_debug(debug_action_t action, void *value) {
       xTaskNotify(xRadioTaskHandle, NOTIFY_CAL_IF, eSetBits);
       break;
     }
+    /*
     case DEBUG_CMD_CAL_BPF: {
       sweep_config = {
         .f_center = radio_get_dial_freq(),
@@ -654,6 +659,7 @@ void radio_debug(debug_action_t action, void *value) {
       xTaskNotify(xRadioTaskHandle, NOTIFY_CAL_BPF, eSetBits);
       break;
     }
+    */
     case DEBUG_CMD_STOP_CLOCKS: {
       si5351.output_enable(SI5351_IDX_TX, 0);
       si5351.output_enable(SI5351_IDX_BFO, 0);

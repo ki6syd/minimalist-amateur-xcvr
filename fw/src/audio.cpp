@@ -208,9 +208,9 @@ void audio_dsp_task(void *param) {
     cfg_tx.channels = 1;
     cfg_tx.buffer_count = 4;
     cfg_tx.buffer_size = BUFFER_CHUNK;
-    cfg_tx.pin_bck = 42;
-    cfg_tx.pin_data = 40;
-    cfg_tx.pin_ws = 41;
+    cfg_tx.pin_bck = HP_DAC_BCLK;
+    cfg_tx.pin_data = HP_DAC_DO;
+    cfg_tx.pin_ws = HP_DAC_LRCLK;
     pcm1502.begin(cfg_tx);
     pcm_wave.begin(info_mono, N_B4);        // replace with info_stereo, for stereo audio
     // end PCM1502 test
