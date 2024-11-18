@@ -37,6 +37,7 @@ uint16_t num_cell = 3;
 uint32_t num_low_samples = 0;
 
 void analog_sense_task(void *pvParameter);
+float pa_curr_conversion();
 void power_set_bias_duty(power_bias_channel_t channel, float duty);
 
 void power_init() {
@@ -84,7 +85,7 @@ void power_init() {
 void analog_sense_task(void *param) {
   while(true) {
     input_volt = (float) analogRead(ADC_VDD) * ADC_MAX_VOLT / ADC_VDD_SCALE / ADC_FS_COUNTS;
-    pa_curr = (float) analogRead(ADC_PA_SNS) * ADC_MAX_VOLT / ADC_PA_CURR_SCALE / ADC_FS_COUNTS;
+    pa_curr = pa_curr_conversion();
 
     // figure out whether we're on USB power? Don't run this logic if voltage is very low
     if(input_volt + VDIODE > VUSB_MAX) {
@@ -121,6 +122,10 @@ void power_update_freq(uint32_t new_freq) {
     }
 }
 
+float pa_curr_conversion() {
+  return (float) analogRead(ADC_PA_SNS) * ADC_MAX_VOLT / ADC_PA_CURR_SCALE / ADC_FS_COUNTS;
+}
+
 float power_get_input_volt() {
   return input_volt;
 }
@@ -149,6 +154,7 @@ void power_set_bias_duty(power_bias_channel_t channel, float duty) {
 // then leaves the amplifier at this bias point, no longer actively controls
 void power_bias_to_current(float total_current) {
   float target_current = total_current / 2;
+  float offset_current = 0;
   float measured_current = 0;
 
   // TODO: put bounds on current to avoid breaking something
@@ -157,6 +163,11 @@ void power_bias_to_current(float total_current) {
   for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++)
     power_set_bias_duty(bias_outputs[i], 0);
   vTaskDelay(pdMS_TO_TICKS(10));
+  offset_current = pa_curr_conversion();
+
+  Serial.print("Baseline PA current: ");
+  Serial.print(offset_current);
+  Serial.print("\t");
 
   digitalWrite(PA_VDD_CTRL, HIGH);
   
@@ -166,12 +177,12 @@ void power_bias_to_current(float total_current) {
     do {
       // set duty cycle
       power_set_bias_duty(bias_outputs[i], bias_duties[i]);
-      vTaskDelay(pdMS_TO_TICKS(1));
+      vTaskDelay(pdMS_TO_TICKS(5));
 
       // measure current, adjust duty as needed
-      for(uint16_t j = 0; j < 5; j++)
-        measured_current += (float) analogRead(ADC_PA_SNS) * ADC_MAX_VOLT / ADC_PA_CURR_SCALE / ADC_FS_COUNTS;
-      measured_current /= 5;
+      for(uint16_t j = 0; j < 10; j++)
+        measured_current += (pa_curr_conversion() - offset_current);
+      measured_current /= 10;
       
       error = target_current - measured_current;
       bias_duties[i] += error * BIAS_KP;
