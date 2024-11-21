@@ -4,9 +4,9 @@
 #include <si5351.h>
 #include <Arduino.h>
 
-#define SI5351_IDX_BFO        SI5351_CLK0
-#define SI5351_IDX_VFO        SI5351_CLK1
-#define SI5351_IDX_TX         SI5351_CLK2
+#define SI5351_IDX_VFO        SI5351_CLK0
+#define SI5351_IDX_BFO_I      SI5351_CLK1
+#define SI5351_IDX_BFO_Q      SI5351_CLK2
 
 typedef enum {
     MODE_RX,

@@ -61,16 +61,15 @@ void hf_si5351_init() {
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLA);
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLB);
 
-  si5351.drive_strength(SI5351_IDX_BFO, SI5351_DRIVE_2MA);
-  si5351.drive_strength(SI5351_IDX_VFO, SI5351_DRIVE_2MA);
-  si5351.drive_strength(SI5351_IDX_TX, SI5351_DRIVE_8MA);
+  si5351.drive_strength(SI5351_IDX_BFO_I, SI5351_DRIVE_2MA);
+  si5351.drive_strength(SI5351_IDX_BFO_Q, SI5351_DRIVE_2MA);
+  si5351.drive_strength(SI5351_IDX_VFO, SI5351_DRIVE_8MA);
 
   hf_set_dial_freq(radio_get_dial_freq());
 
-  // the first call to si5351.set_freq() will enable the clocks. Turn them off
-  si5351.output_enable(SI5351_IDX_BFO, 0);
-  si5351.output_enable(SI5351_IDX_VFO, 0);
-  si5351.output_enable(SI5351_IDX_TX, 0);
+  si5351.output_enable(SI5351_IDX_BFO_I, 1);
+  si5351.output_enable(SI5351_IDX_BFO_Q, 1);
+  si5351.output_enable(SI5351_IDX_VFO, 1);
 }
 
 // helper function that only radio.cpp or radio_hf.cpp should call
@@ -97,9 +96,15 @@ void hf_set_dial_freq(uint64_t freq_dial) {
 
 
 void hf_set_clocks(uint64_t freq_bfo, uint64_t freq_vfo, uint64_t freq_rf) {
-  si5351.set_freq(freq_bfo * 100, SI5351_IDX_BFO);
+  // TODO: remove freq_rf
+  si5351.set_freq(freq_bfo * 100, SI5351_IDX_BFO_I);
+  si5351.set_freq(freq_bfo * 100, SI5351_IDX_BFO_Q);
   si5351.set_freq(freq_vfo * 100, SI5351_IDX_VFO);
-  si5351.set_freq(freq_rf * 100, SI5351_IDX_TX);
+
+  // TODO: set phase and BFO frequency a single time at startup?
+  uint16_t phase_delay = (uint16_t) (SI5351_PLL_FIXED / freq_bfo);
+  si5351.set_phase(SI5351_IDX_BFO_I, 0);
+  si5351.set_phase(SI5351_IDX_BFO_Q, phase_delay);
 
   // Serial.println(radio_freq_string());
 }
@@ -139,10 +144,10 @@ void hf_cal_tx_10MHz() {
   digitalWrite(PA_VDD_CTRL, LOW);
   vTaskDelay(pdMS_TO_TICKS(50));
 
-  si5351.set_freq(((uint64_t) 10000000) * 100, SI5351_IDX_TX);
-  si5351.output_enable(SI5351_IDX_BFO, 0);
-  si5351.output_enable(SI5351_IDX_VFO, 0);
-  si5351.output_enable(SI5351_IDX_TX, 1);
+  si5351.set_freq(((uint64_t) 10000000) * 100, SI5351_IDX_VFO);
+  si5351.output_enable(SI5351_IDX_BFO_I, 0);
+  si5351.output_enable(SI5351_IDX_BFO_Q, 0);
+  si5351.output_enable(SI5351_IDX_VFO, 1);
   vTaskDelay(pdMS_TO_TICKS(10000));
 
   radio_set_rxtx_mode(MODE_QSK_COUNTDOWN);
@@ -152,6 +157,7 @@ void hf_cal_tx_10MHz() {
 // stop the VFO, enable BFO, sweep TX-CLK injection and observe amplitude
 // assumes that si5351 crystal is already calibrated
 void hf_cal_if_filt(radio_filt_sweep_t sweep, radio_filt_properties_t *properties) {
+  /*
   // ensure VDD is turned off
   digitalWrite(PA_VDD_CTRL, LOW);
   vTaskDelay(pdMS_TO_TICKS(50));
@@ -209,6 +215,7 @@ void hf_cal_if_filt(radio_filt_sweep_t sweep, radio_filt_properties_t *propertie
   audio_set_volume(volume_init);
   audio_en_rx_audio(true);
   Serial.println("Routine complete.\n\n");
+  */
 }
 
 /*

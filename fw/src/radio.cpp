@@ -249,9 +249,11 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
 
           // set up clocks
           // TODO: don't expose si5351 directly to this module
+          /* DELETE ME? holdover from having a separate TX clock, need all running in qsd/qse superhet
           si5351.output_enable(SI5351_IDX_BFO, 1);
           si5351.output_enable(SI5351_IDX_VFO, 1);
           si5351.output_enable(SI5351_IDX_TX, 0);
+          */
 
           // allow audio to pass through
           audio_en_rx_audio(true);
@@ -316,9 +318,11 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
           audio_en_rx_audio(false);
 
           // set up clocks. TX clock always running in TX mode
+          /* DELETE ME? holdover from having a separate TX clock, need all running in qsd/qse superhet
           si5351.output_enable(SI5351_IDX_BFO, 0);
           si5351.output_enable(SI5351_IDX_VFO, 0);
           si5351.output_enable(SI5351_IDX_TX, 1);
+          */
         }
         else {
           audio_set_mode(AUDIO_VHF_TX);
@@ -631,11 +635,13 @@ bool radio_freq_is_hf(uint64_t dial_freq) {
 void radio_debug(debug_action_t action, void *value) {
   switch(action) {
     case DEBUG_CMD_TXCLK: {
+      /* DELETE ME??
       bool on_off = *((bool *) value);
       if(on_off)
         si5351.output_enable(SI5351_IDX_TX, 1);
       else
         si5351.output_enable(SI5351_IDX_TX, 0);
+      */
       break;
     }
     case DEBUG_CMD_CAL_XTAL: {
@@ -667,12 +673,13 @@ void radio_debug(debug_action_t action, void *value) {
     }
     */
     case DEBUG_CMD_STOP_CLOCKS: {
-      si5351.output_enable(SI5351_IDX_TX, 0);
-      si5351.output_enable(SI5351_IDX_BFO, 0);
+      si5351.output_enable(SI5351_IDX_BFO_I, 0);
+      si5351.output_enable(SI5351_IDX_BFO_Q, 0);
       si5351.output_enable(SI5351_IDX_VFO, 0);
       break;
     }
     case DEBUG_CMD_IQ_CLOCKS: {
+      /* DELETE ME??
       // routine to test 90deg spaced clocks
 
       si5351.set_freq(10000000 * 100, SI5351_IDX_BFO);
@@ -687,6 +694,7 @@ void radio_debug(debug_action_t action, void *value) {
       si5351.output_enable(SI5351_IDX_TX, 0);
       si5351.output_enable(SI5351_IDX_BFO, 1);
       si5351.output_enable(SI5351_IDX_VFO, 1);
+      */
       break;
     }
   }

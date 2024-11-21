@@ -359,6 +359,8 @@ void audio_dsp_task(void *param) {
     multi_output->add(pcm1502);
 
     // Distortion (clipping) operates *after* volume control is applied, making it the same threshold regardless of volume setting
+    // TODO: this is currently operating on the IQ audio outputs. Need to move this to the headphone amplifier (PCM1502)
+    // TODO: does it make sense for Distortion() constructor to use max_safe_vol for the maxInput?
     volume_limiter = new Distortion(max_safe_vol, max_safe_vol);
     effects.addEffect(*volume_limiter);
     effects.begin(info_mono);
@@ -682,6 +684,7 @@ void audio_en_rx_audio(bool en) {
     }
 }
 
+// TODO: move volume control to the PCM1502 (and also add limiting). out_vol is affecting both PCM1502 and ES8388 outputs
 bool audio_set_volume(float vol) {
     if(vol >= 0.0 && vol <= 1.0) {
         global_vol = vol;

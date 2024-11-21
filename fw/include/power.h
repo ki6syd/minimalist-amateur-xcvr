@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#define BIAS_CURRENT_CW     0.300
+#define BIAS_CURRENT_CW     0.150
 
 void power_init();
 void power_update_freq(uint32_t freq);

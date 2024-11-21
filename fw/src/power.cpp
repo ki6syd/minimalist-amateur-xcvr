@@ -230,7 +230,7 @@ void power_bias_to_current(float total_current) {
       bias_duties[i] += error * BIAS_KP;
 
       // possible case: no bias current at all
-      if(bias_duties[i] > 1) {
+      if(bias_duties[i] > 1 || bias_duties[i] < 0) {
         bias_duties[i] = 0;
         break;
       }
