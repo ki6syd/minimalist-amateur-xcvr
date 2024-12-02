@@ -30,8 +30,8 @@
 #define F_AUDIO                 8000
 #define F_SIDETONE_DEFAULT      499
 #define AUDIO_FILT_DEFAULT      AUDIO_FILT_CW
-#define AUDIO_VOL_DEFAULT       0.3
-#define AUDIO_SIDE_DEFAULT      0.2
+#define AUDIO_VOL_DEFAULT       0.75
+#define AUDIO_SIDE_DEFAULT      0.8
 #define AUDIO_VOL_DURING_CAL    0.01
 #define AUDIO_PGA_DEFAULT       true
 // #define AUDIO_EN_OUT_VBAN            // flakey
@@ -73,5 +73,7 @@ typedef enum {
     DEBUG_CMD_SPOT=7,
     DEBUG_CMD_STOP_CLOCKS=8,
     DEBUG_CMD_SET_CLOCKS=9,
-    DEBUG_CMD_IQ_CLOCKS=10
+    DEBUG_CMD_IQ_CLOCKS=10,
+    DEBUG_CMD_STOP_BFO=11,
+    DEBUG_CMD_STOP_VFO=12,
 } debug_action_t;

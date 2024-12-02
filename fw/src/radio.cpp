@@ -678,6 +678,15 @@ void radio_debug(debug_action_t action, void *value) {
       si5351.output_enable(SI5351_IDX_VFO, 0);
       break;
     }
+    case DEBUG_CMD_STOP_BFO: {
+      si5351.output_enable(SI5351_IDX_BFO_I, 0);
+      si5351.output_enable(SI5351_IDX_BFO_Q, 0);
+      break;
+    }
+    case DEBUG_CMD_STOP_VFO: {
+      si5351.output_enable(SI5351_IDX_VFO, 0);
+      break;
+    }
     case DEBUG_CMD_IQ_CLOCKS: {
       /* DELETE ME??
       // routine to test 90deg spaced clocks

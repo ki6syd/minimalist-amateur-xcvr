@@ -128,7 +128,7 @@ void audio_init() {
     // load sidetone volume
     // TODO: enforce bounds
     if(fs_setting_exists(PREFERENCE_FILE, "sidetone_level"))
-        sidetone_vol = fs_load_setting(PREFERENCE_FILE, "sidetone_level").toInt();
+        sidetone_vol = fs_load_setting(PREFERENCE_FILE, "sidetone_level").toFloat();
 
     // note: platformio + arduino puts wifi on core 0
     // run on core 1
@@ -373,7 +373,6 @@ void audio_dsp_task(void *param) {
     audio_en_pga(true);
     audio_en_sidetone(false);
     audio_en_rx_audio(true);
-    audio_set_sidetone_volume(AUDIO_SIDE_DEFAULT);
     audio_set_volume(AUDIO_VOL_DEFAULT);
 
     uint32_t start_tick, stop_tick, c1_processed, c2_processed;
@@ -647,6 +646,10 @@ void audio_en_sidetone(bool tone) {
     if(tone) {
         int16_t tmp = (int16_t) (sidetone_vol * INT16T_MAX);
         sine_wave.setAmplitude(tmp);
+        Serial.print("Setting sidetone: ");
+        Serial.print(tmp);
+        Serial.print("\t");
+        Serial.println(sidetone_vol);
     }
     else
         sine_wave.setAmplitude(0);
@@ -695,6 +698,8 @@ bool audio_set_volume(float vol) {
 }
 
 bool audio_set_sidetone_volume(float vol) {
+    Serial.print("Setting sidetone volume: ");
+    Serial.println(vol);
     if(vol >= 0.0 && vol <= 1.0) {
         sidetone_vol = vol;
 

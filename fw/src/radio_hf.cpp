@@ -13,8 +13,9 @@
 
 Si5351 si5351;
 
-uint64_t freq_if_lower = 9998500;
-uint64_t freq_if_upper = 10001500;
+// uint64_t freq_if_lower = 9998500; delete me
+// uint64_t freq_if_upper = 10001500; delete me
+uint64_t freq_if = 44995000;
 uint64_t freq_vfo = 0;
 uint64_t freq_bfo = 0;
 
@@ -45,8 +46,8 @@ void hf_si5351_init() {
   }
 
   // TODO: error checking. Maybe add a function for enforcing bounds on settings loaded from json
-  freq_if_lower = fs_load_setting(HARDWARE_FILE, "freq_if_lower").toInt();
-  freq_if_upper = fs_load_setting(HARDWARE_FILE, "freq_if_upper").toInt();
+  // freq_if_lower = fs_load_setting(HARDWARE_FILE, "freq_if_lower").toInt();
+  // freq_if_upper = fs_load_setting(HARDWARE_FILE, "freq_if_upper").toInt();
 
   Wire.begin(CLOCK_SDA, CLOCK_SCL);
 
@@ -61,8 +62,8 @@ void hf_si5351_init() {
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLA);
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLB);
 
-  si5351.drive_strength(SI5351_IDX_BFO_I, SI5351_DRIVE_2MA);
-  si5351.drive_strength(SI5351_IDX_BFO_Q, SI5351_DRIVE_2MA);
+  si5351.drive_strength(SI5351_IDX_BFO_I, SI5351_DRIVE_8MA);
+  si5351.drive_strength(SI5351_IDX_BFO_Q, SI5351_DRIVE_8MA);
   si5351.drive_strength(SI5351_IDX_VFO, SI5351_DRIVE_8MA);
 
   hf_set_dial_freq(radio_get_dial_freq());
@@ -78,14 +79,20 @@ void hf_si5351_init() {
 // assumes typical logic of USB above 10MHz and LSB below 10MHz. Will need an update for FT8
 // note that we use F_SIDETONE_DEFAULT rather than get_sidetone_freq() because sidetone freq() is changing during FT8
 void hf_set_dial_freq(uint64_t freq_dial) {
-  if(freq_dial < 10000000) {
-    freq_vfo = freq_if_lower - freq_dial;
-    freq_bfo = freq_if_lower - ((uint64_t) F_SIDETONE_DEFAULT);
+  /*
+  if(freq_dial < freq_if) {
+    freq_vfo = freq_if - freq_dial;
+    freq_bfo = freq_if - ((uint64_t) F_SIDETONE_DEFAULT);
   }
   else {
-    freq_vfo = freq_dial + freq_if_upper;
-    freq_bfo = freq_if_upper + ((uint64_t) F_SIDETONE_DEFAULT);
+    freq_vfo = freq_dial + freq_if;
+    freq_bfo = freq_if + ((uint64_t) F_SIDETONE_DEFAULT);
   }
+  */
+
+ freq_vfo = freq_if + freq_dial;
+ freq_bfo = freq_if - ((uint64_t) F_SIDETONE_DEFAULT);
+
 #ifdef RX_ARCHITECTURE_QSD
   // multiple BFO frequency by 4x if we are using a QSD and 90deg divider circuit
   freq_bfo = 4 * (freq_dial + ((uint64_t) F_SIDETONE_DEFAULT));
@@ -129,11 +136,11 @@ float hf_get_s_meter() {
 
 String hf_freq_string() {
   String result = "";
-  result += "BFO: ";
-  result += String(freq_bfo);
-  result += "\tVFO: ";
+  result += "VFO: ";
   result += String(freq_vfo);
-  result += "\tTX: ";
+  result += "\tBFO: ";
+  result += String(freq_bfo);
+  result += "\tDial Frequency: ";
   result += String(radio_get_dial_freq());
   return result;
 }
