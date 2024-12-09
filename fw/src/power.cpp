@@ -64,13 +64,14 @@ void power_init() {
   ledcSetup(PWM_CHANNEL_BIAS_0, BIAS_CTRL_FREQ, BIAS_CTRL_BITS);
   ledcAttachPin(BIAS_CTRL_0, PWM_CHANNEL_BIAS_0);
   ledcWrite(PWM_CHANNEL_BIAS_0, 1);
-    gpio_set_drive_capability((gpio_num_t) BIAS_CTRL_0, GPIO_DRIVE_CAP_0);
+  gpio_set_drive_capability((gpio_num_t) BIAS_CTRL_0, GPIO_DRIVE_CAP_0);
 
   // set up BIAS_CTRL_1 with weak drive strength
   ledcSetup(PWM_CHANNEL_BIAS_1, BIAS_CTRL_FREQ, BIAS_CTRL_BITS);
   ledcAttachPin(BIAS_CTRL_1, PWM_CHANNEL_BIAS_1);
   ledcWrite(PWM_CHANNEL_BIAS_1, 1);
   gpio_set_drive_capability((gpio_num_t) BIAS_CTRL_1, GPIO_DRIVE_CAP_0);
+  
 
   for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++)
     bias_duties[i] = BIAS_DUTY_INITIAL;
