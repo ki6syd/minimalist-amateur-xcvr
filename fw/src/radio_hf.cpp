@@ -79,24 +79,9 @@ void hf_si5351_init() {
 // assumes typical logic of USB above 10MHz and LSB below 10MHz. Will need an update for FT8
 // note that we use F_SIDETONE_DEFAULT rather than get_sidetone_freq() because sidetone freq() is changing during FT8
 void hf_set_dial_freq(uint64_t freq_dial) {
-  /*
-  if(freq_dial < freq_if) {
-    freq_vfo = freq_if - freq_dial;
-    freq_bfo = freq_if - ((uint64_t) F_SIDETONE_DEFAULT);
-  }
-  else {
-    freq_vfo = freq_dial + freq_if;
-    freq_bfo = freq_if + ((uint64_t) F_SIDETONE_DEFAULT);
-  }
-  */
-
  freq_vfo = freq_if + freq_dial;
- freq_bfo = freq_if - ((uint64_t) F_SIDETONE_DEFAULT);
+ freq_bfo = 4 * (freq_if - ((uint64_t) F_SIDETONE_DEFAULT));
 
-#ifdef RX_ARCHITECTURE_QSD
-  // multiple BFO frequency by 4x if we are using a QSD and 90deg divider circuit
-  freq_bfo = 4 * (freq_dial + ((uint64_t) F_SIDETONE_DEFAULT));
-#endif
 
   hf_set_clocks(freq_bfo, freq_vfo, freq_dial);
 }

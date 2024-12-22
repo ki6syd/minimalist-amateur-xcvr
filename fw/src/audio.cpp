@@ -5,14 +5,9 @@
 #include "file_system.h"
 
 #include <Arduino.h>
-#include <Wire.h>
-#include <WiFiUdp.h>                    // TODO: move the networking items to wifi_conn
 #include <ESPmDNS.h>
 #include "AudioTools.h"
 #include "AudioLibs/I2SCodecStream.h"
-#include "AudioLibs/VBANStream.h"
-#include "Communication/ESPNowStream.h"
-#include "Communication/UDPStream.h"
 
 // defines the indices of the audio mixer that combines two input channels and sidetone
 #define MIXER_IDX_SIDETONE      0
@@ -50,33 +45,6 @@ GeneratedSoundStream<int16_t> pcm_sound(pcm_wave);
 // StreamCopy pcm_copier(pcm1502, pcm_sound, BUFFER_CHUNK);
 // end PCM1502 test
 
-#ifdef AUDIO_EN_OUT_VBAN
-VBANStream                    vban;                                     // audio over wifi
-#endif
-#ifdef AUDIO_EN_OUT_CSV
-CsvOutput<int16_t>            csv_stream(Serial);                      // data over serial
-#endif
-#ifdef AUDIO_EN_OUT_ESPNOW
-ESPNowStream now;
-const char *peers[] = {"48:CA:43:57:66:98"};    // serial number 1
-#endif
-#ifdef AUDIO_EN_OUT_UDP
-WiFiUDP default_udp;
-UDPStream udp("", "");    // already connected
-// Throttle throttle(udp);
-// IPAddress udpAddress(192, 168, 0, 232); // laptop
-// IPAddress udpAddress(192, 168, 0, 238); // serial number 1
-// IPAddress udpAddress(192, 168, 0, 178); // serial number 2
-IPAddress udpAddress(192, 168, 0, 255); // broadcast
-const int udpPort = 7000;
-#endif
-#ifdef AUDIO_EN_OUT_IP
-WiFiClient client;
-// IPAddress client_address(192, 168, 0, 178);  // serial number 2
-IPAddress client_address(192, 168, 0, 232);  // laptop
-const int ip_port = 7000;
-#endif
-
 SineWaveGenerator<int16_t>    sine_wave;
 GeneratedSoundStream<int16_t> sound_stream(sine_wave);
 
@@ -93,12 +61,10 @@ AudioEffectStream             effects(mono_to_stereo);                  // effec
 Distortion                    *volume_limiter;
 StreamCopy copier_1(BUFFER_CHUNK);
 StreamCopy copier_2(BUFFER_CHUNK * 2);
-#ifdef AUDIO_PATH_IQ
 FilteredStream<int16_t, float> hilbert_n45deg(input_l_vol, info_mono.channels);
 FilteredStream<int16_t, float> hilbert_p45deg(input_r_vol, info_mono.channels);
 float i_channel_correction = 1.0;
 float q_channel_correction = 0.89;
-#endif
 
 // example of i2s codec for both input and output: https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-audiokit/streams-audiokit-filter-audiokit/streams-audiokit-filter-audiokit.ino
 
@@ -116,7 +82,6 @@ uint32_t max_safe_vol = 32768;                   // 32768 allows full volume out
 void audio_dsp_task(void * pvParameter);
 void audio_dsp_task_restart();
 void audio_logic_task(void *pvParameter);
-void audio_gain_task(void *pvParameter);
 void audio_measure_volume();
 void audio_set_dacs(audio_mode_t audio_mode);
 
@@ -151,19 +116,6 @@ void audio_init() {
         &xAudioTaskHandle,
         TASK_CORE_AUDIO // core
     );
-
-    // working as designed but commented out, should implement AGC which actually controls PGA level
-    /*
-    xTaskCreatePinnedToCore(
-        audio_gain_task,
-        "Audio Gain Task",
-        16384,
-        NULL,
-        TASK_PRIORITY_AUDIO, // priority
-        &xGainTaskHandle,
-        TASK_CORE_AUDIO // core
-    );
-    */
 }
 
 void audio_dsp_task(void *param) {
@@ -218,36 +170,12 @@ void audio_dsp_task(void *param) {
     // sidetone audio source
     sine_wave.begin(info_mono, sidetone_freq);
 
-#ifdef AUDIO_EN_OUT_VBAN
-    // setup vban output (mono)
-    auto cfg = vban.defaultConfig(TX_MODE);
-    cfg.copyFrom(info_mono);
-    cfg.ssid = WIFI_STA_SSID;
-    cfg.password = WIFI_STA_PASS;
-    cfg.stream_name = "Stream1";
-    // cfg.target_ip = IPAddress{192,168,1,37}; 
-    cfg.throttle_active = true;
-    cfg.throttle_correction_us = -1000; // optimize overload and underrun
-    if (!vban.begin(cfg)) stop();
-#endif
-#ifdef AUDIO_EN_OUT_CSV
-    csv_stream.begin(info_mono);
-#endif
-
     // input_split (stereo) --> two (mono) volume control pathways
-#ifdef AUDIO_PATH_IQ
     input_split->addOutput(input_l_vol, 0);
     input_split->addOutput(input_r_vol, 1);
-#else
-    // note that the indices of side_l_r_mix are set by the declaration above, then the following two lines
-    // omit the input_x_vol controls if we are not using IQ data
-    input_split->addOutput(*side_l_r_mix, 0);
-    input_split->addOutput(*side_l_r_mix, 1);
-#endif
+
     input_split->begin(info_stereo);
 
-
-#ifdef AUDIO_PATH_IQ
     // l/r volume pathways feed into hilbert transforms. Left is Q, right is I
     // important hardware errata:  initial QSD test hardware had I/Q labeling swapped. "I" audio should correspond to p45deg, "Q" audio should correspond to n45deg
     input_l_vol.setOutput(hilbert_p45deg);  // swap me after fixing hardware
@@ -264,7 +192,6 @@ void audio_dsp_task(void *param) {
 
     hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
     hilbert_p45deg.setOutput(*side_l_r_mix);
-#endif
 
     // left + right + sidetone --> side_l_r_mix (mono). declaration links to audio_filt
     // HF I, Q, sidetone all set to zero weight. audio_set_mode() will properly apply weights.
@@ -287,73 +214,6 @@ void audio_dsp_task(void *param) {
 
     // multi_output goes to mono_to_stereo (mono, via the clipping effect), and any optional outputs
     multi_output->add(effects);    
-#ifdef AUDIO_EN_OUT_VBAN
-    multi_output.add(vban);
-#endif
-#ifdef AUDIO_EN_OUT_CSV
-    multi_output.add(csv_stream);
-#endif
-#ifdef AUDIO_EN_OUT_ESPNOW
-    auto now_cfg = now.defaultConfig();
-    now_cfg.mac_address = "48:CA:43:57:66:5C";   // serial number 2
-    now_cfg.channel = 2;
-    now_cfg.use_send_ack = false;
-    now_cfg.write_retry_count = 0;
-    now_cfg.delay_after_write_ms = 0;
-    now_cfg.delay_after_failed_write_ms = 0;
-    now.begin(now_cfg);
-    now.addPeers(peers);
-    multi_output.add(now);
-#endif
-#ifdef AUDIO_EN_OUT_UDP
-    multi_output.add(udp);
-
-    udp.setUDP(default_udp);
-    udp.begin(udpAddress, udpPort);
-    // note that I2S buffer total size needs to be >1492, the UDP write size
-    // was getting weird UDP packets in Wireshark otherwise
-    // worked with 8x256 buffers
-#endif
-#ifdef AUDIO_EN_OUT_IP
-    client.setNoDelay(true);   // doesn't wait to accumulate packets
-    client.setTimeout(1);       // 2 second timeout
-
-    // attempt connection repeatedly
-    bool connected = false;
-    IPAddress search_address;
-    for(uint16_t i = 0; i < 3; i++) {
-        // try to find the client. assumes MDNS has started
-        // TODO: move this sort of logicto wifi_conn.cpp, don't hard-code
-        search_address = MDNS.queryHost(fs_load_setting(PREFERENCE_FILE, "audio_receiver_hostname"), 250);    //500ms timeout
-        if(search_address != IPAddress(0, 0, 0, 0)) {
-            Serial.print("Found address: ");
-            Serial.println(search_address.toString());
-            client_address = search_address;
-        }
-        else { 
-            Serial.print("Audio receiver not yet found on MDNS, will also try: ");
-            Serial.println(client_address.toString());
-        }
-            
-        if(client.connect(client_address, ip_port)) {
-            connected = true;
-            Serial.print("Successfully connected to server at: ");
-            Serial.println(client_address.toString());
-            break;
-        }
-        vTaskDelay(pdMS_TO_TICKS(250));        
-    }
-
-    // only proceed if client connected
-    if(connected) {
-        Serial.println("IP Key Connection success");
-        multi_output->add(client);
-    }
-    else {
-        Serial.println("Unable to connect to IP key");
-        client.stop();
-    }
-#endif
 
     // pcm1502 test
     multi_output->add(pcm1502);
@@ -378,59 +238,13 @@ void audio_dsp_task(void *param) {
     uint32_t start_tick, stop_tick, c1_processed, c2_processed;
     while(true) {
         start_tick = xTaskGetTickCount();
-        // TODO (for IP): the .copy() calls will block if the client disconnects
         c1_processed = copier_1.copy();
         c2_processed = copier_2.copy();
         // pcm_copier.copy();  // pcm1502 test
         stop_tick = xTaskGetTickCount();
 
-        /*
-        Serial.print(stop_tick - start_tick);
-        Serial.print("\t");
-        Serial.print(c1_processed);
-        Serial.print("\t");
-        Serial.println(c2_processed);
-        */
-
         vTaskDelay(pdMS_TO_TICKS(1));
     }
-}
-
-// properly disables and restarts the DSP task 
-void audio_dsp_task_restart() {
-    // disable audio to avoid any noise during restart
-    audio_en_rx_audio(false);
-
-    // Are any of these even needed? 
-    // copier_1.end();
-    // copier_2.end();
-    audio_board.end();
-    i2s_stream.end();
-    sine_wave.end();
-    // side_l_r_mix.end();      // library has problematic use of malloc/free? reason for malloc'ing this element.
-    // audio_filt_meas.end();
-    // input_split.end();
-    // multi_output.end();
-    // out_vol.end();
-    effects.clear();
-    // mono_to_stereo.end();
-    delete side_l_r_mix;
-    delete input_split;
-    delete volume_limiter;
-
-    Serial.println("\nDeleting existing DSP task...");
-
-    vTaskDelete(xDSPTaskHandle);
-
-    xTaskCreatePinnedToCore(
-        audio_dsp_task,
-        "Audio Stream Updater Task",
-        65536,
-        NULL,
-        TASK_PRIORITY_DSP, // priority
-        &xDSPTaskHandle,
-        TASK_CORE_DSP // core
-    );
 }
 
 void audio_logic_task(void *pvParameter) {
@@ -452,106 +266,9 @@ void audio_logic_task(void *pvParameter) {
                 driver->setInputVolume(0); // changes PGA in the codec
                 pga_en = false;
             }
-            if(notifiedValue & NOTIFY_MODE_HF_RXTX_CW && cur_audio_mode != AUDIO_HF_RXTX_CW) {
-                cur_audio_mode = AUDIO_HF_RXTX_CW;
-                cur_filt = AUDIO_FILT_DEFAULT;
-                audio_dsp_task_restart();
-            }
-            if(notifiedValue & NOTIFY_MODE_VHF_RX && cur_audio_mode != AUDIO_VHF_RX) {
-                // HF --> VHF: need to switch to other audio inputs, requires codec input reconfiguration
-                if(cur_audio_mode == AUDIO_HF_RXTX_CW) {
-                    cur_audio_mode = AUDIO_VHF_RX;
-                    cur_filt = AUDIO_FILT_SSB;
-                    audio_dsp_task_restart();
-                    vTaskDelay(pdMS_TO_TICKS(500));
-                    audio_en_rx_audio(true);
-                    audio_set_dacs(cur_audio_mode);
-                }
-                // VHF TX --> VHF RX: only need to adjust DACs, don't need to reconfigured pathways
-                else if(cur_audio_mode == AUDIO_VHF_TX) {
-                    cur_audio_mode = AUDIO_VHF_RX;
-                    audio_set_dacs(cur_audio_mode);
-                    audio_en_rx_audio(true);
-                    // in TX->RX transition, restore volume
-                    audio_set_volume(global_vol);
-                    // restore volume limiter
-                    audio_en_vol_clipping(true);
-                }
-            }
-            if(notifiedValue & NOTIFY_MODE_VHF_TX && cur_audio_mode != AUDIO_VHF_TX) {
-                // HF --> VHF: need to switch to other audio inputs, requires codec input reconfiguration
-                if(cur_audio_mode == AUDIO_HF_RXTX_CW) {
-                    cur_audio_mode = AUDIO_VHF_TX;
-                    cur_filt = AUDIO_FILT_SSB;
-                    audio_dsp_task_restart();
-                }
-                // VHF RX --> VHF TX: only need to adjust DACs, don't need to reconfigured pathways
-                else if(cur_audio_mode == AUDIO_VHF_RX) {
-                    cur_audio_mode = AUDIO_VHF_TX;
-                    audio_set_dacs(cur_audio_mode);
-                    // turn on audio. TODO: clean up naming, we need "rx" audio on because it controls the side_l_r mixer
-                    audio_en_rx_audio(true);
-                    // TODO: some sort of mic gain control set in json file
-                    out_vol.setVolume(1.0);     // equivalent to calling audio_set_volume(), but doesn't override global_vol
-                    // allow full volume output
-                    audio_en_vol_clipping(false);
-                }
-            }
-            if(notifiedValue & NOTIFY_DBG_MAX_VOL) {
-                Serial.println("Testing max volume");
-
-                audio_set_sidetone_volume(1.0);
-                audio_set_volume(0);
-                audio_en_sidetone(true);
-                audio_en_rx_audio(false);
-
-                // ramp up volume slowly
-                for(float i=0; i < 1; i += 0.01) {
-                    Serial.print("Volume: ");
-                    Serial.println(i);
-                    audio_set_volume(i);
-                    vTaskDelay(pdMS_TO_TICKS(100));
-                }
-
-                audio_set_sidetone_volume(AUDIO_SIDE_DEFAULT);
-                audio_set_volume(AUDIO_VOL_DEFAULT);
-                audio_en_sidetone(false);
-                audio_en_rx_audio(true);
-            }
         }
         
         vTaskDelay(pdMS_TO_TICKS(50));
-    }
-}
-
-// responsible for adjusting PGA gain based on signal strength
-// TODO: turn this into an AGC loop, not just binary PGA on/off
-void audio_gain_task(void *pvParameter) {
-    uint32_t counter = 0;
-    float cur_s_meter = 0;
-    float last_s_meter = 0;
-    while(true) {
-        // check current S-meter value
-        cur_s_meter = radio_get_s_meter();
-
-        // turn off PGA if s-meter is high AND pga was already turned on
-        if(cur_s_meter > 7 && pga_en) {
-            audio_en_pga(false);
-            vTaskDelay(pdTICKS_TO_MS(100));
-        }
-        
-        // increment counter if s-meter is low AND pga is turned off currently
-        if(cur_s_meter < 6 && !pga_en)
-            counter++;
-
-        // turn on PGA if counter expires
-        if(counter > 10) {
-            audio_en_pga(true);
-            counter = 0;
-            vTaskDelay(10);
-        }
-
-        last_s_meter = cur_s_meter;
     }
 }
 
@@ -569,7 +286,6 @@ void audio_set_mode(audio_mode_t mode) {
 bool audio_set_filt(audio_filt_t filt) {
     switch(filt) {
         case AUDIO_FILT_CW:
-            // audio_filt.setFilter(0, new FIR<float>(coeff_bpf_400_600));
             audio_filt.setFilter(0, new FIR<float>(coeff_bpf_300_700));
             break;
 
@@ -586,49 +302,6 @@ bool audio_set_filt(audio_filt_t filt) {
 
 audio_filt_t audio_get_filt() {
     return cur_filt;
-}
-
-// debug fuction just to see the phase shift toggling
-void audio_test(bool swap) {
-#ifdef AUDIO_PATH_IQ
-    Serial.println(swap);
-
-    if(swap) {
-        hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
-        // input_l_vol.setVolume(1.0);
-        // input_r_vol.setVolume(0);
-    }
-    else  {
-        hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg_negated));
-        // input_l_vol.setVolume(0);
-        // input_r_vol.setVolume(1.0);
-    }
-
-    /*
-    if(swap) {
-        hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
-        hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
-    }
-    else {
-        hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
-        hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
-    }
-    */
-#else
-    if(swap)
-        audio_en_pga(true);
-    else
-        audio_en_pga(false);
-    
-    // time for PGA flag to get addressed
-    vTaskDelay(pdMS_TO_TICKS(100));
-
-    Serial.print("\nen: ");
-    Serial.print(swap);
-
-    Serial.print("\tRX sample: ");
-    Serial.println(audio_get_rx_db(50, 1));
-#endif
 }
 
 void audio_en_pga(bool gain) {
@@ -672,11 +345,7 @@ void audio_en_rx_audio(bool en) {
         else {
             side_l_r_mix->setWeight(MIXER_IDX_SIDETONE, 1.0);
             side_l_r_mix->setWeight(MIXER_IDX_RIGHT, 1.0);
-#ifdef AUDIO_PATH_IQ
             side_l_r_mix->setWeight(MIXER_IDX_LEFT, 1.0);
-#else
-            side_l_r_mix->setWeight(MIXER_IDX_LEFT, 0.0);
-#endif
         }
     }
     else {
@@ -785,12 +454,4 @@ void audio_en_vol_clipping(bool enable) {
         volume_limiter->setClipThreashold(max_safe_vol);
     else
         volume_limiter->setClipThreashold(INT16T_MAX);
-}
-
-void audio_debug(debug_action_t command_num) {
-    switch(command_num) {
-        case DEBUG_CMD_MAX_VOL:
-            xTaskNotify(xAudioTaskHandle, NOTIFY_DBG_MAX_VOL, eSetBits);
-            break;
-    }
 }
