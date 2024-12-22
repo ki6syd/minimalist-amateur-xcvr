@@ -74,3 +74,14 @@ typedef enum {
     DEBUG_CMD_STOP_BFO=11,
     DEBUG_CMD_STOP_VFO=12,
 } debug_action_t;
+
+typedef enum {
+    AUDIO_HF_RXTX_CW,
+    AUDIO_VHF_RX,
+    AUDIO_VHF_TX
+} audio_mode_t;
+
+typedef enum {
+    AUDIO_FILT_CW,
+    AUDIO_FILT_SSB
+} audio_filt_t;
