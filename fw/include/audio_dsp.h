@@ -7,7 +7,7 @@
 
 #define PGA_GAIN                24
 #define INT16T_MAX              32767
-#define BUFFER_CHUNK            64
+#define BUFFER_CHUNK            128
 
 void audio_dsp_init();
 void audio_dsp_task(void *pvParameter);

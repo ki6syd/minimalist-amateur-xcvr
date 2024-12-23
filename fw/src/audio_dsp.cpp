@@ -26,7 +26,8 @@ FilteredStream<int16_t, float> hilbert_n45deg;
 FilteredStream<int16_t, float> hilbert_p45deg;
 
 // volume functions
-VolumeStream iq_vol(es8388_stream);
+VolumeStream iq_vol(es8388_stream);             // connect iq_vol to the output of es8388_stream here. No setInput() function for iq_vol.
+VolumeStream iq_connector;                      // dummy object to help connect up the pipeline
 VolumeMeter vol_meas;
 
 // audio plumbing
@@ -82,7 +83,7 @@ void audio_dsp_task(void *pvParameter) {
     // initialize ES8388 codec
     auto i2s_config = es8388_stream.defaultConfig(RXTX_MODE);
     i2s_config.copyFrom(info_stereo);
-    i2s_config.buffer_size = BUFFER_CHUNK;
+    i2s_config.buffer_size = BUFFER_CHUNK*4;
     i2s_config.buffer_count = 4;
     i2s_config.port_no = 0;
     i2s_config.input_device = (cur_audio_mode == AUDIO_HF_RXTX_CW) ? ADC_INPUT_LINE1 : ADC_INPUT_LINE2;
@@ -106,7 +107,8 @@ void audio_dsp_task(void *pvParameter) {
 
     es8388_sidetone_mixer = new OutputMixer<int16_t>(es8388_stream, 2);
 
-    copier_iq_in.begin(*es8388_sidetone_mixer, iq_vol);
+    copier_iq_in.begin(*es8388_sidetone_mixer, iq_connector);
+    // copier_iq_in.begin(*es8388_sidetone_mixer, iq_vol);
     copier_sidetone_in.begin(*es8388_sidetone_mixer, sidetone_sound);
 
 
@@ -119,8 +121,14 @@ void audio_dsp_task(void *pvParameter) {
     Serial.println("sidetone_freq: ");
     Serial.println(sidetone_freq);
 
+    // iq_vol.setOutput(iq_connector);
     iq_vol.begin(info_stereo);
     iq_vol.setVolume(1.0);
+
+    // iq_connector.setOutput(*es8388_sidetone_mixer);
+    iq_connector.setStream(iq_vol);
+    iq_connector.begin(info_stereo);
+    iq_connector.setVolume(1.0);
 
     es8388_sidetone_mixer->begin();
     es8388_sidetone_mixer->setWeight(0, 1.0);
@@ -130,9 +138,14 @@ void audio_dsp_task(void *pvParameter) {
     size_t bytes_copied_in = 0;
     size_t bytes_copied_sidetone = 0;
     while(true) {
-        bytes_copied_sidetone = copier_sidetone_in.copy();
         bytes_copied_in = copier_iq_in.copy();
-        
+        bytes_copied_sidetone = copier_sidetone_in.copy();
+
+        Serial.print("Bytes copied (IQ): ");
+        Serial.println(bytes_copied_in);
+        Serial.print("Bytes copied (Sidetone): ");
+        Serial.println(bytes_copied_sidetone);
+
         vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
