@@ -22,12 +22,10 @@ GeneratedSoundStream<int16_t> sidetone_sound(sidetone_wave);
 
 // filters
 FilteredStream<int16_t, float> audio_filt;
-FilteredStream<int16_t, float> hilbert_n45deg;
-FilteredStream<int16_t, float> hilbert_p45deg;
+FilteredStream<int16_t, float> hilbert;
 
 // volume functions
 VolumeStream iq_vol(es8388_stream);             // connect iq_vol to the output of es8388_stream here. No setInput() function for iq_vol.
-VolumeStream iq_connector;                      // dummy object to help connect up the pipeline
 VolumeMeter vol_meas;
 
 // audio plumbing
@@ -105,10 +103,9 @@ void audio_dsp_task(void *pvParameter) {
     pcm1502_stream.begin(cfg_tx);
     */
 
-    es8388_sidetone_mixer = new OutputMixer<int16_t>(es8388_stream, 2);
+    es8388_sidetone_mixer = new OutputMixer<int16_t>(hilbert, 2);
 
-    copier_iq_in.begin(*es8388_sidetone_mixer, iq_connector);
-    // copier_iq_in.begin(*es8388_sidetone_mixer, iq_vol);
+    copier_iq_in.begin(*es8388_sidetone_mixer, iq_vol);
     copier_sidetone_in.begin(*es8388_sidetone_mixer, sidetone_sound);
 
 
@@ -121,19 +118,18 @@ void audio_dsp_task(void *pvParameter) {
     Serial.println("sidetone_freq: ");
     Serial.println(sidetone_freq);
 
-    // iq_vol.setOutput(iq_connector);
     iq_vol.begin(info_stereo);
-    iq_vol.setVolume(1.0);
-
-    // iq_connector.setOutput(*es8388_sidetone_mixer);
-    iq_connector.setStream(iq_vol);
-    iq_connector.begin(info_stereo);
-    iq_connector.setVolume(1.0);
+    iq_vol.setVolume(1.0, 0);       // replace this with actual I/Q gain correction, for both RX and TX
+    iq_vol.setVolume(1.0, 1);
 
     es8388_sidetone_mixer->begin();
     es8388_sidetone_mixer->setWeight(0, 1.0);
     es8388_sidetone_mixer->setWeight(1, 1.0);
 
+    hilbert.setStream(es8388_stream);
+    hilbert.begin(info_stereo);
+    hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
+    hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
 
     size_t bytes_copied_in = 0;
     size_t bytes_copied_sidetone = 0;
