@@ -38,7 +38,7 @@ VolumeStream pcm1502_connector;
 // stream copiers
 StreamCopy copier_iq_in(BUFFER_CHUNK);
 StreamCopy copier_sidetone_in(BUFFER_CHUNK);
-StreamCopy copier_pcm(BUFFER_CHUNK/2);
+StreamCopy copier_pcm(BUFFER_CHUNK);
 
 
 /*
@@ -97,15 +97,14 @@ void audio_dsp_task(void *pvParameter) {
     auto cfg_tx = pcm1502_stream.defaultConfig(TX_MODE);
     cfg_tx.copyFrom(info_stereo);
     cfg_tx.port_no = 1;
-    cfg_tx.channel_format = I2S_CHANNEL_FMT_ONLY_LEFT;  // comment out this line (and .channels=1) for stereo. 
-    cfg_tx.channels = 1;
+    cfg_tx.channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT;
+    cfg_tx.channels = 2;
     cfg_tx.buffer_count = 4;
     cfg_tx.buffer_size = BUFFER_CHUNK*4;
     cfg_tx.pin_bck = HP_DAC_BCLK;
     cfg_tx.pin_data = HP_DAC_DO;
     cfg_tx.pin_ws = HP_DAC_LRCLK;
     pcm1502_stream.begin(cfg_tx);
-    
 
     es8388_sidetone_mixer = new OutputMixer<int16_t>(hilbert, 2);
 
@@ -115,7 +114,7 @@ void audio_dsp_task(void *pvParameter) {
 
     sidetone_wave.begin(info_stereo, sidetone_freq);
 
-    pcm_wave.begin(info_mono, 440); // 440Hz test tone
+    pcm_wave.begin(info_stereo, 440); // 440Hz test tone
 
     iq_vol.begin(info_stereo);
     iq_vol.setVolume(1.0, 0);       // replace this with actual I/Q gain correction, for both RX and TX
