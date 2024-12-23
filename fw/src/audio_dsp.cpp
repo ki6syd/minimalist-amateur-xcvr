@@ -30,8 +30,11 @@ VolumeStream iq_vol(es8388_stream);
 VolumeMeter vol_meas;
 
 // audio plumbing
-OutputMixer<int16_t> *es8388_sidetone_mixer;
+OutputMixer<int16_t> es8388_sidetone_mixer(es8388_stream, 2);
 
+// stream copiers
+StreamCopy copier_sidetone(es8388_sidetone_mixer, sidetone_sound);
+StreamCopy copier_iq_in(es8388_sidetone_mixer, iq_vol);
 
 
 /*
@@ -73,15 +76,8 @@ void audio_dsp_init() {
         TASK_CORE_DSP
     );
 }
+
 void audio_dsp_task(void *pvParameter) {
-    // stream copiers
-    StreamCopy copier_iq_in(BUFFER_CHUNK);
-    StreamCopy copier_sidetone(BUFFER_CHUNK);
-
-    es8388_sidetone_mixer = new OutputMixer<int16_t>(es8388_stream, 2);
-
-    copier_iq_in.begin(*es8388_sidetone_mixer, iq_vol);
-    copier_sidetone.begin(*es8388_sidetone_mixer, sidetone_sound);
 
     // initialize ES8388 codec
     auto i2s_config = es8388_stream.defaultConfig(RXTX_MODE);
@@ -117,14 +113,14 @@ void audio_dsp_task(void *pvParameter) {
     sidetone_wave.begin(info_stereo, sidetone_freq);
     Serial.println("sidetone_freq: ");
     Serial.println(sidetone_freq);
-    sidetone_wave.setAmplitude(0.9);
+    // sidetone_wave.setAmplitude(0.9);
 
     iq_vol.begin(info_stereo);
     iq_vol.setVolume(1.0);
 
-    es8388_sidetone_mixer->begin();
-    es8388_sidetone_mixer->setWeight(0, 1.0);
-    es8388_sidetone_mixer->setWeight(1, 1.0);
+    es8388_sidetone_mixer.begin();
+    es8388_sidetone_mixer.setWeight(0, 1.0);
+    es8388_sidetone_mixer.setWeight(1, 1.0);
 
 
     size_t bytes_copied_in = 0;
@@ -137,8 +133,6 @@ void audio_dsp_task(void *pvParameter) {
     }
 }
 void audio_dsp_task_restart() {
-
-
     vTaskDelete(xDSPTaskHandle);
 
     xTaskCreatePinnedToCore(
@@ -172,6 +166,9 @@ void audio_dsp_set_volume(float vol) {
 }
 
 void audio_dsp_set_sidetone(bool enable, float freq, float vol) {
+    // commenting out for testing. Other functions in the audio modules call this, delete them?
+    // sidetone was getting turned off
+    /*
     sidetone_en = enable;
     sidetone_freq = freq;
     sidetone_vol = vol;
@@ -189,6 +186,7 @@ void audio_dsp_set_sidetone(bool enable, float freq, float vol) {
     } else {
         sidetone_wave.setAmplitude(0);
     }
+    */
 }
 
 void audio_dsp_set_dacs(audio_mode_t mode) {
