@@ -29,6 +29,7 @@ FilteredStream<int16_t, float> hilbert;
 // volume functions
 VolumeStream iq_balance(es8388_stream);             // connect iq_balance to the output of es8388_stream here. No setInput() function for iq_balance.
 VolumeStream hp_vol;                                // headphone volume
+VolumeStream tx_vol;                                // transmit audio volume
 VolumeMeter vol_meas;
 
 // audio plumbing
@@ -39,7 +40,6 @@ VolumeStream pcm1502_connector;
 // stream copiers
 StreamCopy copier_iq_in(BUFFER_CHUNK);
 StreamCopy copier_sidetone_in(BUFFER_CHUNK);
-// StreamCopy copier_pcm(BUFFER_CHUNK);
 
 
 /*
@@ -115,17 +115,17 @@ void audio_dsp_task(void *pvParameter) {
     sidetone_wave.begin(info_stereo, sidetone_freq);
 
     iq_balance.begin(info_stereo);
-    iq_balance.setVolume(1.0, 0);       // replace this with actual I/Q gain correction, for both RX and TX
+    iq_balance.setVolume(1.0, 0);                   // replace this with actual I/Q gain correction, for both RX and TX
     iq_balance.setVolume(1.0, 1);
 
     es8388_sidetone_mixer->setOutput(hilbert);
-    es8388_sidetone_mixer->setOutputCount(2);
+    es8388_sidetone_mixer->setOutputCount(2);       // "output" is a confusing name, actually refers to number of sources combined into one
     es8388_sidetone_mixer->begin();
     es8388_sidetone_mixer->setWeight(0, 1.0);
     es8388_sidetone_mixer->setWeight(1, 1.0);
 
     // hilbert.setStream(es8388_stream);
-    hilbert.setOutput(rx_tx_audio_mux);     // output of hilbert transform used in both RX and TX audio pathways
+    hilbert.setOutput(rx_tx_audio_mux);             // output of hilbert transform used in both RX and TX audio pathways
     hilbert.begin(info_stereo);
     hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
     hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
@@ -134,7 +134,11 @@ void audio_dsp_task(void *pvParameter) {
     hp_vol.begin(info_stereo);
     hp_vol.setVolume(0.2);
 
-    rx_tx_audio_mux.add(es8388_stream);
+    tx_vol.setOutput(es8388_stream);
+    tx_vol.begin(info_stereo);
+    tx_vol.setVolume(0.99);
+
+    rx_tx_audio_mux.add(tx_vol);
     rx_tx_audio_mux.add(hp_vol);
 
     size_t bytes_copied_in = 0;
