@@ -38,7 +38,7 @@ VolumeStream pcm1502_connector;
 // stream copiers
 StreamCopy copier_iq_in(BUFFER_CHUNK);
 StreamCopy copier_sidetone_in(BUFFER_CHUNK);
-StreamCopy copier_pcm(BUFFER_CHUNK);
+// StreamCopy copier_pcm(BUFFER_CHUNK);
 
 
 /*
@@ -86,7 +86,7 @@ void audio_dsp_task(void *pvParameter) {
     // initialize ES8388 codec
     auto i2s_config = es8388_stream.defaultConfig(RXTX_MODE);
     i2s_config.copyFrom(info_stereo);
-    i2s_config.buffer_size = BUFFER_CHUNK*4;
+    i2s_config.buffer_size = BUFFER_CHUNK;
     i2s_config.buffer_count = 4;
     i2s_config.port_no = 0;
     i2s_config.input_device = (cur_audio_mode == AUDIO_HF_RXTX_CW) ? ADC_INPUT_LINE1 : ADC_INPUT_LINE2;
@@ -100,7 +100,7 @@ void audio_dsp_task(void *pvParameter) {
     cfg_tx.channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT;
     cfg_tx.channels = 2;
     cfg_tx.buffer_count = 4;
-    cfg_tx.buffer_size = BUFFER_CHUNK*4;
+    cfg_tx.buffer_size = BUFFER_CHUNK;
     cfg_tx.pin_bck = HP_DAC_BCLK;
     cfg_tx.pin_data = HP_DAC_DO;
     cfg_tx.pin_ws = HP_DAC_LRCLK;
@@ -110,11 +110,11 @@ void audio_dsp_task(void *pvParameter) {
 
     copier_iq_in.begin(*es8388_sidetone_mixer, iq_vol);
     copier_sidetone_in.begin(*es8388_sidetone_mixer, sidetone_sound);
-    copier_pcm.begin(pcm1502_stream, pcm_sound);
+    // copier_pcm.begin(pcm1502_stream, pcm_sound);
 
     sidetone_wave.begin(info_stereo, sidetone_freq);
 
-    pcm_wave.begin(info_stereo, 440); // 440Hz test tone
+    // pcm_wave.begin(info_stereo, 440); // 440Hz test tone
 
     iq_vol.begin(info_stereo);
     iq_vol.setVolume(1.0, 0);       // replace this with actual I/Q gain correction, for both RX and TX
@@ -135,8 +135,7 @@ void audio_dsp_task(void *pvParameter) {
     // pcm1502_connector.begin(info_stereo);
     // pcm1502_connector.setVolume(1.0);
 
-    
-    // rx_tx_audio_mux.add(pcm1502_connector);
+    rx_tx_audio_mux.add(pcm1502_stream);
 
     size_t bytes_copied_in = 0;
     size_t bytes_copied_sidetone = 0;
@@ -144,7 +143,7 @@ void audio_dsp_task(void *pvParameter) {
     while(true) {
         bytes_copied_in = copier_iq_in.copy();
         bytes_copied_sidetone = copier_sidetone_in.copy();
-        bytes_copied_pcm = copier_pcm.copy();
+        // bytes_copied_pcm = copier_pcm.copy();
 
         Serial.print("Bytes copied (IQ): ");
         Serial.println(bytes_copied_in);
