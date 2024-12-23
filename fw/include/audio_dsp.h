@@ -5,10 +5,6 @@
 #include "AudioTools.h"
 #include "AudioLibs/I2SCodecStream.h"
 
-// DSP-specific defines
-#define MIXER_IDX_SIDETONE      0
-#define MIXER_IDX_LEFT          1
-#define MIXER_IDX_RIGHT         2
 #define PGA_GAIN                24
 #define INT16T_MAX              32767
 #define BUFFER_CHUNK            64

@@ -55,13 +55,13 @@ void audio_logic_task(void *pvParameter) {
             }
             // Handle mode changes
             if(notifiedValue & NOTIFY_MODE_HF_RXTX_CW) {
-                audio_set_mode(AUDIO_HF_RXTX_CW);
+                
             }
             if(notifiedValue & NOTIFY_MODE_VHF_RX) {
-                audio_set_mode(AUDIO_VHF_RX);
+                
             }
             if(notifiedValue & NOTIFY_MODE_VHF_TX) {
-                audio_set_mode(AUDIO_VHF_TX);
+                
             }
         }
         vTaskDelay(pdMS_TO_TICKS(50));
@@ -69,9 +69,12 @@ void audio_logic_task(void *pvParameter) {
 }
 
 void audio_set_mode(audio_mode_t mode) {
-    cur_audio_mode = mode;
-    audio_dsp_task_restart();
-    audio_dsp_set_dacs(mode);
+    if(mode == AUDIO_HF_RXTX_CW)
+        xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_HF_RXTX_CW, eSetBits);
+    else if(mode == AUDIO_VHF_RX)
+        xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_VHF_RX, eSetBits);
+    else if(mode == AUDIO_VHF_TX)
+        xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_VHF_TX, eSetBits);
 }
 
 bool audio_set_volume(float vol) {

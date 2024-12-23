@@ -14,7 +14,6 @@ bool audio_set_sidetone_freq(float freq);
 float audio_get_sidetone_freq();
 void audio_en_sidetone(bool tone);
 void audio_en_rx_audio(bool en);
-void audio_en_rx_audio(bool en);
 void audio_en_pga(bool gain);
 bool audio_get_pga();
 float audio_get_rx_db(uint16_t num_to_avg, uint16_t delay_ms);

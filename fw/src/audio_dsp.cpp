@@ -5,32 +5,47 @@
 #include <Wire.h>
 
 TaskHandle_t xDSPTaskHandle;
-TwoWire codecI2C = TwoWire(1);
 
 AudioInfo info_stereo(F_AUDIO, 2, 16);
 AudioInfo info_mono(F_AUDIO, 1, 16);
+
+// codec interfaces
+TwoWire codecI2C = TwoWire(1);
 DriverPins my_pins;
 static AudioBoard audio_board(AudioDriverES8388, my_pins);
-I2SCodecStream i2s_stream(audio_board);
+I2SCodecStream es8388_stream(audio_board);
+// I2SStream pcm1502_stream;
 
-// PCM1502 declarations
-I2SStream pcm1502;
-SineWaveGenerator<int16_t> pcm_wave(32000);
-GeneratedSoundStream<int16_t> pcm_sound(pcm_wave);
+// sine wave source
+SineWaveGenerator<int16_t> sidetone_wave(32000);
+GeneratedSoundStream<int16_t> sidetone_sound(sidetone_wave);
 
-SineWaveGenerator<int16_t> sine_wave;GeneratedSoundStream<int16_t> sound_stream(sine_wave);
+// filters
+FilteredStream<int16_t, float> audio_filt;
+FilteredStream<int16_t, float> hilbert_n45deg;
+FilteredStream<int16_t, float> hilbert_p45deg;
+
+// volume functions
+VolumeStream iq_vol(es8388_stream);
+VolumeMeter vol_meas;
+
+// audio plumbing
+OutputMixer<int16_t> *es8388_sidetone_mixer;
+
+
+
+/*
 ChannelSplitOutput *input_split;
-VolumeStream out_vol;
+VolumeStream hp_vol;
 VolumeStream input_l_vol, input_r_vol;
-VolumeMeter audio_filt_meas(out_vol);
 MultiOutput *multi_output;
-FilteredStream<int16_t, float> audio_filt(audio_filt_meas, info_mono.channels);
 OutputMixer<int16_t> *side_l_r_mix;
-ChannelFormatConverterStreamT<int16_t> mono_to_stereo(i2s_stream);
+ChannelFormatConverterStreamT<int16_t> mono_to_stereo(es8388_stream);
 AudioEffectStream effects(mono_to_stereo);
-Distortion *volume_limiter;
+Distortion *vol_limiter;
 StreamCopy copier_1(BUFFER_CHUNK);
 StreamCopy copier_2(BUFFER_CHUNK * 2);
+*/
 
 bool pga_en = false;
 float sidetone_vol = AUDIO_SIDE_DEFAULT;
@@ -42,6 +57,7 @@ audio_mode_t cur_audio_mode = AUDIO_HF_RXTX_CW;
 uint32_t max_safe_vol = 32768;
 
 void audio_dsp_init() {
+
     my_pins.addI2C(PinFunction::CODEC, CODEC_SCL, CODEC_SDA, CODEC_ADDR, CODEC_I2C_SPEED, codecI2C);
     my_pins.addI2S(PinFunction::CODEC, CODEC_MCLK, CODEC_BCLK, CODEC_WS, CODEC_DO, CODEC_DI);
     my_pins.begin();
@@ -58,23 +74,29 @@ void audio_dsp_init() {
     );
 }
 void audio_dsp_task(void *pvParameter) {
-    side_l_r_mix = new OutputMixer<int16_t>(audio_filt, 3);
-    input_split = new ChannelSplitOutput();
+    // stream copiers
+    StreamCopy copier_iq_in(BUFFER_CHUNK);
+    StreamCopy copier_sidetone(BUFFER_CHUNK);
 
-    copier_1.begin(*side_l_r_mix, sound_stream);
-    copier_2.begin(*input_split, i2s_stream);
+    es8388_sidetone_mixer = new OutputMixer<int16_t>(es8388_stream, 2);
 
-    auto i2s_config = i2s_stream.defaultConfig(RXTX_MODE);
+    copier_iq_in.begin(*es8388_sidetone_mixer, iq_vol);
+    copier_sidetone.begin(*es8388_sidetone_mixer, sidetone_sound);
+
+    // initialize ES8388 codec
+    auto i2s_config = es8388_stream.defaultConfig(RXTX_MODE);
     i2s_config.copyFrom(info_stereo);
-    i2s_config.buffer_size = BUFFER_CHUNK * 2;
+    i2s_config.buffer_size = BUFFER_CHUNK;
     i2s_config.buffer_count = 4;
     i2s_config.port_no = 0;
     i2s_config.input_device = (cur_audio_mode == AUDIO_HF_RXTX_CW) ? ADC_INPUT_LINE1 : ADC_INPUT_LINE2;
-    i2s_stream.begin(i2s_config);
+    es8388_stream.begin(i2s_config);
+    audio_dsp_set_dacs(cur_audio_mode);
 
-    // PCM1502 test (mono to be compatible with multi_output, but can be stereo)
-    auto cfg_tx = pcm1502.defaultConfig(TX_MODE);
-    cfg_tx.copyFrom(info_mono);
+    // initialize PCM1502 codec
+    /*
+    auto cfg_tx = pcm1502_stream.defaultConfig(TX_MODE);
+    cfg_tx.copyFrom(info_stereo);
     cfg_tx.port_no = 1;
     cfg_tx.channel_format = I2S_CHANNEL_FMT_ONLY_LEFT;  // comment out this line (and .channels=1) for stereo. 
     cfg_tx.channels = 1;
@@ -83,54 +105,39 @@ void audio_dsp_task(void *pvParameter) {
     cfg_tx.pin_bck = HP_DAC_BCLK;
     cfg_tx.pin_data = HP_DAC_DO;
     cfg_tx.pin_ws = HP_DAC_LRCLK;
-    pcm1502.begin(cfg_tx);
-    pcm_wave.begin(info_mono, N_B4);        // replace with info_stereo, for stereo audio
+    pcm1502_stream.begin(cfg_tx);
+    */
 
-    audio_dsp_set_dacs(cur_audio_mode);
     
-    input_split->addOutput(*side_l_r_mix, 0);
-    input_split->addOutput(*side_l_r_mix, 1);
-    input_split->begin(info_stereo);
+    // hilbert_n45deg.begin(info_mono);
+    // hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
+    // hilbert_p45deg.begin(info_mono);
+    // hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
 
-    side_l_r_mix->begin();
-    side_l_r_mix->setWeight(MIXER_IDX_SIDETONE, 1);
-    side_l_r_mix->setWeight(MIXER_IDX_LEFT, 0);
-    side_l_r_mix->setWeight(MIXER_IDX_RIGHT, 0);
+    sidetone_wave.begin(info_stereo, sidetone_freq);
+    Serial.println("sidetone_freq: ");
+    Serial.println(sidetone_freq);
+    sidetone_wave.setAmplitude(0.9);
 
-    audio_dsp_set_filter(cur_filt);
-    audio_dsp_set_volume(global_vol);
+    iq_vol.begin(info_stereo);
+    iq_vol.setVolume(1.0);
 
-    multi_output = new MultiOutput();
-    out_vol.setOutput(*multi_output);
-    out_vol.begin(info_mono);
-    audio_filt_meas.setAudioInfo(info_mono);
-    audio_filt_meas.begin();
+    es8388_sidetone_mixer->begin();
+    es8388_sidetone_mixer->setWeight(0, 1.0);
+    es8388_sidetone_mixer->setWeight(1, 1.0);
 
-    multi_output->add(effects);
-    multi_output->add(pcm1502);
 
-    volume_limiter = new Distortion(max_safe_vol, max_safe_vol);
-    effects.addEffect(*volume_limiter);
-    effects.begin(info_mono);
-
-    mono_to_stereo.begin(1, 2);
-
-    sine_wave.begin(info_mono, sidetone_freq);
-
+    size_t bytes_copied_in = 0;
+    size_t bytes_copied_sidetone = 0;
     while(true) {
-        copier_1.copy();
-        copier_2.copy();
+        bytes_copied_sidetone = copier_sidetone.copy();
+        bytes_copied_in = copier_iq_in.copy();
+        
         vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
 void audio_dsp_task_restart() {
-    audio_board.end();
-    i2s_stream.end();
-    sine_wave.end();
-    effects.clear();
-    delete side_l_r_mix;
-    delete input_split;
-    delete volume_limiter;
+
 
     vTaskDelete(xDSPTaskHandle);
 
@@ -160,7 +167,7 @@ void audio_dsp_set_filter(audio_filt_t filt) {
 void audio_dsp_set_volume(float vol) {
     if(vol >= 0.0 && vol <= 1.0) {
         global_vol = vol;
-        out_vol.setVolume(vol);
+        // hp_vol.setVolume(vol);
     }
 }
 
@@ -169,12 +176,18 @@ void audio_dsp_set_sidetone(bool enable, float freq, float vol) {
     sidetone_freq = freq;
     sidetone_vol = vol;
 
+    if (vol < 0.0) {
+        vol = 0.0;
+    } else if (vol > 1.0) {
+        vol = 1.0;
+    }
+
     if(enable) {
         int16_t amp = (int16_t)(vol * INT16T_MAX);
-        sine_wave.setAmplitude(amp);
-        sine_wave.setFrequency(freq);
+        sidetone_wave.setAmplitude(amp);
+        sidetone_wave.setFrequency(freq);
     } else {
-        sine_wave.setAmplitude(0);
+        sidetone_wave.setAmplitude(0);
     }
 }
 
@@ -193,7 +206,7 @@ float audio_dsp_get_rx_level(uint16_t num_avg, uint16_t delay_ms) {
     
     float rx_dB = 0;
     for(uint16_t i = 0; i < num_avg; i++) {
-        rx_dB += audio_filt_meas.volumeDB();
+        rx_dB += vol_meas.volumeDB();
         if(num_avg > 1) {
             vTaskDelay(pdMS_TO_TICKS(delay_ms));
         }
@@ -206,33 +219,21 @@ float audio_dsp_get_rx_level(uint16_t num_avg, uint16_t delay_ms) {
 }
 
 void audio_en_rx_audio(bool en) {
-    if(side_l_r_mix == nullptr)
-        return;
-
     if(en) {
-        if(cur_audio_mode == AUDIO_VHF_TX) {
-            side_l_r_mix->setWeight(MIXER_IDX_LEFT, 1.0);
-            side_l_r_mix->setWeight(MIXER_IDX_RIGHT, 0.0);
-            side_l_r_mix->setWeight(MIXER_IDX_SIDETONE, 0.0);
-        }
-        else {
-            side_l_r_mix->setWeight(MIXER_IDX_SIDETONE, 1.0);
-            side_l_r_mix->setWeight(MIXER_IDX_RIGHT, 1.0);
-            side_l_r_mix->setWeight(MIXER_IDX_LEFT, 0.0);
-        }
+
     }
     else {
-        side_l_r_mix->setWeight(MIXER_IDX_SIDETONE, 1.0);
-        side_l_r_mix->setWeight(MIXER_IDX_LEFT, 0.0);
-        side_l_r_mix->setWeight(MIXER_IDX_RIGHT, 0.0);
+
     }
 }
 
 void audio_en_vol_clipping(bool enable) {
+    /*
     if(enable)
-        volume_limiter->setClipThreashold(max_safe_vol);
+        vol_limiter->setClipThreashold(max_safe_vol);
     else
-        volume_limiter->setClipThreashold(INT16T_MAX);
+        vol_limiter->setClipThreashold(INT16T_MAX);
+    */
 }
 
 void audio_dsp_set_input_volume(uint8_t volume) {
