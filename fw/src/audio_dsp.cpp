@@ -30,11 +30,11 @@ VolumeStream iq_vol(es8388_stream);
 VolumeMeter vol_meas;
 
 // audio plumbing
-OutputMixer<int16_t> es8388_sidetone_mixer(es8388_stream, 2);
+OutputMixer<int16_t> *es8388_sidetone_mixer;
 
 // stream copiers
-StreamCopy copier_sidetone(es8388_sidetone_mixer, sidetone_sound);
-StreamCopy copier_iq_in(es8388_sidetone_mixer, iq_vol);
+StreamCopy copier_iq_in(BUFFER_CHUNK);
+StreamCopy copier_sidetone_in(BUFFER_CHUNK);
 
 
 /*
@@ -104,7 +104,12 @@ void audio_dsp_task(void *pvParameter) {
     pcm1502_stream.begin(cfg_tx);
     */
 
-    
+    es8388_sidetone_mixer = new OutputMixer<int16_t>(es8388_stream, 2);
+
+    copier_iq_in.begin(*es8388_sidetone_mixer, iq_vol);
+    copier_sidetone_in.begin(*es8388_sidetone_mixer, sidetone_sound);
+
+
     // hilbert_n45deg.begin(info_mono);
     // hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
     // hilbert_p45deg.begin(info_mono);
@@ -113,20 +118,19 @@ void audio_dsp_task(void *pvParameter) {
     sidetone_wave.begin(info_stereo, sidetone_freq);
     Serial.println("sidetone_freq: ");
     Serial.println(sidetone_freq);
-    // sidetone_wave.setAmplitude(0.9);
 
     iq_vol.begin(info_stereo);
     iq_vol.setVolume(1.0);
 
-    es8388_sidetone_mixer.begin();
-    es8388_sidetone_mixer.setWeight(0, 1.0);
-    es8388_sidetone_mixer.setWeight(1, 1.0);
+    es8388_sidetone_mixer->begin();
+    es8388_sidetone_mixer->setWeight(0, 1.0);
+    es8388_sidetone_mixer->setWeight(1, 1.0);
 
 
     size_t bytes_copied_in = 0;
     size_t bytes_copied_sidetone = 0;
     while(true) {
-        bytes_copied_sidetone = copier_sidetone.copy();
+        bytes_copied_sidetone = copier_sidetone_in.copy();
         bytes_copied_in = copier_iq_in.copy();
         
         vTaskDelay(pdMS_TO_TICKS(1));
