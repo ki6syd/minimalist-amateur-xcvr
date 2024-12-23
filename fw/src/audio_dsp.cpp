@@ -14,11 +14,13 @@ TwoWire codecI2C = TwoWire(1);
 DriverPins my_pins;
 static AudioBoard audio_board(AudioDriverES8388, my_pins);
 I2SCodecStream es8388_stream(audio_board);
-// I2SStream pcm1502_stream;
+I2SStream pcm1502_stream;
 
 // sine wave source
 SineWaveGenerator<int16_t> sidetone_wave(32000);
 GeneratedSoundStream<int16_t> sidetone_sound(sidetone_wave);
+SineWaveGenerator<int16_t> pcm_wave(3200);
+GeneratedSoundStream<int16_t> pcm_sound(pcm_wave);
 
 // filters
 FilteredStream<int16_t, float> audio_filt;
@@ -31,10 +33,12 @@ VolumeMeter vol_meas;
 // audio plumbing
 OutputMixer<int16_t> *es8388_sidetone_mixer;
 MultiOutput rx_tx_audio_mux;
+VolumeStream pcm1502_connector;
 
 // stream copiers
 StreamCopy copier_iq_in(BUFFER_CHUNK);
 StreamCopy copier_sidetone_in(BUFFER_CHUNK);
+StreamCopy copier_pcm(BUFFER_CHUNK/2);
 
 
 /*
@@ -90,34 +94,28 @@ void audio_dsp_task(void *pvParameter) {
     audio_dsp_set_dacs(cur_audio_mode);
 
     // initialize PCM1502 codec
-    /*
     auto cfg_tx = pcm1502_stream.defaultConfig(TX_MODE);
     cfg_tx.copyFrom(info_stereo);
     cfg_tx.port_no = 1;
     cfg_tx.channel_format = I2S_CHANNEL_FMT_ONLY_LEFT;  // comment out this line (and .channels=1) for stereo. 
     cfg_tx.channels = 1;
     cfg_tx.buffer_count = 4;
-    cfg_tx.buffer_size = BUFFER_CHUNK;
+    cfg_tx.buffer_size = BUFFER_CHUNK*4;
     cfg_tx.pin_bck = HP_DAC_BCLK;
     cfg_tx.pin_data = HP_DAC_DO;
     cfg_tx.pin_ws = HP_DAC_LRCLK;
     pcm1502_stream.begin(cfg_tx);
-    */
+    
 
     es8388_sidetone_mixer = new OutputMixer<int16_t>(hilbert, 2);
 
     copier_iq_in.begin(*es8388_sidetone_mixer, iq_vol);
     copier_sidetone_in.begin(*es8388_sidetone_mixer, sidetone_sound);
-
-
-    // hilbert_n45deg.begin(info_mono);
-    // hilbert_n45deg.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
-    // hilbert_p45deg.begin(info_mono);
-    // hilbert_p45deg.setFilter(0, new FIR<float>(coeff_hilbert_p45deg));
+    copier_pcm.begin(pcm1502_stream, pcm_sound);
 
     sidetone_wave.begin(info_stereo, sidetone_freq);
-    Serial.println("sidetone_freq: ");
-    Serial.println(sidetone_freq);
+
+    pcm_wave.begin(info_mono, 440); // 440Hz test tone
 
     iq_vol.begin(info_stereo);
     iq_vol.setVolume(1.0, 0);       // replace this with actual I/Q gain correction, for both RX and TX
@@ -134,20 +132,29 @@ void audio_dsp_task(void *pvParameter) {
     hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
 
     rx_tx_audio_mux.add(es8388_stream);
+    // pcm1502_connector.setStream(pcm1502_stream);
+    // pcm1502_connector.begin(info_stereo);
+    // pcm1502_connector.setVolume(1.0);
 
+    
+    // rx_tx_audio_mux.add(pcm1502_connector);
 
     size_t bytes_copied_in = 0;
     size_t bytes_copied_sidetone = 0;
+    size_t bytes_copied_pcm = 0;
     while(true) {
         bytes_copied_in = copier_iq_in.copy();
         bytes_copied_sidetone = copier_sidetone_in.copy();
+        bytes_copied_pcm = copier_pcm.copy();
 
         Serial.print("Bytes copied (IQ): ");
         Serial.println(bytes_copied_in);
         Serial.print("Bytes copied (Sidetone): ");
         Serial.println(bytes_copied_sidetone);
+        Serial.print("Bytes copied (PCM): ");
+        Serial.println(bytes_copied_pcm);
 
-        vTaskDelay(pdMS_TO_TICKS(1));
+        // vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
 void audio_dsp_task_restart() {
