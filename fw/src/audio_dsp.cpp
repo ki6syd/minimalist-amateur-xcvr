@@ -30,6 +30,7 @@ VolumeMeter vol_meas;
 
 // audio plumbing
 OutputMixer<int16_t> *es8388_sidetone_mixer;
+MultiOutput rx_tx_audio_mux;
 
 // stream copiers
 StreamCopy copier_iq_in(BUFFER_CHUNK);
@@ -126,10 +127,14 @@ void audio_dsp_task(void *pvParameter) {
     es8388_sidetone_mixer->setWeight(0, 1.0);
     es8388_sidetone_mixer->setWeight(1, 1.0);
 
-    hilbert.setStream(es8388_stream);
+    // hilbert.setStream(es8388_stream);
+    hilbert.setOutput(rx_tx_audio_mux);     // output of hilbert transform used in both RX and TX audio pathways
     hilbert.begin(info_stereo);
     hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
     hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
+
+    rx_tx_audio_mux.add(es8388_stream);
+
 
     size_t bytes_copied_in = 0;
     size_t bytes_copied_sidetone = 0;
