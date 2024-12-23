@@ -27,7 +27,8 @@ FilteredStream<int16_t, float> audio_filt;
 FilteredStream<int16_t, float> hilbert;
 
 // volume functions
-VolumeStream iq_vol(es8388_stream);             // connect iq_vol to the output of es8388_stream here. No setInput() function for iq_vol.
+VolumeStream iq_balance(es8388_stream);             // connect iq_balance to the output of es8388_stream here. No setInput() function for iq_balance.
+VolumeStream hp_vol;                                // headphone volume
 VolumeMeter vol_meas;
 
 // audio plumbing
@@ -106,20 +107,19 @@ void audio_dsp_task(void *pvParameter) {
     cfg_tx.pin_ws = HP_DAC_LRCLK;
     pcm1502_stream.begin(cfg_tx);
 
-    es8388_sidetone_mixer = new OutputMixer<int16_t>(hilbert, 2);
+    es8388_sidetone_mixer = new OutputMixer<int16_t>(); // (hilbert, 2);
 
-    copier_iq_in.begin(*es8388_sidetone_mixer, iq_vol);
+    copier_iq_in.begin(*es8388_sidetone_mixer, iq_balance);
     copier_sidetone_in.begin(*es8388_sidetone_mixer, sidetone_sound);
-    // copier_pcm.begin(pcm1502_stream, pcm_sound);
 
     sidetone_wave.begin(info_stereo, sidetone_freq);
 
-    // pcm_wave.begin(info_stereo, 440); // 440Hz test tone
+    iq_balance.begin(info_stereo);
+    iq_balance.setVolume(1.0, 0);       // replace this with actual I/Q gain correction, for both RX and TX
+    iq_balance.setVolume(1.0, 1);
 
-    iq_vol.begin(info_stereo);
-    iq_vol.setVolume(1.0, 0);       // replace this with actual I/Q gain correction, for both RX and TX
-    iq_vol.setVolume(1.0, 1);
-
+    es8388_sidetone_mixer->setOutput(hilbert);
+    es8388_sidetone_mixer->setOutputCount(2);
     es8388_sidetone_mixer->begin();
     es8388_sidetone_mixer->setWeight(0, 1.0);
     es8388_sidetone_mixer->setWeight(1, 1.0);
@@ -130,12 +130,12 @@ void audio_dsp_task(void *pvParameter) {
     hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
     hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
 
-    rx_tx_audio_mux.add(es8388_stream);
-    // pcm1502_connector.setStream(pcm1502_stream);
-    // pcm1502_connector.begin(info_stereo);
-    // pcm1502_connector.setVolume(1.0);
+    hp_vol.setOutput(pcm1502_stream);
+    hp_vol.begin(info_stereo);
+    hp_vol.setVolume(0.2);
 
-    rx_tx_audio_mux.add(pcm1502_stream);
+    rx_tx_audio_mux.add(es8388_stream);
+    rx_tx_audio_mux.add(hp_vol);
 
     size_t bytes_copied_in = 0;
     size_t bytes_copied_sidetone = 0;
