@@ -63,7 +63,7 @@ void audio_logic_task(void *pvParameter) {
 
                 sidetone_wave.setAmplitude(0);
 
-                tx_vol.setVolume(0.0);  // TODO: debug why setting this volume to 0 causes hp_vol to also go to 0
+                tx_vol.setVolume(0.0);
 
                 hp_vol.setVolume(global_vol);
 
