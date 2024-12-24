@@ -33,10 +33,9 @@ VolumeMeter vol_meas;
 // audio plumbing
 OutputMixer<int16_t> *es8388_sidetone_mixer;
 MultiOutput rx_tx_audio_mux;
-ChannelSplitOutput *iq_split;
+ChannelSplitOutput iq_split;
 OutputMixer<int16_t> *iq_sum;
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(hp_vol);      // outputs to final headphone volume control
-
 
 // stream copiers
 StreamCopy copier_iq_in(BUFFER_CHUNK);
@@ -64,6 +63,8 @@ float global_vol = AUDIO_VOL_DEFAULT;
 audio_filt_t cur_filt = AUDIO_FILT_DEFAULT;
 audio_mode_t cur_audio_mode = AUDIO_HF_RXTX_CW;
 uint32_t max_safe_vol = 32768;
+float i_rx_gain = 1.0;
+float q_rx_gain = 1.0;
 
 void audio_dsp_init() {
 
@@ -84,7 +85,6 @@ void audio_dsp_init() {
 }
 
 void audio_dsp_task(void *pvParameter) {
-
     // initialize ES8388 codec
     auto i2s_config = es8388_stream.defaultConfig(RXTX_MODE);
     i2s_config.copyFrom(info_stereo);
@@ -109,8 +109,7 @@ void audio_dsp_task(void *pvParameter) {
     pcm1502_stream.begin(cfg_tx);
 
     es8388_sidetone_mixer = new OutputMixer<int16_t>();
-    iq_sum = new OutputMixer<int16_t>(mono_to_stereo, 2);
-    iq_split = new ChannelSplitOutput();
+    iq_sum = new OutputMixer<int16_t>();
 
     copier_iq_in.begin(*es8388_sidetone_mixer, iq_balance);
     copier_sidetone_in.begin(*es8388_sidetone_mixer, sidetone_sound);
@@ -118,8 +117,8 @@ void audio_dsp_task(void *pvParameter) {
     sidetone_wave.begin(info_stereo, sidetone_freq);
 
     iq_balance.begin(info_stereo);
-    iq_balance.setVolume(1.0, 0);                   // replace this with actual I/Q gain correction, for both RX and TX
-    iq_balance.setVolume(1.0, 1);
+    iq_balance.setVolume(q_rx_gain, 0);                   // replace this with actual I/Q gain correction, for both RX and TX
+    iq_balance.setVolume(i_rx_gain, 1);
 
     es8388_sidetone_mixer->setOutput(hilbert);
     es8388_sidetone_mixer->setOutputCount(2);       // "output" is a confusing name, actually refers to number of sources combined into one
@@ -134,15 +133,15 @@ void audio_dsp_task(void *pvParameter) {
     hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
 
     rx_tx_audio_mux.add(tx_vol);
-    rx_tx_audio_mux.add(*iq_split);
+    rx_tx_audio_mux.add(iq_split);
 
     // sum channels together by adding two outputs both to the same mixer
-    iq_split->addOutput(*iq_sum, 0);
-    iq_split->addOutput(*iq_sum, 1);
-    iq_split->begin();
+    iq_split.addOutput(*iq_sum, 0);
+    iq_split.addOutput(*iq_sum, 1);
+    iq_split.begin();
 
-    // iq_sum->setOutput(mono_to_stereo);
-    // iq_sum->setOutputCount(2);
+    iq_sum->setOutput(mono_to_stereo);
+    iq_sum->setOutputCount(2);
     iq_sum->begin();
     iq_sum->setWeight(0, 1.0);
     iq_sum->setWeight(1, 1.0);
@@ -159,21 +158,19 @@ void audio_dsp_task(void *pvParameter) {
     tx_vol.setVolume(1.0);
 
     
-
     size_t bytes_copied_in = 0;
     size_t bytes_copied_sidetone = 0;
     size_t bytes_copied_pcm = 0;
     while(true) {
         bytes_copied_in = copier_iq_in.copy();
         bytes_copied_sidetone = copier_sidetone_in.copy();
-        // bytes_copied_pcm = copier_pcm.copy();
 
-        Serial.print("Bytes copied (IQ): ");
-        Serial.println(bytes_copied_in);
-        Serial.print("Bytes copied (Sidetone): ");
-        Serial.println(bytes_copied_sidetone);
-        Serial.print("Bytes copied (PCM): ");
-        Serial.println(bytes_copied_pcm);
+        // Serial.print("Bytes copied (IQ): ");
+        // Serial.println(bytes_copied_in);
+        // Serial.print("Bytes copied (Sidetone): ");
+        // Serial.println(bytes_copied_sidetone);
+        // Serial.print("Bytes copied (PCM): ");
+        // Serial.println(bytes_copied_pcm);
 
         // vTaskDelay(pdMS_TO_TICKS(1));
     }
