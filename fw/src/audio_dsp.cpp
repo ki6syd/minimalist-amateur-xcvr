@@ -19,8 +19,6 @@ I2SStream pcm1502_stream;
 // sine wave source
 SineWaveGenerator<int16_t> sidetone_wave(32000);
 GeneratedSoundStream<int16_t> sidetone_sound(sidetone_wave);
-SineWaveGenerator<int16_t> pcm_wave(3200);
-GeneratedSoundStream<int16_t> pcm_sound(pcm_wave);
 
 // filters
 FilteredStream<int16_t, float> audio_filt;
@@ -35,7 +33,9 @@ VolumeMeter vol_meas;
 // audio plumbing
 OutputMixer<int16_t> *es8388_sidetone_mixer;
 MultiOutput rx_tx_audio_mux;
-VolumeStream pcm1502_connector;
+ChannelSplitOutput iq_split;
+ChannelFormatConverterStreamT<int16_t> mono_to_stereo(hp_vol);      // outputs to final headphone volume control
+
 
 // stream copiers
 StreamCopy copier_iq_in(BUFFER_CHUNK);
@@ -130,6 +130,14 @@ void audio_dsp_task(void *pvParameter) {
     hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
     hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
 
+    rx_tx_audio_mux.add(tx_vol);
+    rx_tx_audio_mux.add(iq_split);
+
+    iq_split.addOutput(mono_to_stereo, 0);
+
+    // mono_to_stereo outputs to hp_vol, set up at declaration
+    mono_to_stereo.begin(1, 2);
+
     hp_vol.setOutput(pcm1502_stream);
     hp_vol.begin(info_stereo);
     hp_vol.setVolume(0.2);
@@ -138,8 +146,7 @@ void audio_dsp_task(void *pvParameter) {
     tx_vol.begin(info_stereo);
     tx_vol.setVolume(0.99);
 
-    rx_tx_audio_mux.add(tx_vol);
-    rx_tx_audio_mux.add(hp_vol);
+    
 
     size_t bytes_copied_in = 0;
     size_t bytes_copied_sidetone = 0;
