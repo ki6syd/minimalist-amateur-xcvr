@@ -118,8 +118,7 @@ void audio_dsp_task(void *pvParameter) {
 
     hilbert.setOutput(rx_tx_audio_mux);             // output of hilbert transform used in both RX and TX audio pathways
     hilbert.begin(info_stereo);
-    hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
-    hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
+    audio_dsp_set_sideband(SIDEBAND_USB);
 
     // order of these matters. Vice versa, updating tx_vol was affecting iq_split
     rx_tx_audio_mux.add(iq_split);
@@ -213,7 +212,7 @@ audio_filt_t audio_dsp_get_filter() {
 
 void audio_dsp_set_sideband(sideband_t sideband) {
     if(cur_audio_mode == AUDIO_HF_RX_CW) {
-        if(cur_sideband == SIDEBAND_USB) {
+        if(sideband == SIDEBAND_USB) {
             hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
             hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
         }
@@ -223,7 +222,7 @@ void audio_dsp_set_sideband(sideband_t sideband) {
         }
     }
     else {
-        if(cur_sideband == SIDEBAND_USB) {
+        if(sideband == SIDEBAND_USB) {
             hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
             hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
         }
@@ -232,6 +231,8 @@ void audio_dsp_set_sideband(sideband_t sideband) {
             hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
         }
     }
+
+    cur_sideband = sideband;
 }
 
 void audio_dsp_set_dacs(audio_mode_t mode) {

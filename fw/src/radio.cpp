@@ -149,6 +149,12 @@ void radio_task(void *param) {
 
                 // TODO: unpack any bandwidth changes from tmp.bw
                 // hf_set_clocks() needs to know the audio filter to account for sidetone offset?
+
+                // set sideband
+                if(tmp.dial_freq > 10000000)
+                  audio_dsp_set_sideband(SIDEBAND_USB);
+                else
+                  audio_dsp_set_sideband(SIDEBAND_LSB);
             }
             else {
               // update relays, enable module (if needed)

@@ -49,15 +49,10 @@ void setup() {
 void loop() { 
   if(millis() - t > 4000) {
     if(counter % 2 == 0) {      
-      // radio_set_dial_freq(14060000);
-
       // audio_test(true);
     }
     else {
-      // radio_set_dial_freq(14061000);
-
       // audio_test(false);
-
     }      
     counter++;
     t = millis();
