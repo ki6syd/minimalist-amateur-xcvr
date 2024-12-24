@@ -6,10 +6,11 @@
 
 #define NOTIFY_PGA_ON           (1 << 0)
 #define NOTIFY_PGA_OFF          (1 << 1)
-#define NOTIFY_MODE_HF_RXTX_CW  (1 << 2)
-#define NOTIFY_MODE_VHF_RX      (1 << 3)
-#define NOTIFY_MODE_VHF_TX      (1 << 4)
-#define NOTIFY_DBG_MAX_VOL      (1 << 5)
+#define NOTIFY_MODE_HF_RX_CW    (1 << 2)
+#define NOTIFY_MODE_HF_TX_CW    (1 << 3)
+#define NOTIFY_MODE_VHF_RX      (1 << 4)
+#define NOTIFY_MODE_VHF_TX      (1 << 5)
+#define NOTIFY_DBG_MAX_VOL      (1 << 6)
 
 
 TaskHandle_t xAudioTaskHandle;
@@ -47,21 +48,45 @@ void audio_logic_task(void *pvParameter) {
         if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, 0) == pdTRUE) {
             if(notifiedValue & NOTIFY_PGA_ON) {
                 pga_en = true;
-                audio_dsp_set_input_volume(100);
+                audio_dsp_set_pga_gain(100);
             }
             if(notifiedValue & NOTIFY_PGA_OFF) {
                 pga_en = false;
-                audio_dsp_set_input_volume(0);
+                audio_dsp_set_pga_gain(0);
             }
             // Handle mode changes
-            if(notifiedValue & NOTIFY_MODE_HF_RXTX_CW) {
+            if(notifiedValue & NOTIFY_MODE_HF_RX_CW) {
                 
+                Serial.println("HF RX CW");
+                iq_balance.setVolume(q_rx_gain, 0);
+                iq_balance.setVolume(i_rx_gain, 1);
+
+                sidetone_wave.setAmplitude(0);
+
+                tx_vol.setVolume(0.0);  // TODO: debug why setting this volume to 0 causes hp_vol to also go to 0
+
+                hp_vol.setVolume(global_vol);
+
+                cur_audio_mode = AUDIO_HF_RX_CW;
+            }
+            if(notifiedValue & NOTIFY_MODE_HF_TX_CW) {
+                Serial.println("HF TX CW");
+                iq_balance.setVolume(0, 0);
+                iq_balance.setVolume(0, 1);
+
+                sidetone_wave.setAmplitude(32000);
+
+                tx_vol.setVolume(1.0);
+
+                hp_vol.setVolume(global_vol * sidetone_vol);
+
+                cur_audio_mode = AUDIO_HF_TX_CW;
             }
             if(notifiedValue & NOTIFY_MODE_VHF_RX) {
-                
+                // TODO
             }
             if(notifiedValue & NOTIFY_MODE_VHF_TX) {
-                
+                // TODO
             }
         }
         vTaskDelay(pdMS_TO_TICKS(50));
@@ -69,17 +94,24 @@ void audio_logic_task(void *pvParameter) {
 }
 
 void audio_set_mode(audio_mode_t mode) {
-    if(mode == AUDIO_HF_RXTX_CW)
-        xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_HF_RXTX_CW, eSetBits);
+    if(mode == AUDIO_HF_RX_CW)
+        xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_HF_RX_CW, eSetBits);
+    else if(mode == AUDIO_HF_TX_CW)
+        xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_HF_TX_CW, eSetBits);
     else if(mode == AUDIO_VHF_RX)
         xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_VHF_RX, eSetBits);
     else if(mode == AUDIO_VHF_TX)
         xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_VHF_TX, eSetBits);
 }
 
-bool audio_set_volume(float vol) {
+bool audio_set_hp_volume(float vol) {
     if(vol >= 0.0 && vol <= 1.0) {
-        audio_dsp_set_volume(vol);
+        global_vol = vol;
+        
+        // force an update to the audio controls by setting the mode again. TX vs RX volume handled there.
+        Serial.println("Setting HP volume");
+        audio_set_mode(cur_audio_mode);
+
         return true;
     }
     return false;
@@ -89,16 +121,14 @@ float audio_get_volume() {
     return global_vol;
 }
 
-void audio_en_sidetone(bool enable) {
-    audio_dsp_set_sidetone(enable, sidetone_freq, sidetone_vol);
-}
-
 bool audio_set_sidetone_volume(float vol) {
     if(vol >= 0.0 && vol <= 1.0) {
         sidetone_vol = vol;
-        if(sidetone_en) {
-            audio_dsp_set_sidetone(true, sidetone_freq, vol);
-        }
+
+        // force an update to the audio controls by setting the mode again. TX vs RX volume handled there.
+        Serial.println("Setting sidetone volume");
+        audio_set_mode(cur_audio_mode);
+
         return true;
     }
     return false;
@@ -111,9 +141,7 @@ float audio_get_sidetone_volume() {
 bool audio_set_sidetone_freq(float freq) {
     if(freq > 0 && freq < 3000) {
         sidetone_freq = freq;
-        if(sidetone_en) {
-            audio_dsp_set_sidetone(true, freq, sidetone_vol);
-        }
+        sidetone_wave.setFrequency(freq);
         return true;
     }
     return false;
@@ -149,12 +177,4 @@ void audio_debug(debug_action_t command_num) {
     }
 }
 
-audio_filt_t audio_get_filt() {
-    return cur_filt;
-}
-
-bool audio_set_filt(audio_filt_t filt) {
-    audio_dsp_set_filter(filt);
-    return true;
-}
 

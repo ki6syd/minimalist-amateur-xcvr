@@ -2,6 +2,7 @@
 #include "globals.h"
 #include "radio.h"
 #include "audio.h"
+#include "audio_dsp.h"
 #include "keyer.h"
 #include "power.h"
 #include "wifi_conn.h"
@@ -164,7 +165,7 @@ void handler_volume_set(AsyncWebServerRequest *request) {
         return;
 
     float vol_request = request->getParam("audioLevel")->value().toFloat();
-    if(audio_set_volume(vol_request))
+    if(audio_set_hp_volume(vol_request))
         request->send(201, "text/plain", "OK");
     else {
         request->send(400, "text/plain", "Volume out of range");
@@ -189,7 +190,7 @@ void handler_sidetone_set(AsyncWebServerRequest *request) {
 
 void handler_bandwidth_get(AsyncWebServerRequest *request) {
     String ret_val = "";
-    switch(audio_get_filt()) {
+    switch(audio_dsp_get_filter()) {
         case AUDIO_FILT_CW:
             ret_val = "CW";
             break;
@@ -209,9 +210,9 @@ void handler_bandwidth_set(AsyncWebServerRequest *request) {
     String bw = request->getParam("bw")->value();
 
     if(bw == "CW")
-        audio_set_filt(AUDIO_FILT_CW);
+        audio_dsp_set_filter(AUDIO_FILT_CW);
     else if(bw == "SSB")
-        audio_set_filt(AUDIO_FILT_SSB);
+        audio_dsp_set_filter(AUDIO_FILT_SSB);
     else {
         request->send(400, "text/plain", "Unknown bandwidth requested");
         return;
@@ -328,9 +329,9 @@ void handler_debug_post(AsyncWebServerRequest *request) {
 
         String value = request->getParam("value")->value();
         if(strcmp(value.c_str(), "on") == 0)
-            audio_en_sidetone(true);
+            Serial.println("todo");
         else if(strcmp(value.c_str(), "off") == 0) 
-            audio_en_sidetone(false);
+            Serial.println("todo");
         else {
             request->send(400, "text/plain", "Unknown value requested");
             return;

@@ -3,6 +3,7 @@
 #include "radio_hf.h"
 #include "radio_vhf.h"
 #include "audio.h"
+#include "audio_dsp.h"
 #include "io.h"
 #include "file_system.h"
 #include "power.h"
@@ -89,8 +90,7 @@ void radio_task(void *param) {
     // example: https://freertos.org/Documentation/02-Kernel/02-Kernel-features/03-Direct-to-task-notifications/04-As-event-group
     if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(5)) == pdTRUE) {
       if(notifiedValue & NOTIFY_KEY_OFF) {
-        // set sidetone, before doing anything else. Minimize audio delay.
-        audio_en_sidetone(false);
+        // TODO: in case of long audio delays from sidetone, turn on the sound here
 
         // initiate mode change
         radio_set_rxtx_mode(MODE_QSK_COUNTDOWN);
@@ -101,13 +101,12 @@ void radio_task(void *param) {
         digitalWrite(LED_RED, LOW);
       }
       if(notifiedValue & NOTIFY_KEY_ON) {
-        // set sidetone, before doing anything else. Minimizes audio delay.
-        if(ok_to_tx && radio_freq_is_hf(freq_dial))
-          audio_en_sidetone(true);
+        // TODO: in case of long audio delays from sidetone, turn on the sound here
 
         // initiate mode change
         radio_set_rxtx_mode(MODE_TX);
 
+        // TODO: create key shape using a ramp on the sidetone source volume, rather than using VDD_CTRL
         if(ok_to_tx) {
           // turn off sidetone, LED, TX power amp rail, VHF tx_en, etc
           digitalWrite(LED_RED, HIGH);
@@ -237,6 +236,8 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
 
   switch(new_mode) {
     case MODE_RX:
+        Serial.println("MODE_RX");
+
         // stop QSK counter, in case it was still running
         xTimerStop(xQskTimer, 0);
 
@@ -245,27 +246,11 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
 
         if(radio_freq_is_hf(freq_dial)) {
           // change audio mode, function will ignore if there's no change
-          audio_set_mode(AUDIO_HF_RXTX_CW);
-
-          // set up clocks
-          // TODO: don't expose si5351 directly to this module
-          /* DELETE ME? holdover from having a separate TX clock, need all running in qsd/qse superhet
-          si5351.output_enable(SI5351_IDX_BFO, 1);
-          si5351.output_enable(SI5351_IDX_VFO, 1);
-          si5351.output_enable(SI5351_IDX_TX, 0);
-          */
-
-          // allow audio to pass through
-          audio_en_rx_audio(true);
+          audio_set_mode(AUDIO_HF_RX_CW);
         }
         else {
             audio_set_mode(AUDIO_VHF_RX);
-            
-            // TODO: turn off si5351 clocks for VHF mode
         }
-        // no sidetone in RX mode, regardless of VHF or HF
-        // TODO: delete this? sidetone controls happen at key_on and key_off
-        audio_en_sidetone(false);
 
         // change over relays if needed
         // TODO: rework the radio_set_band(band) function so it is "radio_set_relays(freq)" and looks up band from dial freq
@@ -273,6 +258,8 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
 
         break;
     case MODE_QSK_COUNTDOWN:
+        Serial.println("MODE_QSK_COUNTDOWN");
+
         // restart QSK counter upon entry to QSK_COUNTDOWN mode
         if(xTimerReset(xQskTimer, 0) != pdPASS) {
             Serial.println("**** failed to restart qsk timer");
@@ -283,7 +270,7 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
         if(radio_freq_is_hf(freq_dial)) {
             // turn off RX audio
             // TX power amp rail, sidetone, and TX LED are handled elsewhere
-            audio_en_rx_audio(false);
+            // TODO: mute the headphones
 
             // no need to update clocks, was just in TX
             // no need to update relays when mode changes to QSK, was just in TX
@@ -298,6 +285,8 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
 
         break;
     case MODE_TX:
+        Serial.println("MODE_TX");    
+
         // stop QSK counter
         xTimerStop(xQskTimer, 0);
 
@@ -311,18 +300,7 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
           power_bias_to_current(BIAS_CURRENT_CW);
 
           // change audio mode, function will ignore if there's no change
-          audio_set_mode(AUDIO_HF_RXTX_CW);
-
-          // turn off RX audio
-          // TX power amp rail, sidetone, and TX LED are handled elsewhere
-          audio_en_rx_audio(false);
-
-          // set up clocks. TX clock always running in TX mode
-          /* DELETE ME? holdover from having a separate TX clock, need all running in qsd/qse superhet
-          si5351.output_enable(SI5351_IDX_BFO, 0);
-          si5351.output_enable(SI5351_IDX_VFO, 0);
-          si5351.output_enable(SI5351_IDX_TX, 1);
-          */
+          audio_set_mode(AUDIO_HF_TX_CW);
         }
         else {
           audio_set_mode(AUDIO_VHF_TX);

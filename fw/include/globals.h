@@ -76,7 +76,8 @@ typedef enum {
 } debug_action_t;
 
 typedef enum {
-    AUDIO_HF_RXTX_CW,
+    AUDIO_HF_RX_CW,
+    AUDIO_HF_TX_CW,
     AUDIO_VHF_RX,
     AUDIO_VHF_TX
 } audio_mode_t;

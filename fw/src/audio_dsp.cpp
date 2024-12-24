@@ -43,27 +43,12 @@ ChannelFormatConverterStreamT<int16_t> mono_to_stereo(hp_vol);      // outputs t
 StreamCopy copier_iq_in(BUFFER_CHUNK);
 StreamCopy copier_sidetone_in(BUFFER_CHUNK);
 
-
-/*
-ChannelSplitOutput *input_split;
-VolumeStream hp_vol;
-VolumeStream input_l_vol, input_r_vol;
-MultiOutput *multi_output;
-OutputMixer<int16_t> *side_l_r_mix;
-ChannelFormatConverterStreamT<int16_t> mono_to_stereo(es8388_stream);
-AudioEffectStream effects(mono_to_stereo);
-Distortion *vol_limiter;
-StreamCopy copier_1(BUFFER_CHUNK);
-StreamCopy copier_2(BUFFER_CHUNK * 2);
-*/
-
 bool pga_en = false;
 float sidetone_vol = AUDIO_SIDE_DEFAULT;
 float sidetone_freq = F_SIDETONE_DEFAULT;
-bool sidetone_en = false;
 float global_vol = AUDIO_VOL_DEFAULT;
 audio_filt_t cur_filt = AUDIO_FILT_DEFAULT;
-audio_mode_t cur_audio_mode = AUDIO_HF_RXTX_CW;
+audio_mode_t cur_audio_mode = AUDIO_HF_RX_CW;
 uint16_t max_safe_vol = INT16_MAX;
 float i_rx_gain = 1.0;
 float q_rx_gain = 1.0;
@@ -93,7 +78,8 @@ void audio_dsp_task(void *pvParameter) {
     i2s_config.buffer_size = BUFFER_CHUNK;
     i2s_config.buffer_count = 4;
     i2s_config.port_no = 0;
-    i2s_config.input_device = (cur_audio_mode == AUDIO_HF_RXTX_CW) ? ADC_INPUT_LINE1 : ADC_INPUT_LINE2;
+    // i2s_config.input_device = (cur_audio_mode == AUDIO_HF_RXTX_CW) ? ADC_INPUT_LINE1 : ADC_INPUT_LINE2;
+    i2s_config.input_device = ADC_INPUT_LINE1;
     es8388_stream.begin(i2s_config);
     audio_dsp_set_dacs(cur_audio_mode);
 
@@ -117,8 +103,8 @@ void audio_dsp_task(void *pvParameter) {
     copier_sidetone_in.begin(*es8388_sidetone_mixer, sidetone_sound);
 
     sidetone_wave.begin(info_stereo, sidetone_freq);
-    sidetone_wave.setAmplitude(0);     // for testing only. Should set based on RX/TX modes.
 
+    // TODO: separate out into iq balance for TX and RX. This one is for RX. Can't share because audio input needs to be muted during TX.
     iq_balance.begin(info_stereo);
     iq_balance.setVolume(q_rx_gain, 0);                   // replace this with actual I/Q gain correction, for both RX and TX
     iq_balance.setVolume(i_rx_gain, 1);
@@ -134,8 +120,9 @@ void audio_dsp_task(void *pvParameter) {
     hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
     hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
 
-    rx_tx_audio_mux.add(tx_vol);
+    // order of these matters. Vice versa, updating tx_vol was affecting iq_split
     rx_tx_audio_mux.add(iq_split);
+    rx_tx_audio_mux.add(tx_vol);
 
     // sum channels together by adding two outputs both to the same mixer
     iq_split.addOutput(*iq_sum, 0);
@@ -219,49 +206,24 @@ void audio_dsp_set_filter(audio_filt_t filt) {
     cur_filt = filt;
 }
 
-void audio_dsp_set_volume(float vol) {
-    if(vol >= 0.0 && vol <= 1.0) {
-        global_vol = vol;
-        // hp_vol.setVolume(vol);
-    }
-}
-
-void audio_dsp_set_sidetone(bool enable, float freq, float vol) {
-    // commenting out for testing. Other functions in the audio modules call this, delete them?
-    // sidetone was getting turned off
-    /*
-    sidetone_en = enable;
-    sidetone_freq = freq;
-    sidetone_vol = vol;
-
-    if (vol < 0.0) {
-        vol = 0.0;
-    } else if (vol > 1.0) {
-        vol = 1.0;
-    }
-
-    if(enable) {
-        int16_t amp = (int16_t)(vol * INT16T_MAX);
-        sidetone_wave.setAmplitude(amp);
-        sidetone_wave.setFrequency(freq);
-    } else {
-        sidetone_wave.setAmplitude(0);
-    }
-    */
+audio_filt_t audio_dsp_get_filter() {
+    return cur_filt;
 }
 
 void audio_dsp_set_dacs(audio_mode_t mode) {
-    if(mode == AUDIO_HF_RXTX_CW || mode == AUDIO_VHF_RX) {
-        audio_dsp_set_mute(false, 0);
-        audio_dsp_set_mute(true, 1);
+    AudioDriver *driver = audio_board.getDriver();
+    
+    if(mode == AUDIO_HF_RX_CW || mode == AUDIO_HF_TX_CW || mode == AUDIO_VHF_RX) {
+        driver->setMute(false, 0);
+        driver->setMute(true, 1);
     }
     else if(mode == AUDIO_VHF_TX) {
-        audio_dsp_set_mute(true, 0);
-        audio_dsp_set_mute(false, 1);
+        driver->setMute(true, 0);
+        driver->setMute(false, 1);
     }
 }
+
 float audio_dsp_get_rx_level(uint16_t num_avg, uint16_t delay_ms) {
-    if(sidetone_en) return -1001;
     
     float rx_dB = 0;
     for(uint16_t i = 0; i < num_avg; i++) {
@@ -277,30 +239,7 @@ float audio_dsp_get_rx_level(uint16_t num_avg, uint16_t delay_ms) {
     return rx_dB;
 }
 
-void audio_en_rx_audio(bool en) {
-    if(en) {
-
-    }
-    else {
-
-    }
-}
-
-void audio_en_vol_clipping(bool enable) {
-    /*
-    if(enable)
-        vol_limiter->setClipThreashold(max_safe_vol);
-    else
-        vol_limiter->setClipThreashold(INT16T_MAX);
-    */
-}
-
-void audio_dsp_set_input_volume(uint8_t volume) {
+void audio_dsp_set_pga_gain(uint8_t volume) {
     AudioDriver *driver = audio_board.getDriver();
     driver->setInputVolume(volume);
-}
-
-void audio_dsp_set_mute(bool mute, uint8_t channel) {
-    AudioDriver *driver = audio_board.getDriver();
-    driver->setMute(mute, channel);
 }
