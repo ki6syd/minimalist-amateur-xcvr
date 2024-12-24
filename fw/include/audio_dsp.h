@@ -30,6 +30,6 @@ extern float sidetone_vol;
 extern float sidetone_freq;
 extern float global_vol;
 extern audio_mode_t cur_audio_mode;
-extern uint32_t max_safe_vol;
+extern uint16_t max_safe_vol;
 extern bool sidetone_en;
 extern audio_filt_t cur_filt;

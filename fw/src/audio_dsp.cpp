@@ -29,6 +29,8 @@ VolumeStream iq_balance(es8388_stream);             // connect iq_balance to the
 VolumeStream hp_vol;                                // headphone volume
 VolumeStream tx_vol;                                // transmit audio volume
 VolumeMeter vol_meas;
+AudioEffectStream effects;
+Distortion volume_limiter;
 
 // audio plumbing
 OutputMixer<int16_t> *es8388_sidetone_mixer;
@@ -62,7 +64,7 @@ bool sidetone_en = false;
 float global_vol = AUDIO_VOL_DEFAULT;
 audio_filt_t cur_filt = AUDIO_FILT_DEFAULT;
 audio_mode_t cur_audio_mode = AUDIO_HF_RXTX_CW;
-uint32_t max_safe_vol = 32768;
+uint16_t max_safe_vol = INT16_MAX;
 float i_rx_gain = 1.0;
 float q_rx_gain = 1.0;
 
@@ -115,7 +117,7 @@ void audio_dsp_task(void *pvParameter) {
     copier_sidetone_in.begin(*es8388_sidetone_mixer, sidetone_sound);
 
     sidetone_wave.begin(info_stereo, sidetone_freq);
-    sidetone_wave.setAmplitude(0);     // for testing only
+    sidetone_wave.setAmplitude(0);     // for testing only. Should set based on RX/TX modes.
 
     iq_balance.begin(info_stereo);
     iq_balance.setVolume(q_rx_gain, 0);                   // replace this with actual I/Q gain correction, for both RX and TX
@@ -151,8 +153,16 @@ void audio_dsp_task(void *pvParameter) {
     audio_dsp_set_filter(cur_filt);
 
     vol_meas.setAudioInfo(info_mono);
-    vol_meas.setOutput(mono_to_stereo);
+    vol_meas.setOutput(effects);
     vol_meas.begin();
+
+    max_safe_vol = 8000;                                // for debug. File system may have 100% volume.
+    volume_limiter.setClipThreashold(max_safe_vol);     // if abs(volume) exceeds clipThreshold, output rails at maxInput
+    volume_limiter.setMaxInput(max_safe_vol);
+    volume_limiter.setActive(true);
+    effects.setOutput(mono_to_stereo);
+    effects.addEffect(volume_limiter);
+    effects.begin(info_mono);
 
     // mono_to_stereo outputs to hp_vol, set up at declaration
     mono_to_stereo.begin(1, 2);
