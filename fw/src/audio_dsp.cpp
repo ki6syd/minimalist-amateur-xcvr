@@ -49,6 +49,7 @@ float sidetone_freq = F_SIDETONE_DEFAULT;
 float global_vol = AUDIO_VOL_DEFAULT;
 audio_filt_t cur_filt = AUDIO_FILT_DEFAULT;
 audio_mode_t cur_audio_mode = AUDIO_HF_RX_CW;
+sideband_t cur_sideband = SIDEBAND_DEFAULT;
 uint16_t max_safe_vol = INT16_MAX;
 float i_rx_gain = 1.0;
 float q_rx_gain = 1.0;
@@ -104,7 +105,7 @@ void audio_dsp_task(void *pvParameter) {
 
     sidetone_wave.begin(info_stereo, sidetone_freq);
 
-    // TODO: separate out into iq balance for TX and RX. This one is for RX. Can't share because audio input needs to be muted during TX.
+    // TODO: Turn this into "iq_rx_balance" and also add an iq_tx_balance that acts on the sidetone audio wave. Need separate adjustments
     iq_balance.begin(info_stereo);
     iq_balance.setVolume(q_rx_gain, 0);                   // replace this with actual I/Q gain correction, for both RX and TX
     iq_balance.setVolume(i_rx_gain, 1);

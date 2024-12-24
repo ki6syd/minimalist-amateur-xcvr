@@ -29,6 +29,7 @@ extern float global_vol;
 extern audio_mode_t cur_audio_mode;
 extern uint16_t max_safe_vol;
 extern audio_filt_t cur_filt;
+extern sideband_t cur_sideband;
 extern float i_rx_gain;
 extern float q_rx_gain;
 
@@ -39,3 +40,4 @@ extern VolumeStream tx_vol;
 extern VolumeMeter vol_meas;
 extern AudioEffectStream effects;
 extern Distortion volume_limiter;
+extern FilteredStream<int16_t, float> hilbert;
