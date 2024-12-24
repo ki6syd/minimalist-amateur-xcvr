@@ -15,6 +15,7 @@ void audio_dsp_task_restart();
 void audio_dsp_set_mode(audio_mode_t mode);
 void audio_dsp_set_filter(audio_filt_t filt);
 audio_filt_t audio_dsp_get_filter();
+void audio_dsp_set_sideband(sideband_t sideband);
 void audio_dsp_set_volume(float vol);
 void audio_dsp_set_dacs(audio_mode_t mode);
 void audio_dsp_set_mode(audio_mode_t mode);

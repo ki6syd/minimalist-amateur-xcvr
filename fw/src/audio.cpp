@@ -1,6 +1,5 @@
 #include "audio.h"
 #include "audio_dsp.h"
-#include "fir_coeffs_hilbert_8kHz.h"
 #include "globals.h"
 #include "file_system.h"
 #include <Arduino.h>
@@ -38,6 +37,9 @@ void audio_init() {
         &xAudioTaskHandle,
         TASK_CORE_AUDIO
     );
+
+    // TODO: move this elsewhere
+    audio_en_pga(true);
 }
 
 void audio_logic_task(void *pvParameter) {
@@ -68,15 +70,6 @@ void audio_logic_task(void *pvParameter) {
 
                 hp_vol.setVolume(global_vol);
 
-                if(cur_sideband == SIDEBAND_USB) {
-                    hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
-                    hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
-                }
-                else {
-                    hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg_negated));
-                    hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
-                }
-
                 cur_audio_mode = AUDIO_HF_RX_CW;
             }
             if(notifiedValue & NOTIFY_MODE_HF_TX_CW) {
@@ -89,15 +82,6 @@ void audio_logic_task(void *pvParameter) {
                 tx_vol.setVolume(1.0);
 
                 hp_vol.setVolume(global_vol * sidetone_vol);
-
-                if(cur_sideband == SIDEBAND_USB) {
-                    hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
-                    hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
-                }
-                else {
-                    hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg_negated));
-                    hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
-                }
 
                 cur_audio_mode = AUDIO_HF_TX_CW;
             }

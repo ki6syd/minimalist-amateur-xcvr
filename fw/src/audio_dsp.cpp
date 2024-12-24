@@ -211,6 +211,29 @@ audio_filt_t audio_dsp_get_filter() {
     return cur_filt;
 }
 
+void audio_dsp_set_sideband(sideband_t sideband) {
+    if(cur_audio_mode == AUDIO_HF_RX_CW) {
+        if(cur_sideband == SIDEBAND_USB) {
+            hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
+            hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
+        }
+        else {
+            hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg_negated));
+            hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
+        }
+    }
+    else {
+        if(cur_sideband == SIDEBAND_USB) {
+            hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
+            hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
+        }
+        else {
+            hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg_negated));
+            hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
+        }
+    }
+}
+
 void audio_dsp_set_dacs(audio_mode_t mode) {
     AudioDriver *driver = audio_board.getDriver();
     
