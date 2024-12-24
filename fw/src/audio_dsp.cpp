@@ -33,7 +33,8 @@ VolumeMeter vol_meas;
 // audio plumbing
 OutputMixer<int16_t> *es8388_sidetone_mixer;
 MultiOutput rx_tx_audio_mux;
-ChannelSplitOutput iq_split;
+ChannelSplitOutput *iq_split;
+OutputMixer<int16_t> *iq_sum;
 ChannelFormatConverterStreamT<int16_t> mono_to_stereo(hp_vol);      // outputs to final headphone volume control
 
 
@@ -107,7 +108,9 @@ void audio_dsp_task(void *pvParameter) {
     cfg_tx.pin_ws = HP_DAC_LRCLK;
     pcm1502_stream.begin(cfg_tx);
 
-    es8388_sidetone_mixer = new OutputMixer<int16_t>(); // (hilbert, 2);
+    es8388_sidetone_mixer = new OutputMixer<int16_t>();
+    iq_sum = new OutputMixer<int16_t>(mono_to_stereo, 2);
+    iq_split = new ChannelSplitOutput();
 
     copier_iq_in.begin(*es8388_sidetone_mixer, iq_balance);
     copier_sidetone_in.begin(*es8388_sidetone_mixer, sidetone_sound);
@@ -131,20 +134,29 @@ void audio_dsp_task(void *pvParameter) {
     hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
 
     rx_tx_audio_mux.add(tx_vol);
-    rx_tx_audio_mux.add(iq_split);
+    rx_tx_audio_mux.add(*iq_split);
 
-    iq_split.addOutput(mono_to_stereo, 0);
+    // sum channels together by adding two outputs both to the same mixer
+    iq_split->addOutput(*iq_sum, 0);
+    iq_split->addOutput(*iq_sum, 1);
+    iq_split->begin();
+
+    // iq_sum->setOutput(mono_to_stereo);
+    // iq_sum->setOutputCount(2);
+    iq_sum->begin();
+    iq_sum->setWeight(0, 1.0);
+    iq_sum->setWeight(1, 1.0);
 
     // mono_to_stereo outputs to hp_vol, set up at declaration
     mono_to_stereo.begin(1, 2);
 
     hp_vol.setOutput(pcm1502_stream);
     hp_vol.begin(info_stereo);
-    hp_vol.setVolume(0.2);
+    hp_vol.setVolume(1.0);
 
     tx_vol.setOutput(es8388_stream);
     tx_vol.begin(info_stereo);
-    tx_vol.setVolume(0.99);
+    tx_vol.setVolume(1.0);
 
     
 
