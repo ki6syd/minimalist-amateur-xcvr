@@ -115,6 +115,7 @@ void audio_dsp_task(void *pvParameter) {
     copier_sidetone_in.begin(*es8388_sidetone_mixer, sidetone_sound);
 
     sidetone_wave.begin(info_stereo, sidetone_freq);
+    sidetone_wave.setAmplitude(0);     // for testing only
 
     iq_balance.begin(info_stereo);
     iq_balance.setVolume(q_rx_gain, 0);                   // replace this with actual I/Q gain correction, for both RX and TX
@@ -126,7 +127,6 @@ void audio_dsp_task(void *pvParameter) {
     es8388_sidetone_mixer->setWeight(0, 1.0);
     es8388_sidetone_mixer->setWeight(1, 1.0);
 
-    // hilbert.setStream(es8388_stream);
     hilbert.setOutput(rx_tx_audio_mux);             // output of hilbert transform used in both RX and TX audio pathways
     hilbert.begin(info_stereo);
     hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
@@ -140,11 +140,19 @@ void audio_dsp_task(void *pvParameter) {
     iq_split.addOutput(*iq_sum, 1);
     iq_split.begin();
 
-    iq_sum->setOutput(mono_to_stereo);
+    iq_sum->setOutput(audio_filt);
     iq_sum->setOutputCount(2);
     iq_sum->begin();
     iq_sum->setWeight(0, 1.0);
     iq_sum->setWeight(1, 1.0);
+
+    audio_filt.begin(info_mono);
+    audio_filt.setOutput(vol_meas);
+    audio_dsp_set_filter(cur_filt);
+
+    vol_meas.setAudioInfo(info_mono);
+    vol_meas.setOutput(mono_to_stereo);
+    vol_meas.begin();
 
     // mono_to_stereo outputs to hp_vol, set up at declaration
     mono_to_stereo.begin(1, 2);
