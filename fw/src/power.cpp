@@ -191,7 +191,6 @@ void power_bias_to_current(float total_current) {
   float measured_current = 0;
 
   digitalWrite(PA_VDD_CTRL, HIGH);
-  digitalWrite(LED_RED, HIGH);
 
 /*
   // check if TOTAL biasing is correct. can exit if it is
@@ -259,6 +258,5 @@ void power_bias_to_current(float total_current) {
   Serial.println(measured_current);
   */
 
-  digitalWrite(LED_RED, LOW);
   digitalWrite(PA_VDD_CTRL, LOW);
 }

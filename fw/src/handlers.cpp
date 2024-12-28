@@ -244,6 +244,22 @@ void handler_smeter_get(AsyncWebServerRequest *request) {
     request->send(200, "text/plain", String(radio_get_s_meter()));
 }
 
+void handler_power_set(AsyncWebServerRequest *request) {
+    if(!handler_require_param(request, "power"))
+        return;
+
+    float power_request = request->getParam("power")->value().toFloat();
+    if(radio_set_power(power_request))
+        request->send(201, "text/plain", "OK");
+    else {
+        request->send(400, "text/plain", "Power level out of range");
+    }
+}
+
+void handler_power_get(AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", String(radio_get_power()));
+}
+
 void handler_mac_get(AsyncWebServerRequest *request) {
     request->send(200, "text/plain", wifi_get_mac());
 }

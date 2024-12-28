@@ -38,6 +38,7 @@ typedef enum {
 typedef struct {
     uint64_t dial_freq;
     radio_audio_bw_t bw;
+    float power;
 } radio_state_t;
 
 typedef struct {
@@ -80,6 +81,8 @@ String radio_band_to_string(radio_band_t band);
 String radio_bandwidth_to_string(radio_audio_bw_t bw);
 String radio_freq_string();
 float radio_get_s_meter();
+bool radio_set_power(float power_level);
+float radio_get_power();
 void radio_enable_tx(bool en);
 void radio_debug(debug_action_t action, void *value);
 

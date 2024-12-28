@@ -47,6 +47,7 @@ bool pga_en = false;
 float sidetone_vol = AUDIO_SIDE_DEFAULT;
 float sidetone_freq = F_SIDETONE_DEFAULT;
 float global_vol = AUDIO_VOL_DEFAULT;
+float tx_power = 1.0;
 audio_filt_t cur_filt = AUDIO_FILT_DEFAULT;
 audio_mode_t cur_audio_mode = AUDIO_HF_RX_CW;
 sideband_t cur_sideband = SIDEBAND_DEFAULT;
@@ -143,7 +144,6 @@ void audio_dsp_task(void *pvParameter) {
     vol_meas.setOutput(effects);
     vol_meas.begin();
 
-    max_safe_vol = 8000;                                // for debug. File system may have 100% volume.
     volume_limiter.setClipThreashold(max_safe_vol);     // if abs(volume) exceeds clipThreshold, output rails at maxInput
     volume_limiter.setMaxInput(max_safe_vol);
     volume_limiter.setActive(true);

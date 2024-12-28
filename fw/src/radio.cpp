@@ -18,6 +18,7 @@
 #define NOTIFY_CAL_IF         (1 << 5)
 // #define NOTIFY_CAL_BPF        (1 << 6)
 #define NOTIFY_LOW_BAT        (1 << 7)
+#define NOTIFY_POWER_CHANGE   (1 << 8)
 
 #define FREQ_PLL          (SI5351_PLL_FIXED)
 
@@ -35,6 +36,8 @@ TimerHandle_t xQskTimer = NULL;
 bool ok_to_tx = false;
 
 uint64_t freq_dial = HF_DEFAULT_FREQ;
+
+float power = 1.0;
 
 void radio_task(void * pvParameter);
 void qsk_timer_callback(TimerHandle_t timer);
@@ -90,7 +93,7 @@ void radio_task(void *param) {
     // example: https://freertos.org/Documentation/02-Kernel/02-Kernel-features/03-Direct-to-task-notifications/04-As-event-group
     if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(5)) == pdTRUE) {
       if(notifiedValue & NOTIFY_KEY_OFF) {
-        // TODO: in case of long audio delays from sidetone, turn on the sound here
+        audio_en_sidetone(false);
 
         // initiate mode change
         radio_set_rxtx_mode(MODE_QSK_COUNTDOWN);
@@ -101,12 +104,12 @@ void radio_task(void *param) {
         digitalWrite(LED_RED, LOW);
       }
       if(notifiedValue & NOTIFY_KEY_ON) {
-        // TODO: in case of long audio delays from sidetone, turn on the sound here
+        // TODO: create key shape using a ramp on the sidetone source volume, rather than using VDD_CTRL
+        audio_en_sidetone(true);
 
         // initiate mode change
         radio_set_rxtx_mode(MODE_TX);
 
-        // TODO: create key shape using a ramp on the sidetone source volume, rather than using VDD_CTRL
         if(ok_to_tx) {
           // turn off sidetone, LED, TX power amp rail, VHF tx_en, etc
           digitalWrite(LED_RED, HIGH);
@@ -114,7 +117,7 @@ void radio_task(void *param) {
           if(radio_freq_is_hf(freq_dial))
             digitalWrite(PA_VDD_CTRL, HIGH);
           else
-            digitalWrite(VHF_PTT, LOW);          
+            digitalWrite(VHF_PTT, LOW);
         }
       }
       if(notifiedValue & NOTIFY_QSK_EXPIRE) {
@@ -187,6 +190,14 @@ void radio_task(void *param) {
       if(notifiedValue & NOTIFY_LOW_BAT) {
         ok_to_tx = false;
       }
+      if(notifiedValue & NOTIFY_POWER_CHANGE) {
+        if(xQueueReceive(xRadioQueue, (void *) &tmp, 0) == pdTRUE) {
+          Serial.print("Updating power: ");
+          Serial.println(tmp.power);
+          power = tmp.power;
+          audio_set_tx_power(tmp.power);
+        }
+      }
     }
   }
 }
@@ -209,7 +220,7 @@ bool radio_set_dial_freq(uint64_t freq) {
   if(!radio_freq_valid(freq))
     return false;
 
-  radio_state_t tmp = { .dial_freq = freq, .bw = radio_get_bw()};
+  radio_state_t tmp = { .dial_freq = freq, .bw = radio_get_bw(), .power = power};
 
   if(xQueueSend(xRadioQueue, (void *) &tmp, 0) != pdTRUE) {
     Serial.println("Unable to change frequency, queue full");
@@ -514,6 +525,27 @@ float radio_get_s_meter() {
     return hf_get_s_meter();
   else
     return vhf_get_s_meter();
+}
+
+bool radio_set_power(float power_level) {
+    // Validate power level is within acceptable range
+    if(power_level > 1.0 || power_level < 0.0)
+        return false;
+        
+    // Queue the power change request
+    radio_state_t tmp = { .dial_freq = freq_dial, .bw = radio_get_bw(), .power = power_level};
+    
+    if(xQueueSend(xRadioQueue, (void *) &tmp, 0) != pdTRUE) {
+        Serial.println("Unable to change power, queue full");
+        return false;
+    }
+
+    xTaskNotify(xRadioTaskHandle, NOTIFY_POWER_CHANGE, eSetBits);
+    return true;
+}
+
+float radio_get_power() {
+  return power;
 }
 
 // inputs: sweep setup, dataset

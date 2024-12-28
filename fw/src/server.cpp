@@ -45,6 +45,8 @@ static const server_handler_t handlers[] = {
     {API_V1,    HTTP_PUT,   "cwSpeed",          handler_keyer_speed_set},
     {API_V1,    HTTP_GET,   "inputVoltage",     handler_input_voltage_get},
     {API_V1,    HTTP_GET,   "sMeter",           handler_smeter_get},
+    {API_V1,    HTTP_PUT,   "power",            handler_power_set},
+    {API_V1,    HTTP_GET,   "power",            handler_power_get},
     {API_V1,    HTTP_GET,   "githash",          handler_githash_get},
     {API_V1,    HTTP_GET,   "heap",             handler_heap_get},
     {API_V1,    HTTP_GET,   "mac",              handler_mac_get},

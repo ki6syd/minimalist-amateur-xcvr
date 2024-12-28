@@ -19,6 +19,8 @@ void handler_keyer_speed_get(AsyncWebServerRequest *request);
 void handler_keyer_speed_set(AsyncWebServerRequest *request);
 void handler_input_voltage_get(AsyncWebServerRequest *request);
 void handler_smeter_get(AsyncWebServerRequest *request);
+void handler_power_set(AsyncWebServerRequest *request);
+void handler_power_get(AsyncWebServerRequest *request);
 void handler_githash_get(AsyncWebServerRequest *request);
 void handler_heap_get(AsyncWebServerRequest *request);
 void handler_mac_get(AsyncWebServerRequest *request);

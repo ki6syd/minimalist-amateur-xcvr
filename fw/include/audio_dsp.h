@@ -27,6 +27,7 @@ extern bool pga_en;
 extern float sidetone_vol;
 extern float sidetone_freq;
 extern float global_vol;
+extern float tx_power;
 extern audio_mode_t cur_audio_mode;
 extern uint16_t max_safe_vol;
 extern audio_filt_t cur_filt;

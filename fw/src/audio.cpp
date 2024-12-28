@@ -12,7 +12,6 @@
 #define NOTIFY_MODE_VHF_TX      (1 << 5)
 #define NOTIFY_DBG_MAX_VOL      (1 << 6)
 
-
 TaskHandle_t xAudioTaskHandle;
 static float last_volume_dB = 0;
 
@@ -23,6 +22,9 @@ void audio_init() {
 
     if(fs_setting_exists(PREFERENCE_FILE, "sidetone_level"))
         sidetone_vol = fs_load_setting(PREFERENCE_FILE, "sidetone_level").toFloat();
+
+    if(fs_setting_exists(PREFERENCE_FILE, "tx_power"))
+        tx_power = fs_load_setting(PREFERENCE_FILE, "tx_power").toFloat();
 
     // Initialize DSP subsystem
     audio_dsp_init();
@@ -64,26 +66,29 @@ void audio_logic_task(void *pvParameter) {
                 iq_balance.setVolume(q_rx_gain, 0);
                 iq_balance.setVolume(i_rx_gain, 1);
 
-                sidetone_wave.setAmplitude(0);
-
                 tx_vol.setVolume(0.0);
 
                 hp_vol.setVolume(global_vol);
 
                 cur_audio_mode = AUDIO_HF_RX_CW;
+
+                // exits WITHOUT changing sidetone volume. That is handled by key on/off function. This just changes "modes"
             }
             if(notifiedValue & NOTIFY_MODE_HF_TX_CW) {
                 Serial.println("HF TX CW");
                 iq_balance.setVolume(0, 0);
                 iq_balance.setVolume(0, 1);
 
-                sidetone_wave.setAmplitude(32000);
+                Serial.print("Setting tx_power: ");
+                Serial.println(tx_power);
+                tx_vol.setVolume(tx_power);          // TODO: control TX power here, make a call to radio_get_power()
 
-                tx_vol.setVolume(1.0);
-
-                hp_vol.setVolume(global_vol * sidetone_vol);
+                // TODO: consider deleting this from the audio mode change. Needs low latency so also exists in the sidetone enabling.
+                hp_vol.setVolume(sidetone_vol * global_vol);
 
                 cur_audio_mode = AUDIO_HF_TX_CW;
+
+                // exits WITHOUT changing sidetone volume. That is handled by key on/off function. This just changes "modes"
             }
             if(notifiedValue & NOTIFY_MODE_VHF_RX) {
                 // TODO
@@ -141,6 +146,23 @@ float audio_get_sidetone_volume() {
     return sidetone_vol;
 }
 
+void audio_en_sidetone(bool en) {
+    Serial.print("Audio sidetone: ");
+    Serial.println(en);
+
+    int16_t amp;
+    if(en)
+        amp = INT16T_MAX;
+    else
+        amp = 0;
+
+    Serial.println("Setting sidetone amp");
+    sidetone_wave.setAmplitude(amp);
+
+    // this call also happens during mode change. Added here to avoid loud volume before mode fully changes.
+    hp_vol.setVolume(sidetone_vol * global_vol);
+}
+
 bool audio_set_sidetone_freq(float freq) {
     if(freq > 0 && freq < 3000) {
         sidetone_freq = freq;
@@ -152,6 +174,17 @@ bool audio_set_sidetone_freq(float freq) {
 
 float audio_get_sidetone_freq() {
     return sidetone_freq;
+}
+
+bool audio_set_tx_power(float power) {
+    if(power < 0.0 || power > 1.0)
+        return false;
+    
+    Serial.print("Setting TX power: ");
+    Serial.println(power);
+
+    tx_power = power;
+    return true;
 }
 
 void audio_en_pga(bool enable) {
@@ -179,5 +212,3 @@ void audio_debug(debug_action_t command_num) {
             break;
     }
 }
-
-

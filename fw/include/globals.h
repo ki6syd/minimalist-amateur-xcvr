@@ -42,7 +42,7 @@
 #define AUDIO_EN_OUT_IP              // works fairly well. Commented out normally because the audio module has no graceful to handle losing connection to rcvr after gaining it
 
 // comment out to prevent accidental TX
-// #define RADIO_ALLOW_TX
+#define RADIO_ALLOW_TX
 
 #define DIGI_QUEUE_LEN          10
 
