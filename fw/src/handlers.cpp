@@ -336,8 +336,8 @@ void handler_debug_post(AsyncWebServerRequest *request) {
     else if(command_num == DEBUG_CMD_CAL_XTAL || command_num == DEBUG_CMD_CAL_IF || command_num == DEBUG_CMD_CAL_BPF || command_num == DEBUG_CMD_STOP_CLOCKS || command_num == DEBUG_CMD_IQ_CLOCKS || command_num == DEBUG_CMD_STOP_BFO || command_num == DEBUG_CMD_STOP_VFO) {
         radio_debug((debug_action_t) command_num, nullptr);
     }
-    else if(command_num == DEBUG_CMD_MAX_VOL) {
-        // audio_debug((debug_action_t) command_num);
+    else if(command_num == DEBUG_CMD_MAX_VOL || DEBUG_CMD_IMD_TEST) {
+        audio_debug((debug_action_t) command_num);
     }
     else if(command_num == DEBUG_CMD_SPOT) {
          if(!handler_require_param(request, "value"))

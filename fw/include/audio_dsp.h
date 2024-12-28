@@ -36,6 +36,7 @@ extern float i_rx_gain;
 extern float q_rx_gain;
 
 extern SineWaveGenerator<int16_t> sidetone_wave;
+extern SineWaveGenerator<int16_t> imd_test_wave;
 extern VolumeStream iq_balance;
 extern VolumeStream hp_vol;
 extern VolumeStream tx_vol;

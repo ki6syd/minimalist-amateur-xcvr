@@ -20,6 +20,10 @@ I2SStream pcm1502_stream;
 SineWaveGenerator<int16_t> sidetone_wave(32000);
 GeneratedSoundStream<int16_t> sidetone_sound(sidetone_wave);
 
+// intermodulation distortion test source
+SineWaveGenerator<int16_t> imd_test_wave(32000);
+GeneratedSoundStream<int16_t> imd_test_sound(imd_test_wave);
+
 // filters
 FilteredStream<int16_t, float> audio_filt;
 FilteredStream<int16_t, float> hilbert;
@@ -42,6 +46,7 @@ ChannelFormatConverterStreamT<int16_t> mono_to_stereo(hp_vol);      // outputs t
 // stream copiers
 StreamCopy copier_iq_in(BUFFER_CHUNK);
 StreamCopy copier_sidetone_in(BUFFER_CHUNK);
+StreamCopy copier_imd_in(BUFFER_CHUNK);
 
 bool pga_en = false;
 float sidetone_vol = AUDIO_SIDE_DEFAULT;
@@ -103,8 +108,13 @@ void audio_dsp_task(void *pvParameter) {
 
     copier_iq_in.begin(*es8388_sidetone_mixer, iq_balance);
     copier_sidetone_in.begin(*es8388_sidetone_mixer, sidetone_sound);
+    copier_imd_in.begin(*es8388_sidetone_mixer, imd_test_sound);
 
     sidetone_wave.begin(info_stereo, sidetone_freq);
+    sidetone_wave.setAmplitude(0);
+
+    imd_test_wave.begin(info_stereo, sidetone_freq + 1000);
+    imd_test_wave.setAmplitude(0);
 
     // TODO: Turn this into "iq_rx_balance" and also add an iq_tx_balance that acts on the sidetone audio wave. Need separate adjustments
     iq_balance.begin(info_stereo);
@@ -112,10 +122,11 @@ void audio_dsp_task(void *pvParameter) {
     iq_balance.setVolume(i_rx_gain, 1);
 
     es8388_sidetone_mixer->setOutput(hilbert);
-    es8388_sidetone_mixer->setOutputCount(2);       // "output" is a confusing name, actually refers to number of sources combined into one
+    es8388_sidetone_mixer->setOutputCount(3);       // "output" is a confusing name, actually refers to number of sources combined into one
     es8388_sidetone_mixer->begin();
     es8388_sidetone_mixer->setWeight(0, 1.0);
     es8388_sidetone_mixer->setWeight(1, 1.0);
+    es8388_sidetone_mixer->setWeight(2, 1.0);
 
     hilbert.setOutput(rx_tx_audio_mux);             // output of hilbert transform used in both RX and TX audio pathways
     hilbert.begin(info_stereo);
@@ -165,10 +176,11 @@ void audio_dsp_task(void *pvParameter) {
     
     size_t bytes_copied_in = 0;
     size_t bytes_copied_sidetone = 0;
-    size_t bytes_copied_pcm = 0;
+    size_t bytes_copied_imd = 0;
     while(true) {
         bytes_copied_in = copier_iq_in.copy();
         bytes_copied_sidetone = copier_sidetone_in.copy();
+        bytes_copied_imd = copier_imd_in.copy();
 
         // Serial.print("Bytes copied (IQ): ");
         // Serial.println(bytes_copied_in);

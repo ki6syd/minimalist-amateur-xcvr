@@ -74,6 +74,7 @@ typedef enum {
     DEBUG_CMD_IQ_CLOCKS=10,
     DEBUG_CMD_STOP_BFO=11,
     DEBUG_CMD_STOP_VFO=12,
+    DEBUG_CMD_IMD_TEST=13
 } debug_action_t;
 
 typedef enum {

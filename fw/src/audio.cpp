@@ -11,6 +11,7 @@
 #define NOTIFY_MODE_VHF_RX      (1 << 4)
 #define NOTIFY_MODE_VHF_TX      (1 << 5)
 #define NOTIFY_DBG_MAX_VOL      (1 << 6)
+#define NOTIFY_DBG_IMD_TEST     (1 << 7)
 
 TaskHandle_t xAudioTaskHandle;
 static float last_volume_dB = 0;
@@ -95,6 +96,12 @@ void audio_logic_task(void *pvParameter) {
             }
             if(notifiedValue & NOTIFY_MODE_VHF_TX) {
                 // TODO
+            }
+            if(notifiedValue & NOTIFY_DBG_MAX_VOL) {
+                // TODO:
+            }
+            if(notifiedValue & NOTIFY_DBG_IMD_TEST) {
+                imd_test_wave.setAmplitude(INT16_MAX);
             }
         }
         vTaskDelay(pdMS_TO_TICKS(50));
@@ -209,6 +216,9 @@ void audio_debug(debug_action_t command_num) {
     switch(command_num) {
         case DEBUG_CMD_MAX_VOL:
             xTaskNotify(xAudioTaskHandle, NOTIFY_DBG_MAX_VOL, eSetBits);
+            break;
+        case DEBUG_CMD_IMD_TEST:
+            xTaskNotify(xAudioTaskHandle, NOTIFY_DBG_IMD_TEST, eSetBits);
             break;
     }
 }

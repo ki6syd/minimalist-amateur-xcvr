@@ -69,6 +69,9 @@ void info_task(void *param) {
     Serial.print("PA Current: ");
     Serial.println(power_get_pa_current());
 
+    Serial.print("Transmit Power: ");
+    Serial.println(radio_get_power());
+
     Serial.print("S-meter: ");
     Serial.println(radio_get_s_meter());
 
