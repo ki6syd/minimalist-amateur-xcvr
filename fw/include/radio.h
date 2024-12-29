@@ -38,6 +38,7 @@ typedef enum {
 typedef struct {
     uint64_t dial_freq;
     radio_audio_bw_t bw;
+    sideband_t sideband;
     float power;
 } radio_state_t;
 

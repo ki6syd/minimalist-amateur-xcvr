@@ -295,25 +295,7 @@ void handler_debug_post(AsyncWebServerRequest *request) {
 
     uint64_t command_num = request->getParam("command")->value().toInt();
 
-    // toggles the TX clock of the si5351
-    if(command_num == DEBUG_CMD_TXCLK) {
-        if(!handler_require_param(request, "value"))
-            return;
-        
-        String value = request->getParam("value")->value();
-        bool on_off;
-
-        if(strcmp(value.c_str(), "on") == 0)
-            on_off = true;
-        else if(strcmp(value.c_str(), "off") == 0) 
-            on_off = false;
-        else {
-            request->send(400, "text/plain", "Unknown value requested");
-            return;
-        }
-        radio_debug(DEBUG_CMD_TXCLK, &on_off);
-    }
-    else if(command_num == DEBUG_CMD_SET_CLOCKS) {
+    if(command_num == DEBUG_CMD_SET_CLOCKS) {
         if(!handler_require_param(request, "clk0") && !handler_require_param(request, "clk1") && !handler_require_param(request, "clk2"))
             return;
 
@@ -333,7 +315,7 @@ void handler_debug_post(AsyncWebServerRequest *request) {
     else if(command_num == DEBUG_CMD_REBOOT) {
         esp_restart();
     }
-    else if(command_num == DEBUG_CMD_CAL_XTAL || command_num == DEBUG_CMD_CAL_IF || command_num == DEBUG_CMD_CAL_BPF || command_num == DEBUG_CMD_STOP_CLOCKS || command_num == DEBUG_CMD_IQ_CLOCKS || command_num == DEBUG_CMD_STOP_BFO || command_num == DEBUG_CMD_STOP_VFO) {
+    else if(command_num == DEBUG_CMD_CAL_XTAL|| command_num == DEBUG_CMD_STOP_CLOCKS || command_num == DEBUG_CMD_STOP_BFO || command_num == DEBUG_CMD_STOP_VFO) {
         radio_debug((debug_action_t) command_num, nullptr);
     }
     else if(command_num == DEBUG_CMD_MAX_VOL || DEBUG_CMD_IMD_TEST) {

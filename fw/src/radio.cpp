@@ -15,10 +15,8 @@
 #define NOTIFY_QSK_EXPIRE     (1 << 2)
 #define NOTIFY_FREQ_CHANGE    (1 << 3)
 #define NOTIFY_CAL_XTAL       (1 << 4)
-#define NOTIFY_CAL_IF         (1 << 5)
-// #define NOTIFY_CAL_BPF        (1 << 6)
-#define NOTIFY_LOW_BAT        (1 << 7)
-#define NOTIFY_POWER_CHANGE   (1 << 8)
+#define NOTIFY_LOW_BAT        (1 << 5)
+#define NOTIFY_POWER_CHANGE   (1 << 6)
 
 #define FREQ_PLL          (SI5351_PLL_FIXED)
 
@@ -27,7 +25,6 @@ radio_rxtx_mode_t rxtx_mode = MODE_STARTUP;
 radio_band_t band = BAND_UNKNOWN;
 radio_filt_sweep_t sweep_config;
 radio_band_capability_t band_capability[NUMBER_BANDS];
-radio_filt_properties_t if_properties; // , bpf_properties;
 
 QueueHandle_t xRadioQueue;
 TaskHandle_t xRadioTaskHandle;
@@ -36,7 +33,7 @@ TimerHandle_t xQskTimer = NULL;
 bool ok_to_tx = false;
 
 uint64_t freq_dial = HF_DEFAULT_FREQ;
-
+sideband_t sideband = SIDEBAND_DEFAULT;
 float power = 1.0;
 
 void radio_task(void * pvParameter);
@@ -144,20 +141,18 @@ void radio_task(void *param) {
             // different logic depending on HF or VHF requested frequency
             if(radio_freq_is_hf(tmp.dial_freq)) {
                 freq_dial = tmp.dial_freq;
-                hf_set_dial_freq(freq_dial);
-                
+                sideband = tmp.sideband;
+                hf_set_dial_freq(freq_dial, sideband);
+
+                // audio_dsp module needs to know about sideband to configure hilbert xfmr properly
+                audio_dsp_set_sideband(sideband);
+
                 // force a relay update if needed
                 if(new_band != band)
                     radio_set_band(new_band);
 
                 // TODO: unpack any bandwidth changes from tmp.bw
                 // hf_set_clocks() needs to know the audio filter to account for sidetone offset?
-
-                // set sideband
-                if(tmp.dial_freq > 10000000)
-                  audio_dsp_set_sideband(SIDEBAND_USB);
-                else
-                  audio_dsp_set_sideband(SIDEBAND_LSB);
             }
             else {
               // update relays, enable module (if needed)
@@ -178,15 +173,6 @@ void radio_task(void *param) {
       if(notifiedValue & NOTIFY_CAL_XTAL) {
         hf_cal_tx_10MHz();
       }
-      if(notifiedValue & NOTIFY_CAL_IF) {
-        hf_cal_if_filt(sweep_config, &if_properties);
-      }
-      /*
-      if(notifiedValue & NOTIFY_CAL_BPF) {
-        radio_band_t band_to_sweep = radio_get_band(sweep_config.f_center);
-        hf_cal_bpf_filt(band_to_sweep, sweep_config, &bpf_properties);
-      }
-      */
       if(notifiedValue & NOTIFY_LOW_BAT) {
         ok_to_tx = false;
       }
@@ -220,7 +206,15 @@ bool radio_set_dial_freq(uint64_t freq) {
   if(!radio_freq_valid(freq))
     return false;
 
-  radio_state_t tmp = { .dial_freq = freq, .bw = radio_get_bw(), .power = power};
+  // TODO: dial frequency setting logic should exist in the frontend, implement basic 10MHz USB/LSB logic for now
+  // TODO: need a radio_set_sideband() function and also handlers
+  sideband_t new_sideband;
+  if(freq > 10000000)
+    new_sideband = SIDEBAND_USB;
+  else
+    new_sideband = SIDEBAND_LSB;
+
+  radio_state_t tmp = { .dial_freq = freq, .bw = radio_get_bw(), .sideband = new_sideband, .power = power};
 
   if(xQueueSend(xRadioQueue, (void *) &tmp, 0) != pdTRUE) {
     Serial.println("Unable to change frequency, queue full");
@@ -650,21 +644,11 @@ bool radio_freq_is_hf(uint64_t dial_freq) {
 
 void radio_debug(debug_action_t action, void *value) {
   switch(action) {
-    case DEBUG_CMD_TXCLK: {
-      /* DELETE ME??
-      bool on_off = *((bool *) value);
-      if(on_off)
-        si5351.output_enable(SI5351_IDX_TX, 1);
-      else
-        si5351.output_enable(SI5351_IDX_TX, 0);
-      */
-      break;
-    }
     case DEBUG_CMD_CAL_XTAL: {
       xTaskNotify(xRadioTaskHandle, NOTIFY_CAL_XTAL, eSetBits);
       break;
     }
-    case DEBUG_CMD_CAL_IF: {
+    case DEBUG_CMD_CAL_LPF: {
       sweep_config = {
         .f_center = 10000000,
         .f_span = 8000,
@@ -672,22 +656,9 @@ void radio_debug(debug_action_t action, void *value) {
         .num_to_avg = 10,
         .rolloff = 3
         };
-      xTaskNotify(xRadioTaskHandle, NOTIFY_CAL_IF, eSetBits);
+      // xTaskNotify(xRadioTaskHandle, NOTIFY_CAL_IF, eSetBits);
       break;
     }
-    /*
-    case DEBUG_CMD_CAL_BPF: {
-      sweep_config = {
-        .f_center = radio_get_dial_freq(),
-        .f_span = radio_get_dial_freq() / 2,
-        .num_steps = 50,
-        .num_to_avg = 5,
-        .rolloff = 3
-        };
-      xTaskNotify(xRadioTaskHandle, NOTIFY_CAL_BPF, eSetBits);
-      break;
-    }
-    */
     case DEBUG_CMD_STOP_CLOCKS: {
       si5351.output_enable(SI5351_IDX_BFO_I, 0);
       si5351.output_enable(SI5351_IDX_BFO_Q, 0);
@@ -701,25 +672,6 @@ void radio_debug(debug_action_t action, void *value) {
     }
     case DEBUG_CMD_STOP_VFO: {
       si5351.output_enable(SI5351_IDX_VFO, 0);
-      break;
-    }
-    case DEBUG_CMD_IQ_CLOCKS: {
-      /* DELETE ME??
-      // routine to test 90deg spaced clocks
-
-      si5351.set_freq(10000000 * 100, SI5351_IDX_BFO);
-      si5351.set_freq(10000000 * 100, SI5351_IDX_VFO);
-
-      si5351.set_phase(SI5351_IDX_BFO, 0);
-      // si5351.set_phase(SI5351_IDX_VFO, 115);  // why?
-
-      uint16_t phase_delay = (uint16_t) (SI5351_PLL_FIXED / 10000000);
-      si5351.set_phase(SI5351_IDX_VFO, phase_delay);
-
-      si5351.output_enable(SI5351_IDX_TX, 0);
-      si5351.output_enable(SI5351_IDX_BFO, 1);
-      si5351.output_enable(SI5351_IDX_VFO, 1);
-      */
       break;
     }
   }
