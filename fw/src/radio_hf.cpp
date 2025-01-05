@@ -13,7 +13,7 @@
 
 Si5351 si5351;
 
-uint64_t freq_if = 44995000;
+uint64_t freq_if = 45000000;
 uint64_t freq_vfo = 0;
 uint64_t freq_bfo = 0;
 
@@ -49,20 +49,26 @@ void hf_si5351_init() {
   // TODO: parse and have logic based on SI5351 status
   // expect to see a "0" when ANDing with (1<<3), this would indicate that there is no LOS related to the XTAL. 
 
+  // TODO: there are currently spurs from fractional dividers. Eliminate these
+
   si5351.init(SI5351_CRYSTAL_LOAD_8PF , si5351_xtal_freq, 0);
 
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLA);
   si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLB);
 
+  si5351.set_ms_source(SI5351_IDX_VFO, SI5351_PLLA);
+  si5351.set_ms_source(SI5351_IDX_BFO_I, SI5351_PLLB);
+  si5351.set_ms_source(SI5351_IDX_BFO_Q, SI5351_PLLB);
+
+  si5351.drive_strength(SI5351_IDX_VFO, SI5351_DRIVE_8MA);
   si5351.drive_strength(SI5351_IDX_BFO_I, SI5351_DRIVE_8MA);
   si5351.drive_strength(SI5351_IDX_BFO_Q, SI5351_DRIVE_8MA);
-  si5351.drive_strength(SI5351_IDX_VFO, SI5351_DRIVE_8MA);
 
   hf_set_dial_freq(radio_get_dial_freq(), SIDEBAND_USB);
 
+  si5351.output_enable(SI5351_IDX_VFO, 1);
   si5351.output_enable(SI5351_IDX_BFO_I, 1);
   si5351.output_enable(SI5351_IDX_BFO_Q, 1);
-  si5351.output_enable(SI5351_IDX_VFO, 1);
 }
 
 // helper function that only radio.cpp or radio_hf.cpp should call
@@ -92,14 +98,17 @@ void hf_set_dial_freq(uint64_t freq_dial, sideband_t sideband) {
 
 void hf_set_clocks(uint64_t freq_bfo, uint64_t freq_vfo, uint64_t freq_rf) {
   // TODO: remove freq_rf
+  si5351.set_freq(freq_vfo * 100, SI5351_IDX_VFO);
   si5351.set_freq(freq_bfo * 100 * BFO_CLOCK_DIV, SI5351_IDX_BFO_I);
   si5351.set_freq(freq_bfo * 100 * BFO_CLOCK_DIV, SI5351_IDX_BFO_Q);
-  si5351.set_freq(freq_vfo * 100, SI5351_IDX_VFO);
 
-  // TODO: set phase and BFO frequency a single time at startup?
-  uint16_t phase_delay = (uint16_t) (SI5351_PLL_FIXED / (freq_bfo * BFO_CLOCK_DIV));
+  // TODO: set phase and BFO frequency a single time at startup? Eliminates resets at a later time
+  // TODO: why is the hard-coded delay necessary?
+  uint16_t phase_delay = (uint16_t) (SI5351_PLL_FIXED / (freq_bfo * BFO_CLOCK_DIV / 2));
+  phase_delay = 20;
   si5351.set_phase(SI5351_IDX_BFO_I, 0);
   si5351.set_phase(SI5351_IDX_BFO_Q, phase_delay);
+  si5351.pll_reset(SI5351_PLLB);              // see: https://groups.io/g/EdenDSP/topic/si5351_at_70mhz/9274649
 
   // Serial.println(radio_freq_string());
 }

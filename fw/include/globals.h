@@ -29,7 +29,7 @@
 
 #define F_AUDIO                 8000
 #define F_SIDETONE_DEFAULT      499
-#define BFO_CLOCK_DIV           2
+#define BFO_CLOCK_DIV           1
 #define AUDIO_FILT_DEFAULT      AUDIO_FILT_CW
 #define SIDEBAND_DEFAULT        SIDEBAND_USB
 #define AUDIO_VOL_DEFAULT       0.75
