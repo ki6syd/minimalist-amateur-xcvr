@@ -34,6 +34,7 @@
 #define SIDEBAND_DEFAULT        SIDEBAND_USB
 #define AUDIO_VOL_DEFAULT       0.75
 #define AUDIO_SIDE_DEFAULT      0.8
+#define TX_POWER_DEFAULT        0.7
 #define AUDIO_VOL_DURING_CAL    0.01
 #define AUDIO_PGA_DEFAULT       true
 // #define AUDIO_EN_OUT_VBAN            // flakey

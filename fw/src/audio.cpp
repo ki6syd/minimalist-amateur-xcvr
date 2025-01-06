@@ -187,6 +187,7 @@ bool audio_set_tx_power(float power) {
     if(power < 0.0 || power > 1.0)
         return false;
     
+    // NOTE: does not set power yet, it'll update volume control on the next entry to TX mdoe
     Serial.print("Setting TX power: ");
     Serial.println(power);
 
