@@ -34,7 +34,7 @@ bool ok_to_tx = false;
 
 uint64_t freq_dial = HF_DEFAULT_FREQ;
 sideband_t sideband = SIDEBAND_DEFAULT;
-float power = 1.0;
+float power = TX_POWER_DEFAULT;
 
 void radio_task(void * pvParameter);
 void qsk_timer_callback(TimerHandle_t timer);
