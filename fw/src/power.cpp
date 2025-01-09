@@ -60,17 +60,14 @@ void power_init() {
   ledcAttachPin(BUCK_SYNC, PWM_CHANNEL_SYNC);
   ledcWrite(PWM_CHANNEL_SYNC, 2);
 
-  // set up BIAS_CTRL_0 with weak drive strength
+  // set up BIAS_CTRL_0, _1 using different LEDC channel
   ledcSetup(PWM_CHANNEL_BIAS_0, BIAS_CTRL_FREQ, BIAS_CTRL_BITS);
   ledcAttachPin(BIAS_CTRL_0, PWM_CHANNEL_BIAS_0);
   ledcWrite(PWM_CHANNEL_BIAS_0, 1);
-  gpio_set_drive_capability((gpio_num_t) BIAS_CTRL_0, GPIO_DRIVE_CAP_0);
 
-  // set up BIAS_CTRL_1 with weak drive strength
   ledcSetup(PWM_CHANNEL_BIAS_1, BIAS_CTRL_FREQ, BIAS_CTRL_BITS);
   ledcAttachPin(BIAS_CTRL_1, PWM_CHANNEL_BIAS_1);
   ledcWrite(PWM_CHANNEL_BIAS_1, 1);
-  gpio_set_drive_capability((gpio_num_t) BIAS_CTRL_1, GPIO_DRIVE_CAP_0);
   
 
   for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++)
@@ -217,7 +214,7 @@ void power_bias_to_current(float total_current) {
     do {
       // set duty cycle
       power_set_bias_duty(bias_outputs[i], bias_duties[i]);
-      vTaskDelay(pdMS_TO_TICKS(5));
+      vTaskDelay(pdMS_TO_TICKS(2));
 
       // measure current, adjust duty as needed
       for(uint16_t j = 0; j < 5; j++)
@@ -242,7 +239,7 @@ void power_bias_to_current(float total_current) {
   }
 
   // implement bias points we've found already
-  Serial.print("\tBias duty cycles: ");
+  Serial.print("Bias duty cycles: ");
   for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++) {
     power_set_bias_duty(bias_outputs[i], bias_duties[i]);
     Serial.print(bias_duties[i]);
