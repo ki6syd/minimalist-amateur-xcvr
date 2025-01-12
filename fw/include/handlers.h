@@ -23,6 +23,7 @@ void handler_power_set(AsyncWebServerRequest *request);
 void handler_power_get(AsyncWebServerRequest *request);
 void handler_bias_set(AsyncWebServerRequest *request);
 void handler_tune_set(AsyncWebServerRequest *request);
+void handler_iq_phase_set(AsyncWebServerRequest *request);
 void handler_iq_gains_set(AsyncWebServerRequest *request);
 void handler_githash_get(AsyncWebServerRequest *request);
 void handler_heap_get(AsyncWebServerRequest *request);

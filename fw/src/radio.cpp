@@ -306,9 +306,8 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
 
         if(radio_freq_is_hf(freq_dial)) {
           // check power amplifier bias, update if needed
-          // TODO: track bias current as a variable, set current based on mode or API call
           // TODO: let this run as a task in parallel, check on exit
-          power_bias_to_current(BIAS_CURRENT_CW);
+          power_bias_to_current(power_get_bias_target());
 
           // change audio mode, function will ignore if there's no change
           audio_set_mode(AUDIO_HF_TX_CW);

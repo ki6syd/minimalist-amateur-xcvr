@@ -28,6 +28,7 @@ typedef enum {
 power_bias_channel_t bias_outputs[] = {BIAS_CHANNEL_0, BIAS_CHANNEL_1};
 float pa_curr_error = 0, pa_last_duty = 0.25, pa_duty = 0.25, pa_integral = 0;
 float pa_current_offset = 0;
+float pa_bias_target = 0;
 float bias_duties[NUM_BIAS_OUTPUTS];
 
 TaskHandle_t xAnalogSenseTaskHandle;
@@ -76,7 +77,6 @@ void power_init() {
     power_set_bias_duty(bias_outputs[i], 0);
 
   // find gate bias point
-  Serial.println("biasing");
   measure_pa_offset();
   power_bias_to_current(BIAS_CURRENT_CW);
 
@@ -176,7 +176,7 @@ void measure_pa_offset() {
   pa_current_offset = pa_curr_conversion() / 10;
 
   Serial.print("Baseline PA current: ");
-  Serial.print(pa_current_offset);
+  Serial.println(pa_current_offset);
 
   digitalWrite(PA_VDD_CTRL, LOW);
 }
@@ -185,12 +185,25 @@ void measure_pa_offset() {
 // then leaves the amplifier at this bias point, no longer actively controls
 // this function only returns when current is stable
 void power_bias_to_current(float total_current) {
+  // remember this setting
+  pa_bias_target = total_current;
+
+  // special case: nearly zero bias current. Don't actually want any duty cycle
+  if(total_current < 0.001) {
+    for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++) {
+      bias_duties[i] = 0;
+      power_set_bias_duty(bias_outputs[i], bias_duties[i]);
+    }
+    Serial.println("Biasing to zero current");
+    return;
+  }
+
   float measured_current = 0;
 
   digitalWrite(PA_VDD_CTRL, HIGH);
 
 /*
-  // check if TOTAL biasing is correct. can exit if it is
+  // check if TOTAL biasing is correct. can exit if it is already set properly
   vTaskDelay(pdMS_TO_TICKS(5));
   measured_current = pa_curr_conversion();
   if(abs(measured_current - total_current) < (BIAS_TOLERANCE_PCT * total_current)) {
@@ -245,6 +258,7 @@ void power_bias_to_current(float total_current) {
     Serial.print(bias_duties[i]);
     Serial.print("\t");
   }
+  Serial.println();
 
 /*
   // this part isn't strictly needed
@@ -256,4 +270,8 @@ void power_bias_to_current(float total_current) {
   */
 
   digitalWrite(PA_VDD_CTRL, LOW);
+}
+
+float power_get_bias_target() {
+  return pa_bias_target; 
 }

@@ -1,6 +1,7 @@
 #include "handlers.h"
 #include "globals.h"
 #include "radio.h"
+#include "radio_hf.h"
 #include "audio.h"
 #include "audio_dsp.h"
 #include "keyer.h"
@@ -267,6 +268,11 @@ void handler_bias_set(AsyncWebServerRequest *request) {
 
     float curr_request = request->getParam("curr")->value().toFloat();
     power_bias_to_current(curr_request);
+
+    if(request->hasParam("stayBiased") && request->getParam("stayBiased")->value() == "true") {
+        digitalWrite(PA_VDD_CTRL, HIGH);
+    }
+
     request->send(201, "text/plain", "OK");
 }
 
@@ -286,6 +292,18 @@ void handler_tune_set(AsyncWebServerRequest *request) {
     }
     else {
         request->send(400, "text/plain", "Invalid tune state requested");
+    }
+}
+
+void handler_iq_phase_set(AsyncWebServerRequest *request) {
+    if(!handler_require_param(request, "phase"))
+        return;
+
+    int16_t phase_request = request->getParam("phase")->value().toInt();
+    if(hf_set_phase(phase_request))
+        request->send(201, "text/plain", "OK");
+    else {
+        request->send(400, "text/plain", "Phase request out of range");
     }
 }
 

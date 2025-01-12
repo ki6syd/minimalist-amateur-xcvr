@@ -27,6 +27,9 @@ void audio_init() {
     if(fs_setting_exists(PREFERENCE_FILE, "tx_power"))
         tx_power = fs_load_setting(PREFERENCE_FILE, "tx_power").toFloat();
 
+    // todo: load gains from file system if they exist, call audio_set_iq_gains()
+
+
     // Initialize DSP subsystem
     audio_dsp_init();
 

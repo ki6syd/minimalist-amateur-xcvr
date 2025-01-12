@@ -17,6 +17,8 @@ uint64_t freq_if = 45000000;
 uint64_t freq_vfo = 0;
 uint64_t freq_bfo = 0;
 
+uint16_t phase_delay = 19;
+
 // variable to track what value of audio_get_rx_db() corresponds to the #define'd S_UNIT_REF above
 float audio_level_sREF = -49.4;
 
@@ -29,6 +31,8 @@ void hf_init() {
   pinMode(LPF_SEL_1, OUTPUT);
   pinMode(TX_RX_SEL, OUTPUT);
   digitalWrite(TX_RX_SEL, LOW);     // RX mode
+
+  // TODO: load phase_delay from file system, if it exists
 
   hf_si5351_init();
 }
@@ -103,9 +107,6 @@ void hf_set_clocks(uint64_t freq_bfo, uint64_t freq_vfo, uint64_t freq_rf) {
   si5351.set_freq(freq_bfo * 100 * BFO_CLOCK_DIV, SI5351_IDX_BFO_Q);
 
   // TODO: set phase and BFO frequency a single time at startup? Eliminates resets at a later time
-  // TODO: why is the hard-coded delay necessary?
-  uint16_t phase_delay = (uint16_t) (SI5351_PLL_FIXED / (freq_bfo * BFO_CLOCK_DIV / 2));
-  phase_delay = 20;
   si5351.set_phase(SI5351_IDX_BFO_I, 0);
   si5351.set_phase(SI5351_IDX_BFO_Q, phase_delay);
   si5351.pll_reset(SI5351_PLLB);              // see: https://groups.io/g/EdenDSP/topic/si5351_at_70mhz/9274649
@@ -155,4 +156,17 @@ void hf_cal_tx_10MHz() {
   vTaskDelay(pdMS_TO_TICKS(10000));
 
   radio_set_rxtx_mode(MODE_QSK_COUNTDOWN);
+}
+
+bool hf_set_phase(int16_t phase) {
+  // TODO: enforce reasonable bounds
+  if(phase < -100 || phase > 100)
+    return false;
+
+  phase_delay = phase;
+
+  // force an update to clocks
+  hf_set_clocks(freq_bfo, freq_vfo, radio_get_dial_freq());
+
+  return true;
 }
