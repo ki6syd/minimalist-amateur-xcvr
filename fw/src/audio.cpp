@@ -106,6 +106,7 @@ void audio_logic_task(void *pvParameter) {
                 // TODO:
             }
             if(notifiedValue & NOTIFY_DBG_IMD_TEST) {
+                // TODO: cut down volumes, summing creates too large a signal
                 imd_test_wave.setAmplitude(INT16_MAX);
             }
         }

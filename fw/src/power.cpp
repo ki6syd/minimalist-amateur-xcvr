@@ -189,7 +189,7 @@ void power_bias_to_current(float total_current) {
   pa_bias_target = total_current;
 
   // special case: nearly zero bias current. Don't actually want any duty cycle
-  if(total_current < 0.001) {
+  if(total_current < 0.005) {
     for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++) {
       bias_duties[i] = 0;
       power_set_bias_duty(bias_outputs[i], bias_duties[i]);

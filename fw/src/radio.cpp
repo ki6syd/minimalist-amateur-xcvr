@@ -182,6 +182,7 @@ void radio_task(void *param) {
           Serial.println(tmp.power);
           power = tmp.power;
           audio_set_tx_power(tmp.power);
+          
         }
       }
     }
@@ -307,6 +308,7 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
         if(radio_freq_is_hf(freq_dial)) {
           // check power amplifier bias, update if needed
           // TODO: let this run as a task in parallel, check on exit
+          // TODO: should also have a power_bias_to_voltage() function, if mode is CW. Doesn't make sense to bias based on current for class C operation?
           power_bias_to_current(power_get_bias_target());
 
           // change audio mode, function will ignore if there's no change
