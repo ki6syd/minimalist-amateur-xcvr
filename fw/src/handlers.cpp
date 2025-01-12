@@ -260,6 +260,54 @@ void handler_power_get(AsyncWebServerRequest *request) {
     request->send(200, "text/plain", String(radio_get_power()));
 }
 
+
+void handler_bias_set(AsyncWebServerRequest *request) {
+    if(!handler_require_param(request, "curr"))
+        return;
+
+    float curr_request = request->getParam("curr")->value().toFloat();
+    power_bias_to_current(curr_request);
+    request->send(201, "text/plain", "OK");
+}
+
+
+void handler_tune_set(AsyncWebServerRequest *request) {
+    if(!handler_require_param(request, "tune"))
+        return;
+
+    String state = request->getParam("tune")->value();
+    if(state == "on") {
+        radio_key_on();
+        request->send(201, "text/plain", "OK");
+    }
+    else if(state == "off") {
+        radio_key_off();
+        request->send(201, "text/plain", "OK");
+    }
+    else {
+        request->send(400, "text/plain", "Invalid tune state requested");
+    }
+}
+
+void handler_iq_gains_set(AsyncWebServerRequest *request) {
+    if(!handler_require_param(request, "i_tx") || 
+       !handler_require_param(request, "q_tx") ||
+       !handler_require_param(request, "i_rx") ||
+       !handler_require_param(request, "q_rx"))
+        return;
+
+    float i_tx = request->getParam("i_tx")->value().toFloat();
+    float q_tx = request->getParam("q_tx")->value().toFloat();
+    float i_rx = request->getParam("i_rx")->value().toFloat();
+    float q_rx = request->getParam("q_rx")->value().toFloat();
+
+    if(audio_set_iq_gains(i_tx, q_tx, i_rx, q_rx)) {
+        request->send(201, "text/plain", "OK");
+    } else {
+        request->send(400, "text/plain", "Gain values must be between 0 and 1");
+    }
+}
+
 void handler_mac_get(AsyncWebServerRequest *request) {
     request->send(200, "text/plain", wifi_get_mac());
 }
@@ -276,7 +324,7 @@ void handler_ip_get(AsyncWebServerRequest *request) {
     request->send(200, "text/plain", wifi_get_ip());
 }
 
-// TODO: terrible idea to access the file system in this handler...
+// TODO: terrible idea to access the file sys    in this handler...
 void handler_revision_get(AsyncWebServerRequest *request) {
     request->send(200, "text/plain", fs_load_setting(HARDWARE_FILE, "hardware_rev"));
 }
@@ -337,3 +385,4 @@ void handler_debug_post(AsyncWebServerRequest *request) {
     }
     request->send(201, "text/plain", "OK");
 }
+

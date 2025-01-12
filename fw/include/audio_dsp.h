@@ -34,6 +34,8 @@ extern audio_filt_t cur_filt;
 extern sideband_t cur_sideband;
 extern float i_rx_gain;
 extern float q_rx_gain;
+extern float i_tx_gain;
+extern float q_tx_gain;
 
 extern SineWaveGenerator<int16_t> sidetone_wave;
 extern SineWaveGenerator<int16_t> imd_test_wave;

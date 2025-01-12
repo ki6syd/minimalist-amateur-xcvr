@@ -59,6 +59,8 @@ sideband_t cur_sideband = SIDEBAND_DEFAULT;
 uint16_t max_safe_vol = INT16_MAX;
 float i_rx_gain = 1.0;
 float q_rx_gain = 1.0;
+float i_tx_gain = 1.0;
+float q_tx_gain = 1.0;
 
 void audio_dsp_init() {
 
@@ -118,7 +120,7 @@ void audio_dsp_task(void *pvParameter) {
 
     // TODO: Turn this into "iq_rx_balance" and also add an iq_tx_balance that acts on the sidetone audio wave. Need separate adjustments
     iq_balance.begin(info_stereo);
-    iq_balance.setVolume(q_rx_gain, 0);                   // replace this with actual I/Q gain correction, for both RX and TX
+    iq_balance.setVolume(q_rx_gain, 0);
     iq_balance.setVolume(i_rx_gain, 1);
 
     es8388_sidetone_mixer->setOutput(hilbert);

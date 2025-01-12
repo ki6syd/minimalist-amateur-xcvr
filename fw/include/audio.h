@@ -17,6 +17,7 @@ void audio_en_rx_audio(bool en);
 void audio_en_pga(bool gain);
 bool audio_get_pga();
 bool audio_set_tx_power(float power);
+bool audio_set_iq_gains(float i_tx, float q_tx, float i_rx, float q_rx);
 float audio_get_rx_db(uint16_t num_to_avg, uint16_t delay_ms);
 float audio_get_rx_vol();
 float audio_get_loudness();

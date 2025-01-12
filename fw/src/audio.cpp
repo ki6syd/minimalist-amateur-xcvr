@@ -82,7 +82,9 @@ void audio_logic_task(void *pvParameter) {
 
                 Serial.print("Setting tx_power: ");
                 Serial.println(tx_power);
-                tx_vol.setVolume(tx_power);          // TODO: control TX power here, make a call to radio_get_power()
+                // TODO: get tx_power from a call to radio_get_power(), that module should maintain the power level
+                tx_vol.setVolume(tx_power * q_tx_gain, 0);
+                tx_vol.setVolume(tx_power * i_tx_gain, 1);
 
                 // TODO: consider deleting this from the audio mode change. Needs low latency so also exists in the sidetone enabling.
                 hp_vol.setVolume(sidetone_vol * global_vol);
@@ -163,7 +165,6 @@ void audio_en_sidetone(bool en) {
     else
         amp = 0;
 
-    Serial.println("Setting sidetone amp");
     sidetone_wave.setAmplitude(amp);
 
     // this call also happens during mode change. Added here to avoid loud volume before mode fully changes.
@@ -195,6 +196,23 @@ bool audio_set_tx_power(float power) {
     return true;
 }
 
+// update all the gains for the IQ balance, both TX and RX
+bool audio_set_iq_gains(float i_tx, float q_tx, float i_rx, float q_rx) {
+    if(i_tx < 0 || i_tx > 1 || q_tx < 0 || q_tx > 1 || 
+       i_rx < 0 || i_rx > 1 || q_rx < 0 || q_rx > 1) {
+        return false;
+    }
+    
+    i_tx_gain = i_tx;
+    q_tx_gain = q_tx; 
+    i_rx_gain = i_rx;
+    q_rx_gain = q_rx;
+
+    // force an update to gains by setting the mode again
+    audio_set_mode(cur_audio_mode);
+
+    return true;
+}
 void audio_en_pga(bool enable) {
     xTaskNotify(xAudioTaskHandle, 
                 enable ? NOTIFY_PGA_ON : NOTIFY_PGA_OFF, 
