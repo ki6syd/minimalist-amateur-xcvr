@@ -17,7 +17,7 @@ uint64_t freq_if = 45000000;
 uint64_t freq_vfo = 0;
 uint64_t freq_bfo = 0;
 
-uint16_t phase_delay = 19;
+uint16_t phase_delay = 18;
 
 // variable to track what value of audio_get_rx_db() corresponds to the #define'd S_UNIT_REF above
 float audio_level_sREF = -49.4;

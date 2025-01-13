@@ -260,15 +260,27 @@ void power_bias_to_current(float total_current) {
   }
   Serial.println();
 
-/*
-  // this part isn't strictly needed
-  // measure current and report it
-  Serial.print("\tBias current after routine: ");
-  vTaskDelay(pdMS_TO_TICKS(2));
-  measured_current = pa_curr_conversion();
-  Serial.println(measured_current);
-  */
+  digitalWrite(PA_VDD_CTRL, LOW);
+}
 
+void power_bias_to_voltage(float voltage) {  
+  if(voltage < 0 || voltage > BIAS_MAX_VOLT * BIAS_VOLT_GAIN) {
+    return;
+  }
+
+  // calculate duty cycle
+  float duty = voltage / (BIAS_MAX_VOLT * BIAS_VOLT_GAIN);
+
+  // apply duty cycle to each channel
+  Serial.print("Bias duty cycles: ");
+  for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++) {
+    power_set_bias_duty(bias_outputs[i], duty);
+    Serial.print(duty);
+    Serial.print("\t");
+  }
+  Serial.println();
+
+  // put bias control line in a deterministic state
   digitalWrite(PA_VDD_CTRL, LOW);
 }
 

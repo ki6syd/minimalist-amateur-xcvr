@@ -261,13 +261,25 @@ void handler_power_get(AsyncWebServerRequest *request) {
     request->send(200, "text/plain", String(radio_get_power()));
 }
 
-
+// TODO: add a handler for getting the bias duty, voltage, or current
 void handler_bias_set(AsyncWebServerRequest *request) {
-    if(!handler_require_param(request, "curr"))
+    if(!request->hasParam("curr") && !request->hasParam("volt")) {
+        request->send(400, "text/plain", "Send either curr/volt and a value");
         return;
+    }
 
-    float curr_request = request->getParam("curr")->value().toFloat();
-    power_bias_to_current(curr_request);
+    if(request->hasParam("curr")) {
+        float curr_request = request->getParam("curr")->value().toFloat();
+        power_bias_to_current(curr_request);
+    }
+    else if(request->hasParam("volt")) {
+        float volt_request = request->getParam("volt")->value().toFloat();
+        power_bias_to_voltage(volt_request);
+    }
+    else {
+        request->send(400, "text/plain", "Invalid bias setting requested");
+        return;
+    }
 
     if(request->hasParam("stayBiased") && request->getParam("stayBiased")->value() == "true") {
         digitalWrite(PA_VDD_CTRL, HIGH);
@@ -377,6 +389,20 @@ void handler_debug_post(AsyncWebServerRequest *request) {
         Serial.println(clk0_request);
         Serial.println(clk1_request);
         Serial.println(clk2_request);
+    }
+    else if(command_num == DEBUG_CMD_PA_VDD) {
+        if(!handler_require_param(request, "value"))
+            return;
+
+        String value = request->getParam("value")->value();
+        if(strcmp(value.c_str(), "on") == 0)
+            digitalWrite(PA_VDD_CTRL, HIGH);
+        else if(strcmp(value.c_str(), "off") == 0) 
+            digitalWrite(PA_VDD_CTRL, LOW);
+        else {
+            request->send(400, "text/plain", "Unknown value requested");
+            return;
+        }
     }
     else if(command_num == DEBUG_CMD_REBOOT) {
         esp_restart();

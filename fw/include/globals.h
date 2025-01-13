@@ -34,7 +34,7 @@
 #define SIDEBAND_DEFAULT        SIDEBAND_USB
 #define AUDIO_VOL_DEFAULT       0.75
 #define AUDIO_SIDE_DEFAULT      0.8
-#define TX_POWER_DEFAULT        0.7
+#define TX_POWER_DEFAULT        0.8
 #define AUDIO_VOL_DURING_CAL    0.01
 #define AUDIO_PGA_DEFAULT       true
 // #define AUDIO_EN_OUT_VBAN            // flakey
@@ -75,7 +75,8 @@ typedef enum {
     DEBUG_CMD_IMD_TEST=9,
     DEBUG_CMD_TUNE_ON=10,
     DEBUG_CMD_TUNE_OFF=11,
-    DEBUG_CMD_CAL_LPF=12
+    DEBUG_CMD_CAL_LPF=12,
+    DEBUG_CMD_PA_VDD=13
 } debug_action_t;
 
 typedef enum {

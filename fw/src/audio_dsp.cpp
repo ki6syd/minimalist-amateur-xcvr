@@ -105,7 +105,10 @@ void audio_dsp_task(void *pvParameter) {
     cfg_tx.pin_ws = HP_DAC_LRCLK;
     pcm1502_stream.begin(cfg_tx);
 
+    // allocate the OutputMixer, also define output count before attaching anything - necessary to get correct behavior, TBD why.
     es8388_sidetone_mixer = new OutputMixer<int16_t>();
+    es8388_sidetone_mixer->setOutputCount(3);       // "output" is a confusing name, actually refers to number of sources combined into one
+
     iq_sum = new OutputMixer<int16_t>();
 
     copier_iq_in.begin(*es8388_sidetone_mixer, iq_balance);
@@ -115,7 +118,7 @@ void audio_dsp_task(void *pvParameter) {
     sidetone_wave.begin(info_stereo, sidetone_freq);
     sidetone_wave.setAmplitude(0);
 
-    imd_test_wave.begin(info_stereo, sidetone_freq + 1000);
+    imd_test_wave.begin(info_stereo, sidetone_freq+100);    // TODO: should be more like 1kHz apart for a real IMD test. Two tones shouldn't be harmonically related
     imd_test_wave.setAmplitude(0);
 
     // TODO: Turn this into "iq_rx_balance" and also add an iq_tx_balance that acts on the sidetone audio wave. Need separate adjustments
@@ -124,7 +127,6 @@ void audio_dsp_task(void *pvParameter) {
     iq_balance.setVolume(i_rx_gain, 1);
 
     es8388_sidetone_mixer->setOutput(hilbert);
-    es8388_sidetone_mixer->setOutputCount(3);       // "output" is a confusing name, actually refers to number of sources combined into one
     es8388_sidetone_mixer->begin();
     es8388_sidetone_mixer->setWeight(0, 1.0);
     es8388_sidetone_mixer->setWeight(1, 1.0);
