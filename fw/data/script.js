@@ -660,12 +660,9 @@ function json_spots_to_table(num_spots, col_names, table_id) {
    thead.appendChild(tr); // Append the header row to the header
    table.append(tr) // Append the header to the table
 
-  try {
-    var req = new XMLHttpRequest(); // a new request
-    req.open("GET", url_string, false);
-    req.send(null);
-    var json_obj = JSON.parse(req.responseText);
-     
+   fetch(url_string)
+   .then(response => response.json())
+   .then(json_obj => {
      // Loop through the JSON data and create table rows
      json_obj.forEach((item) => {
         var tr = document.createElement("tr");
@@ -720,9 +717,7 @@ function json_spots_to_table(num_spots, col_names, table_id) {
 
         tr.appendChild(td);
 
-
         table.appendChild(tr);
-        
      });
 
     // clear the container
@@ -733,9 +728,8 @@ function json_spots_to_table(num_spots, col_names, table_id) {
      container.appendChild(table) // Append the table to the container element
 
      spot_fetch_errors = 0;
-
-  }
-  catch {
+   })
+   .catch(error => {
     spot_fetch_errors += 1;
 
     // allow up to 5 failures to fetch spots before showing the failure
@@ -749,7 +743,7 @@ function json_spots_to_table(num_spots, col_names, table_id) {
       p.appendChild(p_text)
       container.appendChild(p)
     }
-  }
+   });
 
 }
 
