@@ -48,7 +48,7 @@ void wifi_init() {
 
         // set up AP with hardcoded 192.168.1.1 address
         WiFi.mode(WIFI_AP);
-        WiFi.softAPConfig(IPAddress(192, 168, 1, 1), IPAddress(192, 168, 1, 1), IPAddress(255, 255, 255, 0));
+        WiFi.softAPConfig(IPAddress(192, 168, 1, 1), IPAddress(0, 0, 0, 0), IPAddress(255, 255, 255, 0));
         WiFi.softAP(fs_load_setting(PREFERENCE_FILE, "ap_ssid"), fs_load_setting(PREFERENCE_FILE, "ap_password"), 11);
         ip = WiFi.softAPIP();
     }
