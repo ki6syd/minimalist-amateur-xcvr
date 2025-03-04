@@ -69,6 +69,12 @@ void info_task(void *param) {
     Serial.print("PA Current: ");
     Serial.println(power_get_pa_current());
 
+    Serial.print("PA Voltage: ");
+    Serial.println(power_get_pa_volt());
+
+    Serial.print("PA Temperature: ");
+    Serial.println(power_get_pa_temp());
+
     Serial.print("Transmit Power: ");
     Serial.println(radio_get_power());
 
