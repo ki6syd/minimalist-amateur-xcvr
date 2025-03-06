@@ -48,6 +48,7 @@ static const server_handler_t handlers[] = {
     {API_V1,    HTTP_PUT,   "power",            handler_power_set},
     {API_V1,    HTTP_GET,   "power",            handler_power_get},
     {API_V1,    HTTP_PUT,   "bias",             handler_bias_set},
+    {API_V1,    HTTP_PUT,   "agc",              handler_agc_set},
     {API_V1,    HTTP_PUT,   "tune",             handler_tune_set},
     {API_V1,    HTTP_PUT,   "iqPhase",          handler_iq_phase_set},
     {API_V1,    HTTP_PUT,   "iqGains",          handler_iq_gains_set},

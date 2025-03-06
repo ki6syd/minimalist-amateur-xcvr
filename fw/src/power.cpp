@@ -121,6 +121,8 @@ void analog_sense_task(void *param) {
     pa_curr = power_adc_conversion(ADC_CHANNEL_PA_IDD);
     pa_temp = power_adc_conversion(ADC_CHANNEL_PA_TEMP);
 
+    // TODO: use the last pa_curr reading as the offset if the power amp is not biased
+
     // TODO: move the below battery monitoring logic into a different task from ADC reads
     // figure out whether we're on USB power? Don't run this logic if voltage is very low
     if(input_volt + VDIODE > VUSB_MAX) {
@@ -176,6 +178,7 @@ float power_adc_conversion(adc_channel_t channel) {
     }
 
     // delay to allow settling
+    // TODO: remove this delay if there was no change to the mux control. Would allow higher read rates
     vTaskDelay(pdMS_TO_TICKS(1));
 
     // scale and return

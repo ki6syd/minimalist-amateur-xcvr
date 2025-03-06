@@ -288,6 +288,24 @@ void handler_bias_set(AsyncWebServerRequest *request) {
     request->send(201, "text/plain", "OK");
 }
 
+void handler_agc_set(AsyncWebServerRequest *request) {
+    if(!request->hasParam("volt")) {
+        request->send(400, "text/plain", "Send volt and a value");
+        return;
+    }
+
+    if(request->hasParam("volt")) {
+        float volt_request = request->getParam("volt")->value().toFloat();
+        power_agc_to_voltage(volt_request);
+    }
+    else {
+        request->send(400, "text/plain", "Invalid AGC setting requested");
+        return;
+    }
+
+    request->send(201, "text/plain", "OK");
+}
+
 
 void handler_tune_set(AsyncWebServerRequest *request) {
     if(!handler_require_param(request, "tune"))
