@@ -11,6 +11,11 @@ typedef enum {
     ADC_CHANNEL_PA_TEMP
 } adc_channel_t;
 
+typedef enum {
+    BIAS_CHANNEL_0 = 0,
+    BIAS_CHANNEL_1 = 1,
+} power_bias_channel_t;
+
 void power_init();
 void power_update_freq(uint32_t freq);
 float power_adc_conversion(adc_channel_t channel);
@@ -21,4 +26,6 @@ float power_get_pa_temp();
 void power_bias_to_current(float total_current);
 void power_bias_to_voltage(float voltage);
 float power_get_bias_target();
+float power_get_bias_duty(power_bias_channel_t channel);
+float power_get_agc_duty();
 void power_agc_to_voltage(float voltage);
