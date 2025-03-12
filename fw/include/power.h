@@ -3,6 +3,10 @@
 #include <Arduino.h>
 
 #define BIAS_CURRENT_CW     0.1
+#define BIAS_VOLT_CW        4
+
+#define AGC_VOLT_RX         4.5
+#define AGC_VOLT_TX         2.5
 
 typedef enum {
     ADC_CHANNEL_VIN,

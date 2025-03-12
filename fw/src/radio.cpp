@@ -259,6 +259,9 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
         if(radio_freq_is_hf(freq_dial)) {
           // change audio mode, function will ignore if there's no change
           audio_set_mode(AUDIO_HF_RX_CW);
+
+          // change AGC setpoint
+          power_agc_to_voltage(AGC_VOLT_RX);
         }
         else {
             audio_set_mode(AUDIO_VHF_RX);
@@ -306,10 +309,15 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
         rxtx_mode = MODE_TX;
 
         if(radio_freq_is_hf(freq_dial)) {
-          // check power amplifier bias, update if needed
           // TODO: let this run as a task in parallel, check on exit
-          // TODO: should also have a power_bias_to_voltage() function, if mode is CW. Doesn't make sense to bias based on current for class C operation?
-          power_bias_to_current(power_get_bias_target());
+          // command power amplifier bias depending on modulation
+          if(bw == BW_CW)
+            power_bias_to_voltage(BIAS_VOLT_CW);
+          else
+            power_bias_to_current(power_get_bias_target());
+
+          // change AGC setpoint
+          power_agc_to_voltage(AGC_VOLT_TX);
 
           // change audio mode, function will ignore if there's no change
           audio_set_mode(AUDIO_HF_TX_CW);

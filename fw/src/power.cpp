@@ -14,8 +14,8 @@
 
 #define BIAS_CTRL_BITS      8
 #define BIAS_CTRL_FREQ      100e3
-#define BIAS_MAX_DUTY       0.7
-#define BIAS_TOLERANCE_PCT  0.05
+#define BIAS_MAX_DUTY       0.9
+#define BIAS_TOLERANCE      0.1
 
 #define AGC_CTRL_BITS       8
 #define AGC_CTRL_FREQ       100e3
@@ -24,13 +24,13 @@
 #define TEMP_REFERENCE      (25 + TEMP_ABSOLUTE_0)
 
 #define NUM_BIAS_OUTPUTS    2
-#define BIAS_KP             0.5
-#define BIAS_DUTY_INITIAL   0.25
+#define BIAS_KP             1
+#define BIAS_KD             -2
+#define BIAS_DUTY_INITIAL   0.5
 
 
 power_bias_channel_t bias_outputs[] = {BIAS_CHANNEL_0, BIAS_CHANNEL_1};
 float pa_curr_error = 0, pa_last_duty = 0.25, pa_duty = 0.25, pa_integral = 0;
-float pa_current_offset = 0;
 float pa_bias_target = 0;
 float bias_duties[NUM_BIAS_OUTPUTS];
 float agc_duty;
@@ -47,7 +47,7 @@ uint32_t num_low_samples = 0;
 void analog_sense_task(void *pvParameter);
 void biasing_task(void *pvParameter);
 void power_set_bias_duty(power_bias_channel_t channel, float duty);
-void power_measure_pa_offset();
+void power_sweep_duty();
 void power_set_agc_duty(float duty);
 
 void power_init() {
@@ -88,18 +88,15 @@ void power_init() {
   ledcAttachPin(AGC_CTRL, PWM_CHANNEL_AGC);
   ledcWrite(PWM_CHANNEL_AGC, 1);
 
-  for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++)
-    bias_duties[i] = BIAS_DUTY_INITIAL;
+  // set bias channels to zero
   for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++)
     power_set_bias_duty(bias_outputs[i], 0);
 
   // find gate bias point
-  power_measure_pa_offset();
   power_bias_to_current(BIAS_CURRENT_CW);
 
-  // set AGC voltage to a useful value
-  // TODO: parametrize this voltage
-  power_agc_to_voltage(4.0);
+  // set AGC voltage
+  power_agc_to_voltage(AGC_VOLT_RX);
 
   xTaskCreatePinnedToCore(
       analog_sense_task,
@@ -127,8 +124,8 @@ void analog_sense_task(void *param) {
       xSemaphoreGive(xADCmutex);
     }
 
-    // TODO: check if there is a nonnegligible offset value, otherwise delete the concept of an offset
-    // TODO: use the last pa_curr reading as the offset if the power amp is not biased
+
+    // TODO: build temperature monitoring logic. Cut off at high temp, shift biasing with temp
 
     // TODO: move the below battery monitoring logic into a different task from ADC reads
     // figure out whether we're on USB power? Don't run this logic if voltage is very low
@@ -186,14 +183,14 @@ float power_adc_conversion(adc_channel_t channel) {
 
     // delay to allow settling
     // TODO: remove this delay if there was no change to the mux control. Would allow higher read rates
-    vTaskDelay(pdMS_TO_TICKS(1));
+    vTaskDelay(pdMS_TO_TICKS(2));
 
     // scale and return
     switch(channel) {
       case ADC_CHANNEL_PA_VDD:
         return (float) analogRead(ADC_MUX_OUT) * ADC_MAX_VOLT / ADC_PA_VDD_SCALE / ADC_FS_COUNTS;
       case ADC_CHANNEL_PA_IDD:
-        return ((float) analogRead(ADC_MUX_OUT) * ADC_MAX_VOLT / ADC_PA_IDD_SCALE / ADC_FS_COUNTS) - pa_current_offset;
+        return ((float) analogRead(ADC_MUX_OUT) * ADC_MAX_VOLT / ADC_PA_IDD_SCALE / ADC_FS_COUNTS);
       case ADC_CHANNEL_PA_TEMP:
         float thermistor_voltage = (float) analogRead(ADC_MUX_OUT) * ADC_MAX_VOLT / ADC_FS_COUNTS;
         float thermistor_resistance =  ADC_PA_THERM_RES * (thermistor_voltage / (ADC_MAX_VOLT - thermistor_voltage));
@@ -239,30 +236,48 @@ void power_set_bias_duty(power_bias_channel_t channel, float duty) {
   }
 }
 
-// finds any offset present in the PA current measurement
-todo: delete this function, there is no baseline current
-void power_measure_pa_offset() {
-  float sum = 0;
-  digitalWrite(PA_VDD_CTRL, HIGH);
+// debug function - sweeps duty cycle for each channel and reads out current
+void power_sweep_duty() {
+  float measured_current = 0;
 
-  // turn off bias outputs, add settling time
+  // turn off all bias channels before beginning measurement process
   for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++)
     power_set_bias_duty(bias_outputs[i], 0);
+
+  vTaskDelay(pdMS_TO_TICKS(10));
+  digitalWrite(PA_VDD_CTRL, HIGH);
   vTaskDelay(pdMS_TO_TICKS(10));
 
-  // wait for mutex to be available before repeated reads
-  if(xSemaphoreTake(xADCmutex, portMAX_DELAY) == pdTRUE) {  
-    // average 10 readings
-    pa_current_offset= 0;
-    for(uint16_t j = 0; j < 10; j++)
-          sum += power_adc_conversion(ADC_CHANNEL_PA_IDD);
-    pa_current_offset = sum / 10;
-  }
-  // done reading - return mutex
-  xSemaphoreGive(xADCmutex);
+  // sweep each channel
+  for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++) {
+    Serial.print("biasing channel ");
+    Serial.println(i);
+    vTaskDelay(pdMS_TO_TICKS(10));
+    
+    for(float duty = 0.2; duty <= 0.8; duty += 0.05) {
+      // set duty cycle, allow for settling
+      bias_duties[i] = duty;
+      power_set_bias_duty(bias_outputs[i], bias_duties[i]);
+      vTaskDelay(pdMS_TO_TICKS(10));
 
-  Serial.print("Baseline PA current: ");
-  Serial.println(pa_current_offset);
+      // wait for mutex, then measure current
+      if(xSemaphoreTake(xADCmutex, portMAX_DELAY) == pdTRUE)
+        measured_current = power_adc_conversion(ADC_CHANNEL_PA_IDD);
+      xSemaphoreGive(xADCmutex);
+      
+      Serial.print("duty: ");
+      Serial.print(bias_duties[i]);
+      Serial.print("\tmeasured_current: ");
+      Serial.println(measured_current);
+    }
+
+    
+    // shut down PWM before moving to next one
+    power_set_bias_duty(bias_outputs[i], 0);
+    vTaskDelay(pdMS_TO_TICKS(10));
+
+    // todo: debug why this doesn't seem to actually bring current to zero
+  }
 
   digitalWrite(PA_VDD_CTRL, LOW);
 }
@@ -271,6 +286,9 @@ void power_measure_pa_offset() {
 // then leaves the amplifier at this bias point, no longer actively controls
 // this function only returns when current is stable
 void power_bias_to_current(float total_current) {
+  power_sweep_duty();
+
+  float measured_current = 0;
 
   // remember this setting
   pa_bias_target = total_current;
@@ -285,61 +303,82 @@ void power_bias_to_current(float total_current) {
     return;
   }
 
-  float measured_current = 0;
-
+  // turn on power amplifier, wait to allow it to settle
   digitalWrite(PA_VDD_CTRL, HIGH);
+  vTaskDelay(pdMS_TO_TICKS(10));
 
-/*
   // check if TOTAL biasing is correct. can exit if it is already set properly
-  vTaskDelay(pdMS_TO_TICKS(5));
-  measured_current = power_adc_conversion(ADC_CHANNEL_PA_IDD);
-  if(abs(measured_current - total_current) < (BIAS_TOLERANCE_PCT * total_current)) {
-    Serial.print("Bias current already in spec: ");
-    Serial.println(measured_current);
-    return;
-  }
-*/
+  if(xSemaphoreTake(xADCmutex, portMAX_DELAY) == pdTRUE) {
+    measured_current = power_adc_conversion(ADC_CHANNEL_PA_IDD);
+    xSemaphoreGive(xADCmutex);
 
-  // turn off all bias channels, to start
+    // check error, return if in-spec
+    if(abs(measured_current - total_current) < (BIAS_TOLERANCE * total_current)) {
+      Serial.print("Bias current already in spec: ");
+      Serial.println(measured_current);
+      return;
+    }
+  }
+
+  // turn off all bias channels before beginning measurement process
   for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++)
     power_set_bias_duty(bias_outputs[i], 0);
 
+  // initialize bias duty cycles to useful starting point
+  for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++)
+    bias_duties[i] = BIAS_DUTY_INITIAL;
+
   // find bias point for each channel
   float target_current = total_current / 2;
+  
   for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++) {
     Serial.print("biasing channel ");
     Serial.println(i);
     vTaskDelay(pdMS_TO_TICKS(10));
-    float error = 0;
+    float error = 0, prev_error = 0;
+    uint16_t correct_counter = 0, railed_counter = 0;
     do {
-      // set duty cycle
+      // set duty cycle, allow for settling
       power_set_bias_duty(bias_outputs[i], bias_duties[i]);
-      vTaskDelay(pdMS_TO_TICKS(2));
+      vTaskDelay(pdMS_TO_TICKS(3));
 
-      // measure current, adjust duty as needed. Need to wait for mutex
-      if(xSemaphoreTake(xADCmutex, portMAX_DELAY) == pdTRUE) {
-        for(uint16_t j = 0; j < 5; j++)
-          measured_current += power_adc_conversion(ADC_CHANNEL_PA_IDD);
-        measured_current /= 5;
-      }
-      // done reading, give back the mutex
+      // wait for mutex, then measure current
+      if(xSemaphoreTake(xADCmutex, portMAX_DELAY) == pdTRUE)
+        measured_current = power_adc_conversion(ADC_CHANNEL_PA_IDD);
       xSemaphoreGive(xADCmutex);
+      
+      // control error to zero with PID controller
+      prev_error = error;
+      error = target_current - measured_current;
+      bias_duties[i] += error * BIAS_KP + (prev_error - error) * BIAS_KD;
 
       Serial.print("measured_current: ");
-      Serial.println(measured_current);
-      
-      error = target_current - measured_current;
-      bias_duties[i] += error * BIAS_KP;
+      Serial.print(measured_current);
+      Serial.print("\terror: ");
+      Serial.print(error);
+      Serial.print("\tnew duty: ");
+      Serial.println(bias_duties[i]);
 
-      // possible case: no bias current at all
-      if(bias_duties[i] > 1 || bias_duties[i] < 0) {
+      // possible case: no bias current at all (e.g. no power board). Fault after 10 iterations with extreme duty
+      if(bias_duties[i] > 1 || bias_duties[i] < 0)
+        railed_counter++;
+      else
+        railed_counter = 0;
+
+      if(railed_counter > 10) {
         Serial.print("bias duty out of range for channel ");
         Serial.println(i);
         bias_duties[i] = 0;
         break;
       }
+      
+      // add to counter if bias is correct. Wait for 3 successive correct values.
+      if(abs(error) < (BIAS_TOLERANCE * target_current))
+      correct_counter++;
+      else
+      correct_counter = 0;
     }
-    while(abs(error) > (BIAS_TOLERANCE_PCT * target_current));
+    while(correct_counter < 3);
 
     // shut down PWM before moving to next one
     power_set_bias_duty(bias_outputs[i], 0);
@@ -357,6 +396,7 @@ void power_bias_to_current(float total_current) {
   digitalWrite(PA_VDD_CTRL, LOW);
 }
 
+// set both channels to the specified bias voltage
 void power_bias_to_voltage(float voltage) {  
   if(voltage < 0 || voltage > BIAS_MAX_VOLT * BIAS_VOLT_GAIN) {
     return;
@@ -368,6 +408,7 @@ void power_bias_to_voltage(float voltage) {
   // apply duty cycle to each channel
   Serial.print("Bias duty cycles: ");
   for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++) {
+    bias_duties[i] = duty;
     power_set_bias_duty(bias_outputs[i], duty);
     Serial.print(duty);
     Serial.print("\t");
