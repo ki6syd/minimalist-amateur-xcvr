@@ -25,7 +25,7 @@
 
 #define NUM_BIAS_OUTPUTS    2
 #define BIAS_KP             1
-#define BIAS_KD             -2
+#define BIAS_KD             -4
 #define BIAS_DUTY_INITIAL   0.5
 
 
@@ -94,6 +94,8 @@ void power_init() {
 
   // find gate bias point
   power_bias_to_current(BIAS_CURRENT_CW);
+
+  // todo: run the bias sweep function and log data. use for lookup of starting point.
 
   // set AGC voltage
   power_agc_to_voltage(AGC_VOLT_RX);
@@ -248,29 +250,33 @@ void power_sweep_duty() {
   digitalWrite(PA_VDD_CTRL, HIGH);
   vTaskDelay(pdMS_TO_TICKS(10));
 
+  // lock the mutex for the duration of this function
+  if(xSemaphoreTake(xADCmutex, portMAX_DELAY) != pdTRUE)
+    return;
+
   // sweep each channel
   for(uint16_t i = 0; i < NUM_BIAS_OUTPUTS; i++) {
     Serial.print("biasing channel ");
     Serial.println(i);
     vTaskDelay(pdMS_TO_TICKS(10));
     
-    for(float duty = 0.2; duty <= 0.8; duty += 0.05) {
+    for(float duty = 0; duty < 1; duty += 0.01) {
       // set duty cycle, allow for settling
       bias_duties[i] = duty;
       power_set_bias_duty(bias_outputs[i], bias_duties[i]);
       vTaskDelay(pdMS_TO_TICKS(10));
 
-      // wait for mutex, then measure current
-      if(xSemaphoreTake(xADCmutex, portMAX_DELAY) == pdTRUE)
-        measured_current = power_adc_conversion(ADC_CHANNEL_PA_IDD);
-      xSemaphoreGive(xADCmutex);
+      measured_current = power_adc_conversion(ADC_CHANNEL_PA_IDD);
       
       Serial.print("duty: ");
       Serial.print(bias_duties[i]);
       Serial.print("\tmeasured_current: ");
       Serial.println(measured_current);
-    }
 
+      // stop running if current got too high 
+      if(measured_current > BIAS_MAX_PER_CH)
+        break;
+    }
     
     // shut down PWM before moving to next one
     power_set_bias_duty(bias_outputs[i], 0);
@@ -279,6 +285,8 @@ void power_sweep_duty() {
     // todo: debug why this doesn't seem to actually bring current to zero
   }
 
+  xSemaphoreGive(xADCmutex);
+
   digitalWrite(PA_VDD_CTRL, LOW);
 }
 
@@ -286,7 +294,12 @@ void power_sweep_duty() {
 // then leaves the amplifier at this bias point, no longer actively controls
 // this function only returns when current is stable
 void power_bias_to_current(float total_current) {
-  power_sweep_duty();
+  // useful for debug
+  // power_sweep_duty();
+
+  // lock the mutex for the duration of this function
+  if(xSemaphoreTake(xADCmutex, portMAX_DELAY) != pdTRUE)
+    return;
 
   float measured_current = 0;
 
@@ -308,16 +321,13 @@ void power_bias_to_current(float total_current) {
   vTaskDelay(pdMS_TO_TICKS(10));
 
   // check if TOTAL biasing is correct. can exit if it is already set properly
-  if(xSemaphoreTake(xADCmutex, portMAX_DELAY) == pdTRUE) {
-    measured_current = power_adc_conversion(ADC_CHANNEL_PA_IDD);
-    xSemaphoreGive(xADCmutex);
-
-    // check error, return if in-spec
-    if(abs(measured_current - total_current) < (BIAS_TOLERANCE * total_current)) {
-      Serial.print("Bias current already in spec: ");
-      Serial.println(measured_current);
-      return;
-    }
+  measured_current = power_adc_conversion(ADC_CHANNEL_PA_IDD);
+  
+  // check error, return if in-spec
+  if(abs(measured_current - total_current) < (BIAS_TOLERANCE * total_current)) {
+    Serial.print("Bias current already in spec: ");
+    Serial.println(measured_current);
+    return;
   }
 
   // turn off all bias channels before beginning measurement process
@@ -336,16 +346,14 @@ void power_bias_to_current(float total_current) {
     Serial.println(i);
     vTaskDelay(pdMS_TO_TICKS(10));
     float error = 0, prev_error = 0;
-    uint16_t correct_counter = 0, railed_counter = 0;
+    uint16_t cycle_counter = 0, correct_counter = 0, railed_counter = 0;
     do {
       // set duty cycle, allow for settling
       power_set_bias_duty(bias_outputs[i], bias_duties[i]);
       vTaskDelay(pdMS_TO_TICKS(3));
 
       // wait for mutex, then measure current
-      if(xSemaphoreTake(xADCmutex, portMAX_DELAY) == pdTRUE)
-        measured_current = power_adc_conversion(ADC_CHANNEL_PA_IDD);
-      xSemaphoreGive(xADCmutex);
+      measured_current = power_adc_conversion(ADC_CHANNEL_PA_IDD);
       
       // control error to zero with PID controller
       prev_error = error;
@@ -374,15 +382,25 @@ void power_bias_to_current(float total_current) {
       
       // add to counter if bias is correct. Wait for 3 successive correct values.
       if(abs(error) < (BIAS_TOLERANCE * target_current))
-      correct_counter++;
+        correct_counter++;
       else
-      correct_counter = 0;
+        correct_counter = 0;
+
+      // abort if current is not settling
+      cycle_counter++;
+      if(cycle_counter > 25) {
+        Serial.println("Bias settling failed");
+        bias_duties[i] = 0;
+        break;
+      }
     }
     while(correct_counter < 3);
 
     // shut down PWM before moving to next one
     power_set_bias_duty(bias_outputs[i], 0);
   }
+
+  xSemaphoreGive(xADCmutex);
 
   // implement bias points we've found already
   Serial.print("Bias duty cycles: ");
