@@ -73,8 +73,7 @@ typedef enum {
     DEBUG_CMD_STOP_BFO=7,
     DEBUG_CMD_STOP_VFO=8,
     DEBUG_CMD_IMD_TEST=9,
-    DEBUG_CMD_TUNE_ON=10,
-    DEBUG_CMD_TUNE_OFF=11,
+    DEBUG_CMD_MIN_VOL=10,
     DEBUG_CMD_CAL_LPF=12,
     DEBUG_CMD_PA_VDD=13
 } debug_action_t;
@@ -82,6 +81,7 @@ typedef enum {
 typedef enum {
     AUDIO_HF_RX_CW,
     AUDIO_HF_TX_CW,
+    AUDIO_HF_TX_SSB,
     AUDIO_VHF_RX,
     AUDIO_VHF_TX
 } audio_mode_t;

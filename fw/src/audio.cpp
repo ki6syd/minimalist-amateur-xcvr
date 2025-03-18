@@ -8,10 +8,12 @@
 #define NOTIFY_PGA_OFF          (1 << 1)
 #define NOTIFY_MODE_HF_RX_CW    (1 << 2)
 #define NOTIFY_MODE_HF_TX_CW    (1 << 3)
-#define NOTIFY_MODE_VHF_RX      (1 << 4)
-#define NOTIFY_MODE_VHF_TX      (1 << 5)
-#define NOTIFY_DBG_MAX_VOL      (1 << 6)
-#define NOTIFY_DBG_IMD_TEST     (1 << 7)
+#define NOTIFY_MODE_HF_TX_SSB   (1 << 4)
+#define NOTIFY_MODE_VHF_RX      (1 << 5)
+#define NOTIFY_MODE_VHF_TX      (1 << 6)
+#define NOTIFY_DBG_MAX_VOL      (1 << 7)
+#define NOTIFY_DBG_MIN_VOL      (1 << 8)
+#define NOTIFY_DBG_IMD_TEST     (1 << 9)
 
 TaskHandle_t xAudioTaskHandle;
 static float last_volume_dB = 0;
@@ -65,7 +67,6 @@ void audio_logic_task(void *pvParameter) {
             }
             // Handle mode changes
             if(notifiedValue & NOTIFY_MODE_HF_RX_CW) {
-                
                 Serial.println("HF RX CW");
                 iq_balance.setVolume(q_rx_gain, 0);
                 iq_balance.setVolume(i_rx_gain, 1);
@@ -96,6 +97,24 @@ void audio_logic_task(void *pvParameter) {
 
                 // exits WITHOUT changing sidetone volume. That is handled by key on/off function. This just changes "modes"
             }
+            if(notifiedValue & NOTIFY_MODE_HF_TX_SSB) {
+                Serial.println("HF TX SSB");
+                iq_balance.setVolume(q_rx_gain, 0);
+                iq_balance.setVolume(q_rx_gain, 1);
+
+                Serial.print("Setting tx_power: ");
+                Serial.println(tx_power);
+                // TODO: get tx_power from a call to radio_get_power(), that module should maintain the power level
+                tx_vol.setVolume(tx_power * q_tx_gain, 0);
+                tx_vol.setVolume(tx_power * i_tx_gain, 1);
+
+                // TODO: consider deleting this from the audio mode change. Needs low latency so also exists in the sidetone enabling.
+                hp_vol.setVolume(sidetone_vol * global_vol);
+
+                cur_audio_mode = AUDIO_HF_TX_SSB;
+
+                // exits WITHOUT changing sidetone volume. That is handled by key on/off function. This just changes "modes"
+            }
             if(notifiedValue & NOTIFY_MODE_VHF_RX) {
                 // TODO
             }
@@ -104,6 +123,9 @@ void audio_logic_task(void *pvParameter) {
             }
             if(notifiedValue & NOTIFY_DBG_MAX_VOL) {
                 // TODO:
+            }
+            if(notifiedValue & NOTIFY_DBG_MIN_VOL) {
+                sidetone_wave.setAmplitude(0);
             }
             if(notifiedValue & NOTIFY_DBG_IMD_TEST) {
                 imd_test_wave.setAmplitude(INT16_MAX/2);
@@ -119,6 +141,8 @@ void audio_set_mode(audio_mode_t mode) {
         xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_HF_RX_CW, eSetBits);
     else if(mode == AUDIO_HF_TX_CW)
         xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_HF_TX_CW, eSetBits);
+    else if(mode == AUDIO_HF_TX_SSB)
+        xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_HF_TX_SSB, eSetBits);
     else if(mode == AUDIO_VHF_RX)
         xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_VHF_RX, eSetBits);
     else if(mode == AUDIO_VHF_TX)
@@ -196,7 +220,10 @@ bool audio_set_tx_power(float power) {
     Serial.print("Setting TX power: ");
     Serial.println(power);
 
+    // update power variable and also make an adjustment to the volume control
     tx_power = power;
+    tx_vol.setVolume(tx_power * q_tx_gain, 0);
+    tx_vol.setVolume(tx_power * i_tx_gain, 1);
     return true;
 }
 
@@ -242,6 +269,9 @@ void audio_debug(debug_action_t command_num) {
             break;
         case DEBUG_CMD_IMD_TEST:
             xTaskNotify(xAudioTaskHandle, NOTIFY_DBG_IMD_TEST, eSetBits);
+            break;
+        case DEBUG_CMD_MIN_VOL:
+            xTaskNotify(xAudioTaskHandle, NOTIFY_DBG_MIN_VOL, eSetBits);        
             break;
     }
 }

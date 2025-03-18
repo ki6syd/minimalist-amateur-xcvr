@@ -20,7 +20,8 @@
 
 #define FREQ_PLL          (SI5351_PLL_FIXED)
 
-radio_audio_bw_t bw = BW_CW;
+// TODO: need to handle radio_audio_bw_t setting - can never become SSB currently.
+radio_audio_bw_t bw = BW_SSB;
 radio_rxtx_mode_t rxtx_mode = MODE_STARTUP;
 radio_band_t band = BAND_UNKNOWN;
 radio_filt_sweep_t sweep_config;
@@ -102,7 +103,10 @@ void radio_task(void *param) {
       }
       if(notifiedValue & NOTIFY_KEY_ON) {
         // TODO: create key shape using a ramp on the sidetone source volume, rather than using VDD_CTRL
-        audio_en_sidetone(true);
+
+        // only use sidetone in CW mode. TODO: differentiate whether key on was from PTT vs CW key. Consider cross-mode.
+        if(radio_get_bw() == BW_CW)
+          audio_en_sidetone(true);
 
         // initiate mode change
         radio_set_rxtx_mode(MODE_TX);
@@ -182,7 +186,6 @@ void radio_task(void *param) {
           Serial.println(tmp.power);
           power = tmp.power;
           audio_set_tx_power(tmp.power);
-          
         }
       }
     }
@@ -237,7 +240,6 @@ radio_audio_bw_t radio_get_bw() {
 
 
 void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
-
   // return immediately if there was no change requested
   if(new_mode == rxtx_mode)
     return;
@@ -310,17 +312,22 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
 
         if(radio_freq_is_hf(freq_dial)) {
           // TODO: let this run as a task in parallel, check on exit
-          // command power amplifier bias depending on modulation
-          if(bw == BW_CW)
+          // command power amplifier bias and AGC voltage depending on modulation
+          if(radio_get_bw() == BW_CW) {
+            // todo: check bias current with a fixed voltage, mismatched transistors are a problem
             power_bias_to_voltage(BIAS_VOLT_CW);
-          else
+            power_agc_to_voltage(AGC_VOLT_TX_CW);
+          }
+          else if(radio_get_bw() == BW_SSB) {
             power_bias_to_current(power_get_bias_target());
-
-          // change AGC setpoint
-          power_agc_to_voltage(AGC_VOLT_TX);
+            power_agc_to_voltage(AGC_VOLT_TX_SSB);
+          }
 
           // change audio mode, function will ignore if there's no change
-          audio_set_mode(AUDIO_HF_TX_CW);
+          if(radio_get_bw() == BW_CW)
+            audio_set_mode(AUDIO_HF_TX_CW);
+          else if(radio_get_bw() == BW_SSB)
+            audio_set_mode(AUDIO_HF_TX_SSB);
         }
         else {
           audio_set_mode(AUDIO_VHF_TX);

@@ -89,6 +89,10 @@ void audio_dsp_task(void *pvParameter) {
     i2s_config.port_no = 0;
     // i2s_config.input_device = (cur_audio_mode == AUDIO_HF_RXTX_CW) ? ADC_INPUT_LINE1 : ADC_INPUT_LINE2;
     i2s_config.input_device = ADC_INPUT_LINE1;
+
+    // TEMPORARY: configure for SSB
+    // i2s_config.input_device = ADC_INPUT_LINE2;
+    
     es8388_stream.begin(i2s_config);
     audio_dsp_set_dacs(cur_audio_mode);
 
@@ -118,10 +122,11 @@ void audio_dsp_task(void *pvParameter) {
     sidetone_wave.begin(info_stereo, sidetone_freq);
     sidetone_wave.setAmplitude(0);
 
-    imd_test_wave.begin(info_stereo, sidetone_freq+100);    // TODO: should be more like 1kHz apart for a real IMD test. Two tones shouldn't be harmonically related
+    imd_test_wave.begin(info_stereo, sidetone_freq+1000);
     imd_test_wave.setAmplitude(0);
 
     // TODO: Turn this into "iq_rx_balance" and also add an iq_tx_balance that acts on the sidetone audio wave. Need separate adjustments
+    // TODO: intercept the signal going into iq_balance and choose one channel to copy to both. Mic input needs to get to both channels.
     iq_balance.begin(info_stereo);
     iq_balance.setVolume(q_rx_gain, 0);
     iq_balance.setVolume(i_rx_gain, 1);

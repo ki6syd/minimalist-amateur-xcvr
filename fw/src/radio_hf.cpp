@@ -17,7 +17,7 @@ uint64_t freq_if = 45000000;
 uint64_t freq_vfo = 0;
 uint64_t freq_bfo = 0;
 
-uint16_t phase_delay = 18;
+uint8_t phase_delay = 18;
 
 // variable to track what value of audio_get_rx_db() corresponds to the #define'd S_UNIT_REF above
 float audio_level_sREF = -49.4;
@@ -91,6 +91,9 @@ void hf_set_dial_freq(uint64_t freq_dial, sideband_t sideband) {
   }
   else if (radio_get_bw() == BW_SSB) {
     freq_bfo = freq_if;
+
+    // temporary hack to get the signal inside the passband of the xtal filter
+    freq_if = 44992500;
   }
   else {
     Serial.println("ERROR: unknown bandwidth");
@@ -160,7 +163,7 @@ void hf_cal_tx_10MHz() {
 
 bool hf_set_phase(int16_t phase) {
   // TODO: enforce reasonable bounds
-  if(phase < -100 || phase > 100)
+  if(phase < 0 || phase > 100)
     return false;
 
   phase_delay = phase;

@@ -322,8 +322,6 @@ void power_bias_to_current(float total_current) {
 
   // check if TOTAL biasing is correct. can exit if it is already set properly
   measured_current = power_adc_conversion(ADC_CHANNEL_PA_IDD);
-  
-  // check error, return if in-spec
   if(abs(measured_current - total_current) < (BIAS_TOLERANCE * total_current)) {
     Serial.print("Bias current already in spec: ");
     Serial.println(measured_current);
@@ -350,7 +348,7 @@ void power_bias_to_current(float total_current) {
     do {
       // set duty cycle, allow for settling
       power_set_bias_duty(bias_outputs[i], bias_duties[i]);
-      vTaskDelay(pdMS_TO_TICKS(3));
+      vTaskDelay(pdMS_TO_TICKS(5));
 
       // wait for mutex, then measure current
       measured_current = power_adc_conversion(ADC_CHANNEL_PA_IDD);
@@ -416,9 +414,8 @@ void power_bias_to_current(float total_current) {
 
 // set both channels to the specified bias voltage
 void power_bias_to_voltage(float voltage) {  
-  if(voltage < 0 || voltage > BIAS_MAX_VOLT * BIAS_VOLT_GAIN) {
+  if(voltage < 0 || voltage > BIAS_MAX_VOLT * BIAS_VOLT_GAIN)
     return;
-  }
 
   // calculate duty cycle
   float duty = voltage / (BIAS_MAX_VOLT * BIAS_VOLT_GAIN);
@@ -466,6 +463,7 @@ void power_agc_to_voltage(float voltage) {
   }
 
   // calculate duty cycle
+  // TODO: separate concepts of maximum voltage and rail voltage. rail voltage is 3.3, we want maximum 4.5v agc voltage
   agc_duty = voltage / (AGC_MAX_VOLT * AGC_VOLT_GAIN);
 
   // apply duty cycle to AGC output
