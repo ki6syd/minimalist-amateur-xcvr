@@ -20,8 +20,8 @@
 
 #define FREQ_PLL          (SI5351_PLL_FIXED)
 
-// TODO: need to handle radio_audio_bw_t setting - can never become SSB currently.
-radio_audio_bw_t bw = BW_SSB;
+// TODO: need to handle radio_audio_bw_t setting - can never become BW_SSB currently, this is needed for SSB transmit.
+radio_audio_bw_t bw = BW_SSB; // BW_CW
 radio_rxtx_mode_t rxtx_mode = MODE_STARTUP;
 radio_band_t band = BAND_UNKNOWN;
 radio_filt_sweep_t sweep_config;
