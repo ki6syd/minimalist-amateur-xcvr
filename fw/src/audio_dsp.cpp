@@ -94,7 +94,7 @@ void audio_dsp_task(void *pvParameter) {
 
     // TEMPORARY: configure for SSB. Reminder: also need to set radio_audio_bw to BW_SSB.
     // TODO: select this based on the rx mode
-    i2s_config.input_device = ADC_INPUT_LINE2;
+    // i2s_config.input_device = ADC_INPUT_LINE2;
     
     es8388_stream.begin(i2s_config);
     audio_dsp_set_dacs(cur_audio_mode);

@@ -21,11 +21,11 @@
 #define FREQ_PLL          (SI5351_PLL_FIXED)
 
 // TODO: need to handle radio_audio_bw_t setting - can never become BW_SSB currently, this is needed for SSB transmit.
-radio_audio_bw_t bw = BW_SSB; // BW_CW
+radio_audio_bw_t bw = BW_CW; // BW_SSB
 radio_rxtx_mode_t rxtx_mode = MODE_STARTUP;
 radio_band_t band = BAND_UNKNOWN;
 radio_filt_sweep_t sweep_config;
-radio_band_capability_t band_capability[NUMBER_BANDS];
+radio_band_capability_t band_capability[NUMBER_BANDS]; // TODO: size this with a maximum number of bands. Keep track of number loaded from JSON to know how many bands are loaded.
 
 QueueHandle_t xRadioQueue;
 TaskHandle_t xRadioTaskHandle;
@@ -348,39 +348,16 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
 
 // this function does NOT care whether transmit is active currently. Blindly sets the correct relays/mux based on the band selection
 // mode change safety is handled by dial frequency updates
-// TODO: this is actually a relay setting function, break out into something that accepts a band and a mode
+// TODO: move this into the hf and vhf submodules?
 // setting band to anything but BAND_VHF will result in powerdown
 void radio_set_band(radio_band_t new_band) {
     if(rxtx_mode == MODE_RX || rxtx_mode == MODE_QSK_COUNTDOWN) {
-        /*
-        switch(new_band) {
-            case BAND_HF_1:
-                digitalWrite(BPF_SEL_0, LOW);
-                digitalWrite(BPF_SEL_1, LOW);
-                break;
-            case BAND_HF_2:
-                digitalWrite(BPF_SEL_0, HIGH);
-                digitalWrite(BPF_SEL_1, LOW);
-                break;
-            case BAND_HF_3:
-                digitalWrite(BPF_SEL_0, LOW);
-                digitalWrite(BPF_SEL_1, HIGH);
-                break;
-            case BAND_VHF:
-                digitalWrite(BPF_SEL_0, HIGH);
-                digitalWrite(BPF_SEL_1, HIGH);
-                break;
-            default:
-                Serial.print("Invalid band request: ");
-                Serial.println(new_band);
-                return;
-        }
-        */
         digitalWrite(LPF_SEL_0, LOW);
         digitalWrite(LPF_SEL_1, LOW);
         digitalWrite(TX_RX_SEL, LOW);
     }
     else if(rxtx_mode == MODE_TX) {
+      // TODO: separate out the concept of "band" and "filter frequency range". Need multiple bands to map to one filter freq range. Select LPF based on filter freq range.
         switch(new_band) {
             case BAND_HF_1:
                 digitalWrite(LPF_SEL_0, LOW);
@@ -388,11 +365,15 @@ void radio_set_band(radio_band_t new_band) {
                 digitalWrite(TX_RX_SEL, HIGH);
                 break;
             case BAND_HF_2:
+            case BAND_HF_3:
                 digitalWrite(LPF_SEL_0, HIGH);
                 digitalWrite(LPF_SEL_1, LOW);
                 digitalWrite(TX_RX_SEL, HIGH);
                 break;
-            case BAND_HF_3:
+            case BAND_HF_4:
+            case BAND_HF_5:
+            case BAND_HF_6:
+            case BAND_HF_7:
                 digitalWrite(LPF_SEL_0, LOW);
                 digitalWrite(LPF_SEL_1, HIGH);
                 digitalWrite(TX_RX_SEL, HIGH);
@@ -418,26 +399,18 @@ void radio_set_band(radio_band_t new_band) {
         digitalWrite(TX_RX_SEL, LOW);
         switch(new_band) {
             case BAND_HF_1:
-              // digitalWrite(BPF_SEL_0, LOW);
-              // digitalWrite(BPF_SEL_1, LOW);
               digitalWrite(LPF_SEL_0, LOW);
               digitalWrite(LPF_SEL_1, LOW);
               break;
             case BAND_HF_2:
-              // digitalWrite(BPF_SEL_0, HIGH);
-              // digitalWrite(BPF_SEL_1, LOW);
               digitalWrite(LPF_SEL_0, HIGH);
               digitalWrite(LPF_SEL_1, LOW);
               break;
             case BAND_HF_3:
-              // digitalWrite(BPF_SEL_0, LOW);
-              // digitalWrite(BPF_SEL_1, HIGH);
               digitalWrite(LPF_SEL_0, LOW);
               digitalWrite(LPF_SEL_1, HIGH);
               break;
             case BAND_SELFTEST_LOOPBACK:
-              // digitalWrite(BPF_SEL_0, HIGH);
-              // digitalWrite(BPF_SEL_1, HIGH);
               digitalWrite(LPF_SEL_0, LOW);
               digitalWrite(LPF_SEL_1, LOW);
               break;
@@ -503,6 +476,10 @@ String radio_band_to_string(radio_band_t band) {
         case BAND_HF_1: return "BAND_HF_1";
         case BAND_HF_2: return "BAND_HF_2";
         case BAND_HF_3: return "BAND_HF_3";
+        case BAND_HF_4: return "BAND_HF_4";
+        case BAND_HF_5: return "BAND_HF_5";
+        case BAND_HF_6: return "BAND_HF_6";
+        case BAND_HF_7: return "BAND_HF_7";
         case BAND_VHF: return "BAND_VHF";
         case BAND_SELFTEST_LOOPBACK: return "BAND_SELFTEST_LOOPBACK";
         default: return "UNKNOWN_BAND";
@@ -518,7 +495,6 @@ String radio_bandwidth_to_string(radio_audio_bw_t bw) {
         default: return "UNKNOWN_BW";
     }
 }
-
 
 String radio_freq_string() {
   if(band == BAND_VHF) {

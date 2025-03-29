@@ -13,15 +13,43 @@
 		},
 		{
 			"band_num": "BAND_HF_2",
+			"min_freq": "10100000",
+			"max_freq": "10150000",
+			"rx_modes": ["ssb", "cw"],
+			"tx_modes": ["cw"]
+		},
+		{
+			"band_num": "BAND_HF_3",
 			"min_freq": "14000000",
 			"max_freq": "14350000",
 			"rx_modes": ["ssb", "cw"],
 			"tx_modes": ["cw"]
 		},
 		{
-			"band_num": "BAND_HF_3",
+			"band_num": "BAND_HF_4",
+			"min_freq": "18068000",
+			"max_freq": "18168000",
+			"rx_modes": ["ssb", "cw"],
+			"tx_modes": ["cw"]
+		},
+		{
+			"band_num": "BAND_HF_5",
 			"min_freq": "21000000",
 			"max_freq": "21450000",
+			"rx_modes": ["ssb", "cw"],
+			"tx_modes": ["cw"]
+		},
+		{
+			"band_num": "BAND_HF_6",
+			"min_freq": "24890000",
+			"max_freq": "24990000",
+			"rx_modes": ["ssb", "cw"],
+			"tx_modes": ["cw"]
+		},
+		{
+			"band_num": "BAND_HF_7",
+			"min_freq": "28000000",
+			"max_freq": "29700000",
 			"rx_modes": ["ssb", "cw"],
 			"tx_modes": ["cw"]
 		},

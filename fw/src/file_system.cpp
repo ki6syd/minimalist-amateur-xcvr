@@ -102,6 +102,10 @@ radio_band_t string_to_radio_band(const char* band_str) {
     if (strcmp(band_str, "BAND_HF_1") == 0) return BAND_HF_1;
     if (strcmp(band_str, "BAND_HF_2") == 0) return BAND_HF_2;
     if (strcmp(band_str, "BAND_HF_3") == 0) return BAND_HF_3;
+    if (strcmp(band_str, "BAND_HF_4") == 0) return BAND_HF_4;
+    if (strcmp(band_str, "BAND_HF_5") == 0) return BAND_HF_5;
+    if (strcmp(band_str, "BAND_HF_6") == 0) return BAND_HF_6;
+    if (strcmp(band_str, "BAND_HF_7") == 0) return BAND_HF_7;
     if (strcmp(band_str, "BAND_VHF") == 0) return BAND_VHF;
     return BAND_UNKNOWN;
 }
@@ -118,6 +122,8 @@ void print_band_capability(radio_band_capability_t (&bands)[NUMBER_BANDS]) {
         // Print the band name
         Serial.print("Band Name: ");
         Serial.println(radio_band_to_string(bands[i].band_name));
+
+        Serial.println(bands[i].band_name);
 
         // Print the frequency range
         Serial.print("Min Frequency: ");

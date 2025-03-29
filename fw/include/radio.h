@@ -21,6 +21,10 @@ typedef enum {
     BAND_HF_1,
     BAND_HF_2,
     BAND_HF_3,
+    BAND_HF_4,
+    BAND_HF_5,
+    BAND_HF_6,
+    BAND_HF_7,
     BAND_VHF,
     BAND_SELFTEST_LOOPBACK,
     BAND_UNKNOWN
