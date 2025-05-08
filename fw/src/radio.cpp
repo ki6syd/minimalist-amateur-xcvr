@@ -20,8 +20,8 @@
 
 #define FREQ_PLL          (SI5351_PLL_FIXED)
 
-// TODO: need to handle radio_audio_bw_t setting - can never become BW_SSB currently, this is needed for SSB transmit.
-radio_audio_bw_t bw = BW_CW; // BW_SSB
+// TODO: need to handle radio_modulation_t setting - can never become MOD_SSB currently, this is needed for SSB transmit.
+radio_modulation_t modulation = MOD_CW; // MOD_SSB
 radio_rxtx_mode_t rxtx_mode = MODE_STARTUP;
 radio_band_t band = BAND_UNKNOWN;
 radio_filt_sweep_t sweep_config;
@@ -105,7 +105,7 @@ void radio_task(void *param) {
         // TODO: create key shape using a ramp on the sidetone source volume, rather than using VDD_CTRL
 
         // only use sidetone in CW mode. TODO: differentiate whether key on was from PTT vs CW key. Consider cross-mode.
-        if(radio_get_bw() == BW_CW)
+        if(radio_get_modulation() == MOD_CW)
           audio_en_sidetone(true);
 
         // initiate mode change
@@ -218,7 +218,7 @@ bool radio_set_dial_freq(uint64_t freq) {
   else
     new_sideband = SIDEBAND_LSB;
 
-  radio_state_t tmp = { .dial_freq = freq, .bw = radio_get_bw(), .sideband = new_sideband, .power = power};
+  radio_state_t tmp = { .dial_freq = freq, .mod = radio_get_modulation(), .sideband = new_sideband, .power = power};
 
   if(xQueueSend(xRadioQueue, (void *) &tmp, 0) != pdTRUE) {
     Serial.println("Unable to change frequency, queue full");
@@ -234,8 +234,8 @@ uint64_t radio_get_dial_freq() {
   return freq_dial;
 }
 
-radio_audio_bw_t radio_get_bw() {
-  return bw;
+radio_modulation_t radio_get_modulation() {
+  return modulation;
 }
 
 
@@ -313,20 +313,20 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
         if(radio_freq_is_hf(freq_dial)) {
           // TODO: let this run as a task in parallel, check on exit
           // command power amplifier bias and AGC voltage depending on modulation
-          if(radio_get_bw() == BW_CW) {
+          if(radio_get_modulation() == MOD_CW) {
             // todo: check bias current with a fixed voltage, mismatched transistors are a problem
             power_bias_to_voltage(BIAS_VOLT_CW);
             power_agc_to_voltage(AGC_VOLT_TX_CW);
           }
-          else if(radio_get_bw() == BW_SSB) {
+          else if(radio_get_modulation() == MOD_SSB) {
             power_bias_to_current(power_get_bias_target());
             power_agc_to_voltage(AGC_VOLT_TX_SSB);
           }
 
           // change audio mode, function will ignore if there's no change
-          if(radio_get_bw() == BW_CW)
+          if(radio_get_modulation() == MOD_CW)
             audio_set_mode(AUDIO_HF_TX_CW);
-          else if(radio_get_bw() == BW_SSB)
+          else if(radio_get_modulation() == MOD_SSB)
             audio_set_mode(AUDIO_HF_TX_SSB);
         }
         else {
@@ -486,13 +486,13 @@ String radio_band_to_string(radio_band_t band) {
     }
 }
 
-// Convert radio_audio_bw_t enum to string
-String radio_bandwidth_to_string(radio_audio_bw_t bw) {
+// Convert radio_modulation_t enum to string
+String radio_modulation_to_string(radio_modulation_t bw) {
     switch (bw) {
-        case BW_CW: return "CW";
-        case BW_SSB: return "SSB";
-        case BW_FM: return "FM";
-        default: return "UNKNOWN_BW";
+        case MOD_CW: return "CW";
+        case MOD_SSB: return "SSB";
+        case MOD_FM: return "FM";
+        default: return "UNKNOWN_MODULATION";
     }
 }
 
@@ -519,7 +519,7 @@ bool radio_set_power(float power_level) {
         return false;
         
     // Queue the power change request
-    radio_state_t tmp = { .dial_freq = freq_dial, .bw = radio_get_bw(), .power = power_level};
+    radio_state_t tmp = { .dial_freq = freq_dial, .mod = radio_get_modulation(), .power = power_level};
     
     if(xQueueSend(xRadioQueue, (void *) &tmp, 0) != pdTRUE) {
         Serial.println("Unable to change power, queue full");

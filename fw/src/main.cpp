@@ -105,8 +105,8 @@ void info_task(void *param) {
     Serial.print("Current band: ");
     Serial.println(radio_band_to_string(radio_get_band(radio_get_dial_freq())));
 
-    Serial.print("Current Radio Bandwidth: ");
-    Serial.println(radio_bandwidth_to_string(radio_get_bw()));
+    Serial.print("Current Radio Modulation: ");
+    Serial.println(radio_modulation_to_string(radio_get_modulation()));
 
     // TODO: print out the audio module bandwidth
 

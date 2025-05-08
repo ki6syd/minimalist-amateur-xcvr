@@ -30,18 +30,15 @@ typedef enum {
     BAND_UNKNOWN
 } radio_band_t;
 
-
-// TODO: break out SSB into LSB and USB (at a later date). Assuming LSB below 10MHz for now.
-// TODO: break apart the concept of audio bandwidth and RF mode
 typedef enum {
-    BW_CW,
-    BW_SSB,
-    BW_FM
-} radio_audio_bw_t;
+    MOD_CW,
+    MOD_SSB,
+    MOD_FM
+} radio_modulation_t;
 
 typedef struct {
     uint64_t dial_freq;
-    radio_audio_bw_t bw;
+    radio_modulation_t mod;
     sideband_t sideband;
     float power;
 } radio_state_t;
@@ -65,10 +62,10 @@ typedef struct {
     radio_band_t band_name;
     uint64_t min_freq;
     uint64_t max_freq;
-    uint16_t num_rx_bandwidths;
-    uint16_t num_tx_bandwidths;
-    radio_audio_bw_t rx_bandwidths[8];
-    radio_audio_bw_t tx_bandwidths[8];
+    uint16_t num_rx_modulations;
+    uint16_t num_tx_modulations;
+    radio_modulation_t rx_modulations[8];
+    radio_modulation_t tx_modulations[8];
 } radio_band_capability_t;
 
 void radio_init();
@@ -81,9 +78,9 @@ bool radio_set_dial_freq_fine(uint64_t freq_dHz);
 radio_band_t radio_get_band(uint64_t freq);
 bool radio_freq_valid(uint64_t freq);
 uint64_t radio_get_dial_freq();
-radio_audio_bw_t radio_get_bw();
+radio_modulation_t radio_get_modulation();
 String radio_band_to_string(radio_band_t band);
-String radio_bandwidth_to_string(radio_audio_bw_t bw);
+String radio_modulation_to_string(radio_modulation_t bw);
 String radio_freq_string();
 float radio_get_s_meter();
 bool radio_set_power(float power_level);

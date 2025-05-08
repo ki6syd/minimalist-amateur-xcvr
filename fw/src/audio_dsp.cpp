@@ -92,7 +92,7 @@ void audio_dsp_task(void *pvParameter) {
     // i2s_config.input_device = (cur_audio_mode == AUDIO_HF_RXTX_CW) ? ADC_INPUT_LINE1 : ADC_INPUT_LINE2;
     i2s_config.input_device = ADC_INPUT_LINE1;
 
-    // TEMPORARY: configure for SSB. Reminder: also need to set radio_audio_bw to BW_SSB.
+    // TEMPORARY: configure for SSB. Reminder: also need to set radio_modulation to MOD_SSB.
     // TODO: select this based on the rx mode
     // i2s_config.input_device = ADC_INPUT_LINE2;
     
@@ -226,10 +226,10 @@ void audio_dsp_task_restart() {
 
 void audio_dsp_set_filter(audio_filt_t filt) {
     switch(filt) {
-        case AUDIO_FILT_CW:
+        case AUDIO_FILT_NARROW:
             audio_filt.setFilter(0, new FIR<float>(coeff_bpf_300_700));
             break;
-        case AUDIO_FILT_SSB:
+        case AUDIO_FILT_WIDE:
             audio_filt.setFilter(0, new FIR<float>(coeff_bpf_400_2000));
             break;
     }

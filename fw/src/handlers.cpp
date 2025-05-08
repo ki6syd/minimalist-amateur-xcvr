@@ -192,11 +192,11 @@ void handler_sidetone_set(AsyncWebServerRequest *request) {
 void handler_bandwidth_get(AsyncWebServerRequest *request) {
     String ret_val = "";
     switch(audio_dsp_get_filter()) {
-        case AUDIO_FILT_CW:
-            ret_val = "CW";
+        case AUDIO_FILT_NARROW:
+            ret_val = "NARROW";
             break;
-        case AUDIO_FILT_SSB:
-            ret_val = "SSB";
+        case AUDIO_FILT_WIDE:
+            ret_val = "WIDE";
             break;
         default:
             ret_val = "UNKNOWN";
@@ -210,10 +210,10 @@ void handler_bandwidth_set(AsyncWebServerRequest *request) {
 
     String bw = request->getParam("bw")->value();
 
-    if(bw == "CW")
-        audio_dsp_set_filter(AUDIO_FILT_CW);
-    else if(bw == "SSB")
-        audio_dsp_set_filter(AUDIO_FILT_SSB);
+    if(bw == "NARROW")
+        audio_dsp_set_filter(AUDIO_FILT_NARROW);
+    else if(bw == "WIDE")
+        audio_dsp_set_filter(AUDIO_FILT_WIDE);
     else {
         request->send(400, "text/plain", "Unknown bandwidth requested");
         return;

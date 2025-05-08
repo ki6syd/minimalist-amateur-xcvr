@@ -30,7 +30,7 @@
 #define F_AUDIO                 8000
 #define F_SIDETONE_DEFAULT      499
 #define BFO_CLOCK_DIV           1
-#define AUDIO_FILT_DEFAULT      AUDIO_FILT_CW
+#define AUDIO_FILT_DEFAULT      AUDIO_FILT_NARROW
 #define SIDEBAND_DEFAULT        SIDEBAND_USB
 #define AUDIO_VOL_DEFAULT       0.75
 #define AUDIO_SIDE_DEFAULT      0.8
@@ -87,11 +87,12 @@ typedef enum {
 } audio_mode_t;
 
 typedef enum {
-    AUDIO_FILT_CW,
-    AUDIO_FILT_SSB
+    AUDIO_FILT_NARROW,
+    AUDIO_FILT_WIDE
 } audio_filt_t;
 
 typedef enum {
     SIDEBAND_LSB,
-    SIDEBAND_USB
+    SIDEBAND_USB,
+    SIDEBAND_NA
 } sideband_t;

@@ -83,13 +83,14 @@ void hf_set_dial_freq(uint64_t freq_dial, sideband_t sideband) {
   freq_vfo = freq_if + freq_dial;
 
   // TODO: check this logic for CW sidetone offset
-  if(radio_get_bw() == BW_CW) {
+  // TODO: for CW, do we need to shift between TX and RX? this whole function may need an overhaul. unsure why CW vs SSB is relevant.
+  if(radio_get_modulation() == MOD_CW) {
     if(sideband == SIDEBAND_USB)
       freq_bfo = freq_if - ((uint64_t) F_SIDETONE_DEFAULT);
     else
       freq_bfo = freq_if + ((uint64_t) F_SIDETONE_DEFAULT);
   }
-  else if (radio_get_bw() == BW_SSB) {
+  else if (radio_get_modulation() == MOD_SSB) {
     freq_bfo = freq_if;
 
     // temporary hack to get the signal inside the passband of the xtal filter

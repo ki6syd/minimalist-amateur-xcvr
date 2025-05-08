@@ -14,7 +14,7 @@ ESPxWebFlMgr filemgr(8080);
 bool fs_mounted = false;
 
 radio_band_t string_to_radio_band(const char* band_str);
-radio_audio_bw_t string_to_radio_audio_bw(const char* bw_str);
+radio_modulation_t string_to_radio_modulation(const char* mod_str);
 void print_band_capability(radio_band_capability_t (&bands)[NUMBER_BANDS]);
 void fs_task(void *pvParameter);
 
@@ -110,11 +110,11 @@ radio_band_t string_to_radio_band(const char* band_str) {
     return BAND_UNKNOWN;
 }
 
-radio_audio_bw_t string_to_radio_audio_bw(const char* bw_str) {
-    if (strcmp(bw_str, "cw") == 0) return BW_CW;
-    if (strcmp(bw_str, "ssb") == 0) return BW_SSB;
-    if (strcmp(bw_str, "fm") == 0) return BW_FM;
-    return BW_CW;  // Default to CW if unrecognized
+radio_modulation_t string_to_radio_modulation(const char* mod_str) {
+    if (strcmp(mod_str, "cw") == 0) return MOD_CW;
+    if (strcmp(mod_str, "ssb") == 0) return MOD_SSB;
+    if (strcmp(mod_str, "fm") == 0) return MOD_FM;
+    return MOD_CW;  // Default to CW if unrecognized
 }
 
 void print_band_capability(radio_band_capability_t (&bands)[NUMBER_BANDS]) {
@@ -132,23 +132,23 @@ void print_band_capability(radio_band_capability_t (&bands)[NUMBER_BANDS]) {
         Serial.println(bands[i].max_freq);
 
         Serial.print("Num RX Bandwidths: ");
-        Serial.println(bands[i].num_rx_bandwidths);
+        Serial.println(bands[i].num_rx_modulations);
 
         // Print the bandwidths
-        Serial.print("RX Bandwidths: ");
-        for (int j = 0; j < bands[i].num_rx_bandwidths; j++) {
-            Serial.print(radio_bandwidth_to_string(bands[i].rx_bandwidths[j]));
+        Serial.print("RX Modulations: ");
+        for (int j = 0; j < bands[i].num_rx_modulations; j++) {
+            Serial.print(radio_modulation_to_string(bands[i].rx_modulations[j]));
             Serial.print(", ");
         }
         Serial.println();
 
         Serial.print("Num TX Bandwidths: ");
-        Serial.println(bands[i].num_tx_bandwidths);
+        Serial.println(bands[i].num_tx_modulations);
 
         // Print the bandwidths
-        Serial.print("TX Bandwidths: ");
-        for (int j = 0; j < bands[i].num_tx_bandwidths; j++) {
-            Serial.print(radio_bandwidth_to_string(bands[i].tx_bandwidths[j]));
+        Serial.print("TX Modulations: ");
+        for (int j = 0; j < bands[i].num_tx_modulations; j++) {
+            Serial.print(radio_modulation_to_string(bands[i].tx_modulations[j]));
             Serial.print(", ");
         }
 
@@ -194,22 +194,22 @@ void fs_load_bands(String file_name, radio_band_capability_t (&bands)[NUMBER_BAN
 
         // Parse rx_modes into the bandwidths array
         JsonArray rx_modes = entry["rx_modes"].as<JsonArray>();
-        tmp.num_rx_bandwidths = rx_modes.size();
-        size_t bw_index = 0;
+        tmp.num_rx_modulations = rx_modes.size();
+        size_t mod_index = 0;
         for (const char* mode : rx_modes) {
-            if (bw_index >= 8) break;  // Ensure we don't exceed bandwidths array size. TODO: parametrize this
-            tmp.rx_bandwidths[bw_index] = string_to_radio_audio_bw(mode);
-            bw_index++;
+            if (mod_index >= 8) break;  // Ensure we don't exceed bandwidths array size. TODO: parametrize this
+            tmp.rx_modulations[mod_index] = string_to_radio_modulation(mode);
+            mod_index++;
         }
 
         // Parse tx_modes into the bandwidths array
         JsonArray tx_modes = entry["tx_modes"].as<JsonArray>();
-        tmp.num_tx_bandwidths = tx_modes.size();
-        bw_index = 0;
+        tmp.num_tx_modulations = tx_modes.size();
+        mod_index = 0;
         for (const char* mode : tx_modes) {
-            if (bw_index >= 8) break;  // Ensure we don't exceed bandwidths array size. TODO: parametrize this
-            tmp.tx_bandwidths[bw_index] = string_to_radio_audio_bw(mode);
-            bw_index++;
+            if (mod_index >= 8) break;  // Ensure we don't exceed bandwidths array size. TODO: parametrize this
+            tmp.tx_modulations[mod_index] = string_to_radio_modulation(mode);
+            mod_index++;
         }
 
         bands[i] = tmp;
