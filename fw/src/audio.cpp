@@ -77,6 +77,8 @@ void audio_logic_task(void *pvParameter) {
 
                 cur_audio_mode = AUDIO_HF_RX_CW;
 
+                // todo: this is a good spot to restart DSP process to give a new i2s config
+
                 // exits WITHOUT changing sidetone volume. That is handled by key on/off function. This just changes "modes"
             }
             if(notifiedValue & NOTIFY_MODE_HF_TX_CW) {
@@ -93,7 +95,7 @@ void audio_logic_task(void *pvParameter) {
                 // TODO: consider deleting this from the audio mode change. Needs low latency so also exists in the sidetone enabling.
                 hp_vol.setVolume(sidetone_vol * global_vol);
 
-                cur_audio_mode = AUDIO_HF_TX_CW;
+                cur_audio_mode = AUDIO_HF_TX_CW;                
 
                 // exits WITHOUT changing sidetone volume. That is handled by key on/off function. This just changes "modes"
             }
@@ -114,7 +116,7 @@ void audio_logic_task(void *pvParameter) {
 
                 cur_audio_mode = AUDIO_HF_TX_SSB;
 
-                // todo: this is a good spot to restart DSP process with new i2s config
+                // todo: this is a good spot to restart DSP process to give a new i2s config
 
                 // exits WITHOUT changing sidetone volume. That is handled by key on/off function. This just changes "modes"
             }

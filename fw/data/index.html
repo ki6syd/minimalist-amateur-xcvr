@@ -41,27 +41,33 @@
   <form>
     <div>
       <label for="bw" class="label">BW</label>
-      <output name="bw" class="readout" id="bw">CW</output>
+      <output name="bw" class="readout" id="bw">NARROW</output>
     </div>
 
     <div>
-      <label for="v_bat" class="label">VDD </label>
-      <output name="v_bat" class="readout" id="v_bat">0.0 V</output>
+      <label for="mod" class="label">MOD</label>
+      <output name="mod" class="readout" id="mod">CW</output>
     </div>
   </form>
 
   <form>
     <div>
+      <label for="v_bat" class="label">VDD </label>
+      <output name="v_bat" class="readout" id="v_bat">0.0 V</output>
+    </div>
+
+    <div>
       <label for="af_gain" class="label">VOL</label>
       <output name="af_gain" class="readout" id="af_gain">0.5</output>
     </div>
+  </form>
 
+  <form>
     <div>
       <label for="keyer_speed" class="label">WPM</label>
       <output name="keyer_speed" class="readout" id="keyer_speed">15</output>
     </div>
   </form>
-
 
   <form>
     <div>
@@ -97,6 +103,7 @@
     <div>
       <button type="button" class="button" onclick="press_bw()">BW</button>
       <button id="cq" type="button" class="button" onclick="memory(0)" data-long-press-delay="750">CQ</button>
+      <button type="button" class="button" onclick="press_mod()">MOD</button>
     </div>
 
     <div>

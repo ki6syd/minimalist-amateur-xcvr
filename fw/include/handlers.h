@@ -15,6 +15,8 @@ void handler_sidetone_get(AsyncWebServerRequest *request);
 void handler_sidetone_set(AsyncWebServerRequest *request);
 void handler_bandwidth_get(AsyncWebServerRequest *request);
 void handler_bandwidth_set(AsyncWebServerRequest *request);
+void handler_modulation_get(AsyncWebServerRequest *request);
+void handler_modulation_set(AsyncWebServerRequest *request);
 void handler_keyer_speed_get(AsyncWebServerRequest *request);
 void handler_keyer_speed_set(AsyncWebServerRequest *request);
 void handler_input_voltage_get(AsyncWebServerRequest *request);

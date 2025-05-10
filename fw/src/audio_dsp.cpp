@@ -240,6 +240,17 @@ audio_filt_t audio_dsp_get_filter() {
     return cur_filt;
 }
 
+String radio_audio_filt_to_string(audio_filt_t filt) {
+    switch(filt) {
+      case AUDIO_FILT_NARROW:
+        return "NARROW";
+      case AUDIO_FILT_WIDE:
+        return "WIDE";
+      default:
+        return "UNKNOWN";
+    }
+  }
+
 void audio_dsp_set_sideband(sideband_t sideband) {
     if(cur_audio_mode == AUDIO_HF_RX_CW) {
         if(sideband == SIDEBAND_USB) {
@@ -263,6 +274,10 @@ void audio_dsp_set_sideband(sideband_t sideband) {
     }
 
     cur_sideband = sideband;
+}
+
+void audio_dsp_set_modulation(radio_modulation_t new_mod) {
+    
 }
 
 void audio_dsp_set_dacs(audio_mode_t mode) {

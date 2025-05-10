@@ -221,6 +221,41 @@ void handler_bandwidth_set(AsyncWebServerRequest *request) {
     request->send(201, "text/plain", "OK");
 }
 
+
+void handler_modulation_get(AsyncWebServerRequest *request) {
+    String ret_val = "";
+    switch(radio_get_modulation()) {
+        case MOD_CW:
+            ret_val = "CW";
+            break;
+        case MOD_SSB:
+            ret_val = "SSB";
+            break;
+        default:
+            ret_val = "UNKNOWN";
+    }
+    request->send(200, "text/plain", ret_val);
+}
+
+void handler_modulation_set(AsyncWebServerRequest *request) {
+    if(!handler_require_param(request, "mod"))
+        return;
+
+    String mod = request->getParam("mod")->value();
+
+    if(mod == "CW")
+        radio_set_modulation(MOD_CW);
+    else if(mod == "SSB")
+        radio_set_modulation(MOD_SSB);
+    else if(mod == "FM")
+        radio_set_modulation(MOD_FM);
+    else {
+        request->send(400, "text/plain", "Unknown modulation requested");
+        return;
+    }
+    request->send(201, "text/plain", "OK");
+}
+
 void handler_keyer_speed_get(AsyncWebServerRequest *request) {
     request->send(200, "text/plain", String(keyer_get_speed()));
 }
@@ -447,4 +482,3 @@ void handler_debug_post(AsyncWebServerRequest *request) {
     }
     request->send(201, "text/plain", "OK");
 }
-

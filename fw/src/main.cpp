@@ -7,6 +7,7 @@
 #include "server.h"
 #include "file_system.h"
 #include "audio.h"
+#include "audio_dsp.h"
 #include "radio.h"
 #include "digi_modes.h"
 #include "time_keeping.h"
@@ -107,6 +108,9 @@ void info_task(void *param) {
 
     Serial.print("Current Radio Modulation: ");
     Serial.println(radio_modulation_to_string(radio_get_modulation()));
+
+    Serial.print("Current Audio Bandwidth: ");
+    Serial.println(radio_audio_filt_to_string(audio_dsp_get_filter()));
 
     // TODO: print out the audio module bandwidth
 

@@ -271,7 +271,7 @@ function adj_speed(change) {
 
 function set_bw() {
   bw = document.getElementById('bw').value;
-  http_request("PUT", "rxBandwidth", ["bw"], [bw])
+  http_request("PUT", "bandwidth", ["bw"], [bw])
 }
 
 function get_bw() {
@@ -281,16 +281,16 @@ function get_bw() {
       document.getElementById('bw').value = this.responseText;
     }
   };
-  http_request("GET", "rxBandwidth", [], [], func)
+  http_request("GET", "bandwidth", [], [], func)
 }
 
 function press_bw() {
   var bw = document.getElementById('bw').value;
 
-  if(bw == "CW")
-    bw = "SSB"
-  else if(bw == "SSB")
-    bw = "CW"
+  if(bw == "NARROW")
+    bw = "WIDE"
+  else if(bw == "WIDE")
+    bw = "NARROW"
   else
     return;
 
@@ -298,6 +298,40 @@ function press_bw() {
 
   set_bw();
   get_bw();
+
+  // update SOTAmat link
+  updateSOTAmatLink();
+}
+
+function set_mod() {
+  mod = document.getElementById('mod').value;
+  http_request("PUT", "modulation", ["mod"], [mod])
+}
+
+function get_mod() {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById('mod').value = this.responseText;
+    }
+  };
+  http_request("GET", "modulation", [], [], func)
+}
+
+function press_mod() {
+  var mod = document.getElementById('mod').value;
+
+  if(mod == "CW")
+    mod = "SSB"
+  else if(mod == "CW")
+    mod = "SSB"
+  else
+    return;
+
+  document.getElementById('mod').value = mod;
+
+  set_mod();
+  get_mod();
 
   // update SOTAmat link
   updateSOTAmatLink();

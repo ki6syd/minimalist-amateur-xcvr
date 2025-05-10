@@ -30,12 +30,6 @@ typedef enum {
     BAND_UNKNOWN
 } radio_band_t;
 
-typedef enum {
-    MOD_CW,
-    MOD_SSB,
-    MOD_FM
-} radio_modulation_t;
-
 typedef struct {
     uint64_t dial_freq;
     radio_modulation_t mod;
@@ -75,12 +69,14 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode);
 void radio_set_band(radio_band_t new_band);
 bool radio_set_dial_freq(uint64_t freq);
 bool radio_set_dial_freq_fine(uint64_t freq_dHz);
+bool radio_set_modulation(radio_modulation_t mod);
 radio_band_t radio_get_band(uint64_t freq);
 bool radio_freq_valid(uint64_t freq);
 uint64_t radio_get_dial_freq();
 radio_modulation_t radio_get_modulation();
 String radio_band_to_string(radio_band_t band);
 String radio_modulation_to_string(radio_modulation_t bw);
+bool radio_modulation_valid(radio_modulation_t mod);
 String radio_freq_string();
 float radio_get_s_meter();
 bool radio_set_power(float power_level);

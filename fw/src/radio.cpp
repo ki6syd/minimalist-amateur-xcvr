@@ -10,18 +10,18 @@
 
 #include <Arduino.h>
 
-#define NOTIFY_KEY_ON         (1 << 0)
-#define NOTIFY_KEY_OFF        (1 << 1)
-#define NOTIFY_QSK_EXPIRE     (1 << 2)
-#define NOTIFY_FREQ_CHANGE    (1 << 3)
-#define NOTIFY_CAL_XTAL       (1 << 4)
-#define NOTIFY_LOW_BAT        (1 << 5)
-#define NOTIFY_POWER_CHANGE   (1 << 6)
+#define NOTIFY_KEY_ON             (1 << 0)
+#define NOTIFY_KEY_OFF            (1 << 1)
+#define NOTIFY_QSK_EXPIRE         (1 << 2)
+#define NOTIFY_FREQ_CHANGE        (1 << 3)
+#define NOTIFY_CAL_XTAL           (1 << 4)
+#define NOTIFY_LOW_BAT            (1 << 5)
+#define NOTIFY_POWER_CHANGE       (1 << 6)
+#define NOTIFY_MODULATION_CHANGE  (1 << 7)
 
 #define FREQ_PLL          (SI5351_PLL_FIXED)
 
-// TODO: need to handle radio_modulation_t setting - can never become MOD_SSB currently, this is needed for SSB transmit.
-radio_modulation_t modulation = MOD_CW; // MOD_SSB
+radio_modulation_t modulation = MOD_CW;
 radio_rxtx_mode_t rxtx_mode = MODE_STARTUP;
 radio_band_t band = BAND_UNKNOWN;
 radio_filt_sweep_t sweep_config;
@@ -171,7 +171,18 @@ void radio_task(void *param) {
             }
 
             // call to set_rxtx_mode() to force an audio path change, if needed
+            // this is a hack
             radio_set_rxtx_mode(rxtx_mode);
+        }
+      }
+      if(notifiedValue & NOTIFY_MODULATION_CHANGE) {
+        // wait for zero ticks, don't want to block here
+        if(xQueueReceive(xRadioQueue, (void *) &tmp, 0) == pdTRUE) {
+          modulation = tmp.mod;
+
+          // call to set_rxtx_mode() to force an audio path change, if needed
+          // this is a hack
+          radio_set_rxtx_mode(MODE_QSK_COUNTDOWN);
         }
       }
       if(notifiedValue & NOTIFY_CAL_XTAL) {
@@ -226,6 +237,23 @@ bool radio_set_dial_freq(uint64_t freq) {
   }
 
   xTaskNotify(xRadioTaskHandle, NOTIFY_FREQ_CHANGE, eSetBits);
+
+  return true;
+}
+
+// helper function to REQUEST a modulation change
+bool radio_set_modulation(radio_modulation_t new_mod) {
+  if(!radio_modulation_valid(new_mod))
+    return false;
+
+  radio_state_t tmp = { .dial_freq = radio_get_dial_freq(), .mod = new_mod, .sideband = sideband, .power = power};
+
+  if(xQueueSend(xRadioQueue, (void *) &tmp, 0) != pdTRUE) {
+    Serial.println("Unable to change frequency, queue full");
+    return false;
+  }
+
+  xTaskNotify(xRadioTaskHandle, NOTIFY_MODULATION_CHANGE, eSetBits);
 
   return true;
 }
@@ -495,6 +523,18 @@ String radio_modulation_to_string(radio_modulation_t bw) {
         default: return "UNKNOWN_MODULATION";
     }
 }
+
+bool radio_modulation_valid(radio_modulation_t mod) {
+    switch (mod) {
+        case MOD_CW:
+        case MOD_SSB:
+        case MOD_FM:
+            return true;
+        default:
+            return false;
+    }
+}
+
 
 String radio_freq_string() {
   if(band == BAND_VHF) {

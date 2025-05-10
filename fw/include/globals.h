@@ -87,6 +87,12 @@ typedef enum {
 } audio_mode_t;
 
 typedef enum {
+    MOD_CW,
+    MOD_SSB,
+    MOD_FM
+} radio_modulation_t;
+
+typedef enum {
     AUDIO_FILT_NARROW,
     AUDIO_FILT_WIDE
 } audio_filt_t;
