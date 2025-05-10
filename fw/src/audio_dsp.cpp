@@ -29,8 +29,8 @@ FilteredStream<int16_t, float> audio_filt;
 FilteredStream<int16_t, float> hilbert;
 
 // volume functions
-// VolumeStream iq_balance(es8388_stream);             // connect iq_balance to the output of es8388_stream here. No setInput() function for iq_balance.
-VolumeStream iq_balance;
+// VolumeStream iq_rx_balance(es8388_stream);             // connect iq_rx_balance to the output of es8388_stream here. No setInput() function for iq_rx_balance.
+VolumeStream iq_rx_balance;
 VolumeStream hp_vol;                                // headphone volume
 VolumeStream tx_vol;                                // transmit audio volume
 VolumeMeter vol_meas;
@@ -89,12 +89,8 @@ void audio_dsp_task(void *pvParameter) {
     i2s_config.buffer_size = BUFFER_CHUNK;
     i2s_config.buffer_count = 4;
     i2s_config.port_no = 0;
-    // i2s_config.input_device = (cur_audio_mode == AUDIO_HF_RXTX_CW) ? ADC_INPUT_LINE1 : ADC_INPUT_LINE2;
-    i2s_config.input_device = ADC_INPUT_LINE1;
-
-    // TEMPORARY: configure for SSB. Reminder: also need to set radio_modulation to MOD_SSB.
-    // TODO: select this based on the rx mode
-    // i2s_config.input_device = ADC_INPUT_LINE2;
+    // i2s_config.input_device = (cur_audio_mode == AUDIO_HF_RX_CW) ? ADC_INPUT_LINE1 : ADC_INPUT_LINE2;
+    i2s_config.input_device = ADC_INPUT_LINE2;
     
     es8388_stream.begin(i2s_config);
     audio_dsp_set_dacs(cur_audio_mode);
@@ -118,10 +114,11 @@ void audio_dsp_task(void *pvParameter) {
 
     iq_sum = new OutputMixer<int16_t>();
 
-    copier_iq_in.begin(*es8388_sidetone_mixer, iq_balance);
+    copier_iq_in.begin(*es8388_sidetone_mixer, iq_rx_balance);
     copier_sidetone_in.begin(*es8388_sidetone_mixer, sidetone_sound);
     copier_imd_in.begin(*es8388_sidetone_mixer, imd_test_sound);
 
+    // TODO: need a volume control after this to allow iq_tx_balance control
     sidetone_wave.begin(info_stereo, sidetone_freq);
     sidetone_wave.setAmplitude(0);
 
@@ -129,16 +126,14 @@ void audio_dsp_task(void *pvParameter) {
     imd_test_wave.setAmplitude(0);
 
     ConverterFillLeftAndRight<int16_t> converter_fill_lr(RightIsEmpty); // RightIsEmpty: used to fill microphone into both channels of the stream. Auto: used to pass through normally.
-    // TODO: create a ConverterFillLeftAndRight differently depending on the rx mode. 
+    // ConverterFillLeftAndRight<int16_t> converter_fill_lr((cur_audio_mode == AUDIO_HF_RX_CW) ? Auto : RightIsEmpty); // RightIsEmpty: used to fill microphone into both channels of the stream. Auto: used to pass through normally.
     mic_channel_duplicate = new ConverterStream<int16_t>(es8388_stream, converter_fill_lr); // connect mic_channel_duplicate to the output of es8388_stream here. No setInput() function for mic_channel_duplicate.
     mic_channel_duplicate->begin();    
 
-    // TODO: Turn this into "iq_rx_balance" and also add an iq_tx_balance that acts on the sidetone audio wave. Need separate adjustments
-    // TODO: intercept the signal going into iq_balance and choose one channel to copy to both. Mic input needs to get to both channels.
-    iq_balance.setStream(*mic_channel_duplicate);
-    iq_balance.begin(info_stereo);
-    iq_balance.setVolume(q_rx_gain, 0);
-    iq_balance.setVolume(i_rx_gain, 1);
+    iq_rx_balance.setStream(*mic_channel_duplicate);
+    iq_rx_balance.begin(info_stereo);
+    iq_rx_balance.setVolume(q_rx_gain, 0);
+    iq_rx_balance.setVolume(i_rx_gain, 1);
 
     es8388_sidetone_mixer->setOutput(hilbert);
     es8388_sidetone_mixer->begin();
@@ -274,10 +269,6 @@ void audio_dsp_set_sideband(sideband_t sideband) {
     }
 
     cur_sideband = sideband;
-}
-
-void audio_dsp_set_modulation(radio_modulation_t new_mod) {
-    
 }
 
 void audio_dsp_set_dacs(audio_mode_t mode) {

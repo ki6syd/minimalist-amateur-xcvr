@@ -68,8 +68,8 @@ void audio_logic_task(void *pvParameter) {
             // Handle mode changes
             if(notifiedValue & NOTIFY_MODE_HF_RX_CW) {
                 Serial.println("HF RX CW");
-                iq_balance.setVolume(q_rx_gain, 0);
-                iq_balance.setVolume(i_rx_gain, 1);
+                iq_rx_balance.setVolume(q_rx_gain, 0);
+                iq_rx_balance.setVolume(i_rx_gain, 1);
 
                 tx_vol.setVolume(0.0);
 
@@ -83,8 +83,8 @@ void audio_logic_task(void *pvParameter) {
             }
             if(notifiedValue & NOTIFY_MODE_HF_TX_CW) {
                 Serial.println("HF TX CW");
-                iq_balance.setVolume(0, 0);
-                iq_balance.setVolume(0, 1);
+                iq_rx_balance.setVolume(0, 0);
+                iq_rx_balance.setVolume(0, 1);
 
                 Serial.print("Setting tx_power: ");
                 Serial.println(tx_power);
@@ -102,8 +102,8 @@ void audio_logic_task(void *pvParameter) {
             if(notifiedValue & NOTIFY_MODE_HF_TX_SSB) {
 
                 Serial.println("HF TX SSB");
-                iq_balance.setVolume(q_rx_gain, 0);
-                iq_balance.setVolume(q_rx_gain, 1);
+                iq_rx_balance.setVolume(q_rx_gain, 0);
+                iq_rx_balance.setVolume(q_rx_gain, 1);
 
                 Serial.print("Setting tx_power: ");
                 Serial.println(tx_power);
@@ -116,7 +116,9 @@ void audio_logic_task(void *pvParameter) {
 
                 cur_audio_mode = AUDIO_HF_TX_SSB;
 
-                // todo: this is a good spot to restart DSP process to give a new i2s config
+                // restart DSP process to allow for the i2s config to change
+                // audio_dsp_task_restart();
+                // todo: test this reconfiguration
 
                 // exits WITHOUT changing sidetone volume. That is handled by key on/off function. This just changes "modes"
             }
@@ -133,6 +135,7 @@ void audio_logic_task(void *pvParameter) {
                 sidetone_wave.setAmplitude(0);
             }
             if(notifiedValue & NOTIFY_DBG_IMD_TEST) {
+                // create a two-tone test waveform by outputting half amplitude at two different frequencies
                 imd_test_wave.setAmplitude(INT16_MAX/2);
                 sidetone_wave.setAmplitude(INT16_MAX/2);
             }

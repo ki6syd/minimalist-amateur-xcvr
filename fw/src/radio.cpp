@@ -19,9 +19,9 @@
 #define NOTIFY_POWER_CHANGE       (1 << 6)
 #define NOTIFY_MODULATION_CHANGE  (1 << 7)
 
-#define FREQ_PLL          (SI5351_PLL_FIXED)
+#define FREQ_PLL                  (SI5351_PLL_FIXED)
 
-radio_modulation_t modulation = MOD_CW;
+radio_modulation_t modulation = MODULATION_DEFAULT;
 radio_rxtx_mode_t rxtx_mode = MODE_STARTUP;
 radio_band_t band = BAND_UNKNOWN;
 radio_filt_sweep_t sweep_config;

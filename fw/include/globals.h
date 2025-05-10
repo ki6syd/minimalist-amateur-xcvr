@@ -32,6 +32,7 @@
 #define BFO_CLOCK_DIV           1
 #define AUDIO_FILT_DEFAULT      AUDIO_FILT_NARROW
 #define SIDEBAND_DEFAULT        SIDEBAND_USB
+#define MODULATION_DEFAULT      MOD_SSB
 #define AUDIO_VOL_DEFAULT       0.75
 #define AUDIO_SIDE_DEFAULT      0.8
 #define TX_POWER_DEFAULT        0.8

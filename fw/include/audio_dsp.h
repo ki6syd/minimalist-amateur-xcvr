@@ -17,7 +17,6 @@ void audio_dsp_set_filter(audio_filt_t filt);
 audio_filt_t audio_dsp_get_filter();
 String radio_audio_filt_to_string(audio_filt_t filt);
 void audio_dsp_set_sideband(sideband_t sideband);
-void audio_dsp_set_modulation(radio_modulation_t mod);
 void audio_dsp_set_volume(float vol);
 void audio_dsp_set_dacs(audio_mode_t mode);
 void audio_dsp_set_mode(audio_mode_t mode);
@@ -41,7 +40,7 @@ extern float q_tx_gain;
 
 extern SineWaveGenerator<int16_t> sidetone_wave;
 extern SineWaveGenerator<int16_t> imd_test_wave;
-extern VolumeStream iq_balance;
+extern VolumeStream iq_rx_balance;
 extern VolumeStream hp_vol;
 extern VolumeStream tx_vol;
 extern VolumeMeter vol_meas;
