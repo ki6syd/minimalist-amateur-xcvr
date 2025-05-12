@@ -5,6 +5,7 @@
 #include <Wire.h>
 
 TaskHandle_t xDSPTaskHandle;
+SemaphoreHandle_t xDSPcodecMutex;
 
 AudioInfo info_stereo(F_AUDIO, 2, 16);
 AudioInfo info_mono(F_AUDIO, 1, 16);
@@ -38,6 +39,7 @@ AudioEffectStream effects;
 Distortion volume_limiter;
 
 // audio plumbing
+FillLeftAndRightStatus left_right_fill_mode;
 ConverterStream<int16_t> *mic_channel_duplicate;
 OutputMixer<int16_t> *es8388_sidetone_mixer;
 MultiOutput rx_tx_audio_mux;
@@ -56,7 +58,7 @@ float sidetone_freq = F_SIDETONE_DEFAULT;
 float global_vol = AUDIO_VOL_DEFAULT;
 float tx_power = TX_POWER_DEFAULT;
 audio_filt_t cur_filt = AUDIO_FILT_DEFAULT;
-audio_mode_t cur_audio_mode = AUDIO_HF_RX_CW;
+audio_mode_t cur_audio_mode = AUDIO_HF_RX;
 sideband_t cur_sideband = SIDEBAND_DEFAULT;
 uint16_t max_safe_vol = INT16_MAX;
 float i_rx_gain = 1.0;
@@ -71,10 +73,15 @@ void audio_dsp_init() {
     my_pins.begin();
     audio_board.begin();
 
+    xDSPcodecMutex = xSemaphoreCreateMutex();
+    if(xDSPcodecMutex == NULL) {
+        Serial.println("Error creating mutex xDSPcodecMutex");
+    }
+
     xTaskCreatePinnedToCore(
         audio_dsp_task,
         "Audio DSP Task",
-        65536,
+        16384,
         NULL,
         TASK_PRIORITY_DSP,
         &xDSPTaskHandle,
@@ -83,18 +90,16 @@ void audio_dsp_init() {
 }
 
 void audio_dsp_task(void *pvParameter) {
-    // initialize ES8388 codec
-    auto i2s_config = es8388_stream.defaultConfig(RXTX_MODE);
-    i2s_config.copyFrom(info_stereo);
-    i2s_config.buffer_size = BUFFER_CHUNK;
-    i2s_config.buffer_count = 4;
-    i2s_config.port_no = 0;
-    // i2s_config.input_device = (cur_audio_mode == AUDIO_HF_RX_CW) ? ADC_INPUT_LINE1 : ADC_INPUT_LINE2;
-    i2s_config.input_device = ADC_INPUT_LINE2;
-    
-    es8388_stream.begin(i2s_config);
-    audio_dsp_set_dacs(cur_audio_mode);
+    uint32_t ulNotificationValue;
 
+    Serial.print("Starting audio_dsp_task with audio mode: ");
+    Serial.println(cur_audio_mode);
+
+    //configure es8388 i2s codec differently based the current audio mode
+    audio_dsp_es8388_config(cur_audio_mode);
+    // audio_dsp_es8388_config(AUDIO_HF_TX_SSB);
+    // audio_dsp_es8388_config(AUDIO_HF_RX);
+    
     // initialize PCM1502 codec
     auto cfg_tx = pcm1502_stream.defaultConfig(TX_MODE);
     cfg_tx.copyFrom(info_stereo);
@@ -125,8 +130,13 @@ void audio_dsp_task(void *pvParameter) {
     imd_test_wave.begin(info_stereo, sidetone_freq+1000);
     imd_test_wave.setAmplitude(0);
 
-    ConverterFillLeftAndRight<int16_t> converter_fill_lr(RightIsEmpty); // RightIsEmpty: used to fill microphone into both channels of the stream. Auto: used to pass through normally.
-    // ConverterFillLeftAndRight<int16_t> converter_fill_lr((cur_audio_mode == AUDIO_HF_RX_CW) ? Auto : RightIsEmpty); // RightIsEmpty: used to fill microphone into both channels of the stream. Auto: used to pass through normally.
+    // // es8388 inputs are used for both RX and microphone input. In case of mic input, need to copy data to both stereo channels
+    // if(cur_audio_mode == AUDIO_HF_RX)
+    //     left_right_fill_mode = Auto;    // passes both channels through
+    // else
+    //     left_right_fill_mode = RightIsEmpty;    // fills microphone into both channels of the stream
+
+    ConverterFillLeftAndRight<int16_t> converter_fill_lr(left_right_fill_mode);
     mic_channel_duplicate = new ConverterStream<int16_t>(es8388_stream, converter_fill_lr); // connect mic_channel_duplicate to the output of es8388_stream here. No setInput() function for mic_channel_duplicate.
     mic_channel_duplicate->begin();    
 
@@ -186,37 +196,172 @@ void audio_dsp_task(void *pvParameter) {
     tx_vol.begin(info_stereo);
     tx_vol.setVolume(1.0);
 
+    if (!es8388_sidetone_mixer) Serial.println("Error: sidetone mixer is NULL!");
+    if (!iq_sum) Serial.println("Error: iq sum is NULL!");
+    if (!mic_channel_duplicate) Serial.println("Error: mic_channel_duplicate is NULL!");
     
     size_t bytes_copied_in = 0;
     size_t bytes_copied_sidetone = 0;
     size_t bytes_copied_imd = 0;
+    Serial.println("Starting copier loop");
     while(true) {
-        bytes_copied_in = copier_iq_in.copy();
-        bytes_copied_sidetone = copier_sidetone_in.copy();
-        bytes_copied_imd = copier_imd_in.copy();
+        // guard the copying with a mutex. May need to block in order to reconfigure codec.
+        if(xSemaphoreTake(xDSPcodecMutex, portMAX_DELAY) == pdTRUE) {
+            bytes_copied_in = copier_iq_in.copy();
+            // Serial.print("Bytes copied (IQ): ");
+            // Serial.println(bytes_copied_in);
 
-        // Serial.print("Bytes copied (IQ): ");
-        // Serial.println(bytes_copied_in);
-        // Serial.print("Bytes copied (Sidetone): ");
-        // Serial.println(bytes_copied_sidetone);
-        // Serial.print("Bytes copied (PCM): ");
-        // Serial.println(bytes_copied_pcm);
+            bytes_copied_imd = copier_imd_in.copy();
+            // Serial.print("Bytes copied (IMD): ");
+            // Serial.println(bytes_copied_imd);
 
-        // vTaskDelay(pdMS_TO_TICKS(1));
+            bytes_copied_sidetone = copier_sidetone_in.copy();  
+            // Serial.print("Bytes copied (ST): ");
+            // Serial.println(bytes_copied_sidetone);
+
+            // vTaskDelay(pdMS_TO_TICKS(1));
+
+            xSemaphoreGive(xDSPcodecMutex);
+        }
+
+
+        
+
+        // check if task needs to terminate
+        if (xTaskNotifyWait(0x00, 0xFFFFFFFF, &ulNotificationValue, 0) == pdTRUE) {
+            if (ulNotificationValue == TASK_EXIT_SIGNAL) { 
+                Serial.println("Audio DSP task received exit signal.");
+
+                vTaskDelay(pdMS_TO_TICKS(1000));
+
+                // break;
+            }
+        }
     }
-}
-void audio_dsp_task_restart() {
-    vTaskDelete(xDSPTaskHandle);
 
-    xTaskCreatePinnedToCore(
+    // if we've gotten to this point, the task is self-deleting
+
+    Serial.println("Stopping active streams and copiers");
+    // copier_iq_in.end();
+    // copier_sidetone_in.end();
+    // copier_imd_in.end();
+
+    pcm1502_stream.end();
+    es8388_stream.end();
+    audio_board.end();
+    Serial.println("Done stopping active streams and copiers");
+
+    // === Second: End audio processing components ===
+    sidetone_wave.end();
+    sidetone_sound.end();
+    imd_test_wave.end();
+    imd_test_sound.end();
+    // iq_rx_balance.end();
+    // hilbert.end();
+    // rx_tx_audio_mux.end();
+    // iq_split.end();
+    // audio_filt.end();
+    // vol_meas.end();
+    // effects.end();
+    effects.clear();
+    // mono_to_stereo.end();
+    // hp_vol.end();
+    // tx_vol.end();
+    Serial.println("Done with 1");
+
+    // must happen first
+    if (es8388_sidetone_mixer != nullptr) {
+        delete es8388_sidetone_mixer;   // Safe deletion
+        es8388_sidetone_mixer = nullptr;
+    }
+    Serial.println("Done with 3a");
+
+    if (iq_sum != nullptr) {
+        delete iq_sum;                  // Safe deletion
+        iq_sum = nullptr;
+    }
+    Serial.println("Done with 3b");
+
+    if (mic_channel_duplicate != nullptr) {
+        delete mic_channel_duplicate;   // Safe deletion
+        mic_channel_duplicate = nullptr;
+    }
+    Serial.println("Done with 3c");
+
+    // === Optional: Heap debug ===
+    Serial.printf("Heap after cleanup: %u bytes\n", ESP.getFreeHeap());
+
+    // === Fifth: Clear task handle and self-delete ===
+    xDSPTaskHandle = NULL;  // Clear task handle
+    Serial.println("Task cleanup finished, deleting task now.");
+    vTaskDelete(NULL);
+}
+
+void audio_dsp_task_restart() {
+    Serial.print("waiting for mutex...");
+    // take semaphore to prevent copier from running. Maximum 100ms wait.
+    if(xSemaphoreTake(xDSPcodecMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+        // reconfigure codec to use correct inputs/outputs
+        audio_dsp_es8388_config(cur_audio_mode);
+
+        // delay may not be needed
+        vTaskDelay(pdMS_TO_TICKS(10));
+
+
+        Serial.println("giving back mutex...");
+        // give back semaphore, allowing copier to run again
+        xSemaphoreGive(xDSPcodecMutex);
+    }
+
+    
+    return;
+
+    Serial.println("Signaling Audio DSP task to exit...");
+    if (xDSPTaskHandle != NULL) {
+        // Notify the task to exit
+        xTaskNotify(xDSPTaskHandle, TASK_EXIT_SIGNAL, eSetValueWithOverwrite);
+
+        // Wait for task to clean up and delete itself
+        // while (xDSPTaskHandle != NULL) {
+        //     vTaskDelay(pdMS_TO_TICKS(100));
+        // }
+        // Serial.println("Audio DSP task exited.");
+    }
+
+    // open loop hack: wait for 100ms to allow copier to catch up and pause. then reconfigure codec before 1 second elapses
+    vTaskDelay(pdMS_TO_TICKS(100));
+    Serial.println("Audio DSP task restarting...");
+    
+    audio_dsp_es8388_config(cur_audio_mode);
+
+    return;
+
+    // Print out system memory info before restarting
+    Serial.printf("Free heap before restart: %u bytes\n", ESP.getFreeHeap());
+    Serial.printf("Minimum ever free heap: %u bytes\n", ESP.getMinFreeHeap());
+    Serial.printf("Restarting task on core %d\n", TASK_CORE_DSP);
+
+    // Try to recreate the task
+    BaseType_t result = xTaskCreatePinnedToCore(
         audio_dsp_task,
         "Audio DSP Task",
-        65536,
-        NULL,
-        TASK_PRIORITY_DSP,
-        &xDSPTaskHandle,
-        TASK_CORE_DSP
+        16384,                 // Stack size
+        NULL,                  // Parameters
+        TASK_PRIORITY_DSP,     // Priority
+        &xDSPTaskHandle,       // Handle
+        TASK_CORE_DSP          // Core
     );
+
+    if (result == pdPASS) {
+        Serial.println("✅ Audio DSP task restarted successfully.");
+    } else {
+        Serial.printf("❌ Failed to restart Audio DSP task! Free heap: %u bytes\n", ESP.getFreeHeap());
+        if (result == errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY) {
+            Serial.println("Reason: Not enough heap memory.");
+        } else {
+            Serial.printf("Unknown error code: %d\n", result);
+        }
+    }
 }
 
 void audio_dsp_set_filter(audio_filt_t filt) {
@@ -247,7 +392,7 @@ String radio_audio_filt_to_string(audio_filt_t filt) {
   }
 
 void audio_dsp_set_sideband(sideband_t sideband) {
-    if(cur_audio_mode == AUDIO_HF_RX_CW) {
+    if(cur_audio_mode == AUDIO_HF_RX) {
         if(sideband == SIDEBAND_USB) {
             hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
             hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
@@ -271,10 +416,27 @@ void audio_dsp_set_sideband(sideband_t sideband) {
     cur_sideband = sideband;
 }
 
-void audio_dsp_set_dacs(audio_mode_t mode) {
+
+void audio_dsp_es8388_config(audio_mode_t mode) {
+    if(mode == AUDIO_HF_RX)
+        Serial.println("setting up codec for HF_RX");
+
+    // initialize ES8388 codec
+    auto i2s_config = es8388_stream.defaultConfig(RXTX_MODE);
+    i2s_config.copyFrom(info_stereo);
+    i2s_config.buffer_size = BUFFER_CHUNK;
+    i2s_config.buffer_count = 4;
+    i2s_config.port_no = 0;
+    // set input device depending on the audio mode
+    if(mode == AUDIO_HF_RX || mode == AUDIO_HF_TX_CW || mode == AUDIO_VHF_RX)
+        i2s_config.input_device = ADC_INPUT_LINE1;
+    else
+        i2s_config.input_device = ADC_INPUT_LINE2;
+    es8388_stream.begin(i2s_config);
+
+    // set the correct DAC outputs based on audio mode
     AudioDriver *driver = audio_board.getDriver();
-    
-    if(mode == AUDIO_HF_RX_CW || mode == AUDIO_HF_TX_CW || mode == AUDIO_VHF_RX) {
+    if(mode == AUDIO_HF_RX || mode == AUDIO_HF_TX_CW || mode == AUDIO_VHF_RX) {
         driver->setMute(false, 0);
         driver->setMute(true, 1);
     }
@@ -282,10 +444,15 @@ void audio_dsp_set_dacs(audio_mode_t mode) {
         driver->setMute(true, 0);
         driver->setMute(false, 1);
     }
+
+    // es8388 inputs are used for both RX and microphone input. In case of mic input, need to copy data to both stereo channels
+    if(cur_audio_mode == AUDIO_HF_RX)
+        left_right_fill_mode = Auto;    // passes both channels through
+    else
+        left_right_fill_mode = RightIsEmpty;    // fills microphone into both channels of the stream
 }
 
 float audio_dsp_get_rx_level(uint16_t num_avg, uint16_t delay_ms) {
-    
     float rx_dB = 0;
     for(uint16_t i = 0; i < num_avg; i++) {
         rx_dB += vol_meas.volumeDB();

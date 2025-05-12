@@ -75,9 +75,11 @@ void audio_logic_task(void *pvParameter) {
 
                 hp_vol.setVolume(global_vol);
 
-                cur_audio_mode = AUDIO_HF_RX_CW;
+                cur_audio_mode = AUDIO_HF_RX;
 
-                // todo: this is a good spot to restart DSP process to give a new i2s config
+                // restart DSP process to allow for the i2s config to change
+                Serial.println("Restarting audio_dsp_task() with cur_audio_mode = " + audio_mode_to_string(cur_audio_mode));    
+                audio_dsp_task_restart();
 
                 // exits WITHOUT changing sidetone volume. That is handled by key on/off function. This just changes "modes"
             }
@@ -95,7 +97,11 @@ void audio_logic_task(void *pvParameter) {
                 // TODO: consider deleting this from the audio mode change. Needs low latency so also exists in the sidetone enabling.
                 hp_vol.setVolume(sidetone_vol * global_vol);
 
-                cur_audio_mode = AUDIO_HF_TX_CW;                
+                cur_audio_mode = AUDIO_HF_TX_CW;
+                
+                // restart DSP process to allow for the i2s config to change
+                Serial.println("Restarting audio_dsp_task() with cur_audio_mode = " + audio_mode_to_string(cur_audio_mode));    
+                audio_dsp_task_restart();
 
                 // exits WITHOUT changing sidetone volume. That is handled by key on/off function. This just changes "modes"
             }
@@ -117,8 +123,8 @@ void audio_logic_task(void *pvParameter) {
                 cur_audio_mode = AUDIO_HF_TX_SSB;
 
                 // restart DSP process to allow for the i2s config to change
-                // audio_dsp_task_restart();
-                // todo: test this reconfiguration
+                Serial.println("Restarting audio_dsp_task() with cur_audio_mode = " + audio_mode_to_string(cur_audio_mode));    
+                audio_dsp_task_restart();
 
                 // exits WITHOUT changing sidetone volume. That is handled by key on/off function. This just changes "modes"
             }
@@ -133,6 +139,7 @@ void audio_logic_task(void *pvParameter) {
             }
             if(notifiedValue & NOTIFY_DBG_MIN_VOL) {
                 sidetone_wave.setAmplitude(0);
+                imd_test_wave.setAmplitude(0);
             }
             if(notifiedValue & NOTIFY_DBG_IMD_TEST) {
                 // create a two-tone test waveform by outputting half amplitude at two different frequencies
@@ -145,7 +152,9 @@ void audio_logic_task(void *pvParameter) {
 }
 
 void audio_set_mode(audio_mode_t mode) {
-    if(mode == AUDIO_HF_RX_CW)
+    Serial.print("audio_set_mode(): ");
+    Serial.println(audio_mode_to_string(mode));
+    if(mode == AUDIO_HF_RX)
         xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_HF_RX_CW, eSetBits);
     else if(mode == AUDIO_HF_TX_CW)
         xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_HF_TX_CW, eSetBits);
@@ -155,6 +164,23 @@ void audio_set_mode(audio_mode_t mode) {
         xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_VHF_RX, eSetBits);
     else if(mode == AUDIO_VHF_TX)
         xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_VHF_TX, eSetBits);
+}
+
+String audio_mode_to_string(audio_mode_t mode) {
+    switch(mode) {
+        case AUDIO_HF_RX:
+            return "HF RX";
+        case AUDIO_HF_TX_CW:
+            return "HF TX CW";
+        case AUDIO_HF_TX_SSB:
+            return "HF TX SSB";
+        case AUDIO_VHF_RX:
+            return "VHF RX";
+        case AUDIO_VHF_TX:
+            return "VHF TX";
+        default:
+            return "UNKNOWN";
+    }
 }
 
 bool audio_set_hp_volume(float vol) {

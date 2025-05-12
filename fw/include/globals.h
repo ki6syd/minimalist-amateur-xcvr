@@ -27,6 +27,8 @@
 #define TASK_CORE_DIGI          1
 #define TASK_CORE_KEY_IO        1
 
+#define TASK_EXIT_SIGNAL        0xDEAD
+
 #define F_AUDIO                 8000
 #define F_SIDETONE_DEFAULT      499
 #define BFO_CLOCK_DIV           1
@@ -80,7 +82,7 @@ typedef enum {
 } debug_action_t;
 
 typedef enum {
-    AUDIO_HF_RX_CW,
+    AUDIO_HF_RX,
     AUDIO_HF_TX_CW,
     AUDIO_HF_TX_SSB,
     AUDIO_VHF_RX,

@@ -286,9 +286,11 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
         // update mode so the next function calls assume TX
         rxtx_mode = MODE_RX;
 
+        Serial.print("Checking if freq is HF...");
         if(radio_freq_is_hf(freq_dial)) {
+          Serial.println("yes");
           // change audio mode, function will ignore if there's no change
-          audio_set_mode(AUDIO_HF_RX_CW);
+          audio_set_mode(AUDIO_HF_RX);
 
           // change AGC setpoint
           power_agc_to_voltage(AGC_VOLT_RX);

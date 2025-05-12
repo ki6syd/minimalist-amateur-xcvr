@@ -12,14 +12,12 @@
 void audio_dsp_init();
 void audio_dsp_task(void *pvParameter);
 void audio_dsp_task_restart();
-void audio_dsp_set_mode(audio_mode_t mode);
 void audio_dsp_set_filter(audio_filt_t filt);
 audio_filt_t audio_dsp_get_filter();
 String radio_audio_filt_to_string(audio_filt_t filt);
 void audio_dsp_set_sideband(sideband_t sideband);
 void audio_dsp_set_volume(float vol);
-void audio_dsp_set_dacs(audio_mode_t mode);
-void audio_dsp_set_mode(audio_mode_t mode);
+void audio_dsp_es8388_config(audio_mode_t mode);
 float audio_dsp_get_rx_level(uint16_t num_avg, uint16_t delay_ms);
 void audio_dsp_set_pga_gain(uint8_t volume);
 

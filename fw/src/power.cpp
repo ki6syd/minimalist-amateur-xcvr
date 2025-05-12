@@ -358,12 +358,12 @@ void power_bias_to_current(float total_current) {
       error = target_current - measured_current;
       bias_duties[i] += error * BIAS_KP + (prev_error - error) * BIAS_KD;
 
-      Serial.print("measured_current: ");
-      Serial.print(measured_current);
-      Serial.print("\terror: ");
-      Serial.print(error);
-      Serial.print("\tnew duty: ");
-      Serial.println(bias_duties[i]);
+      // Serial.print("measured_current: ");
+      // Serial.print(measured_current);
+      // Serial.print("\terror: ");
+      // Serial.print(error);
+      // Serial.print("\tnew duty: ");
+      // Serial.println(bias_duties[i]);
 
       // possible case: no bias current at all (e.g. no power board). Fault after 10 iterations with extreme duty
       if(bias_duties[i] > 1 || bias_duties[i] < 0)

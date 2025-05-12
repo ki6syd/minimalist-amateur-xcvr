@@ -8,6 +8,7 @@ void audio_init();
 bool audio_set_hp_volume(float vol);
 float audio_get_volume();
 void audio_set_mode(audio_mode_t mode);
+String audio_mode_to_string(audio_mode_t mode);
 bool audio_set_sidetone_volume(float vol);
 float audio_get_sidetone_volume();
 void audio_en_sidetone(bool en);
