@@ -91,6 +91,8 @@ void radio_task(void *param) {
     // example: https://freertos.org/Documentation/02-Kernel/02-Kernel-features/03-Direct-to-task-notifications/04-As-event-group
     if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(5)) == pdTRUE) {
       if(notifiedValue & NOTIFY_KEY_OFF) {
+        Serial.println("KEY OFF");
+
         audio_en_sidetone(false);
 
         // initiate mode change
@@ -102,6 +104,7 @@ void radio_task(void *param) {
         digitalWrite(LED_RED, LOW);
       }
       if(notifiedValue & NOTIFY_KEY_ON) {
+        Serial.println("KEY ON");
         // TODO: create key shape using a ramp on the sidetone source volume, rather than using VDD_CTRL
 
         // only use sidetone in CW mode. TODO: differentiate whether key on was from PTT vs CW key. Consider cross-mode.
@@ -286,9 +289,7 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
         // update mode so the next function calls assume TX
         rxtx_mode = MODE_RX;
 
-        Serial.print("Checking if freq is HF...");
         if(radio_freq_is_hf(freq_dial)) {
-          Serial.println("yes");
           // change audio mode, function will ignore if there's no change
           audio_set_mode(AUDIO_HF_RX);
 

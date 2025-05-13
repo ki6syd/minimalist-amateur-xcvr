@@ -11,7 +11,7 @@
 
 void audio_dsp_init();
 void audio_dsp_task(void *pvParameter);
-void audio_dsp_task_restart();
+void audio_dsp_request_codec_update();
 void audio_dsp_set_filter(audio_filt_t filt);
 audio_filt_t audio_dsp_get_filter();
 String radio_audio_filt_to_string(audio_filt_t filt);

@@ -323,8 +323,8 @@ function press_mod() {
 
   if(mod == "CW")
     mod = "SSB"
-  else if(mod == "CW")
-    mod = "SSB"
+  else if(mod == "SSB")
+    mod = "CW"
   else
     return;
 
@@ -830,6 +830,7 @@ setInterval(function() { get_s_meter();}, 500);
 setInterval(function() { get_volume();}, 5000); 
 setInterval(function() { get_speed();}, 5000); 
 setInterval(function() { get_bw();}, 3000); 
+setInterval(function() { get_mod();}, 3000); 
 setInterval(function() { get_queue_len();}, 1000); 
 // setInterval(function() { get_debug();}, 500);
 setInterval(function() { get_utc_time();}, 5000) 

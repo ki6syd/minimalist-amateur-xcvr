@@ -67,7 +67,6 @@ void audio_logic_task(void *pvParameter) {
             }
             // Handle mode changes
             if(notifiedValue & NOTIFY_MODE_HF_RX_CW) {
-                Serial.println("HF RX CW");
                 iq_rx_balance.setVolume(q_rx_gain, 0);
                 iq_rx_balance.setVolume(i_rx_gain, 1);
 
@@ -76,15 +75,11 @@ void audio_logic_task(void *pvParameter) {
                 hp_vol.setVolume(global_vol);
 
                 cur_audio_mode = AUDIO_HF_RX;
-
-                // restart DSP process to allow for the i2s config to change
-                Serial.println("Restarting audio_dsp_task() with cur_audio_mode = " + audio_mode_to_string(cur_audio_mode));    
-                audio_dsp_task_restart();
+                audio_dsp_request_codec_update();
 
                 // exits WITHOUT changing sidetone volume. That is handled by key on/off function. This just changes "modes"
             }
             if(notifiedValue & NOTIFY_MODE_HF_TX_CW) {
-                Serial.println("HF TX CW");
                 iq_rx_balance.setVolume(0, 0);
                 iq_rx_balance.setVolume(0, 1);
 
@@ -98,16 +93,11 @@ void audio_logic_task(void *pvParameter) {
                 hp_vol.setVolume(sidetone_vol * global_vol);
 
                 cur_audio_mode = AUDIO_HF_TX_CW;
-                
-                // restart DSP process to allow for the i2s config to change
-                Serial.println("Restarting audio_dsp_task() with cur_audio_mode = " + audio_mode_to_string(cur_audio_mode));    
-                audio_dsp_task_restart();
+                audio_dsp_request_codec_update();
 
                 // exits WITHOUT changing sidetone volume. That is handled by key on/off function. This just changes "modes"
             }
             if(notifiedValue & NOTIFY_MODE_HF_TX_SSB) {
-
-                Serial.println("HF TX SSB");
                 iq_rx_balance.setVolume(q_rx_gain, 0);
                 iq_rx_balance.setVolume(q_rx_gain, 1);
 
@@ -121,10 +111,7 @@ void audio_logic_task(void *pvParameter) {
                 hp_vol.setVolume(sidetone_vol * global_vol);
 
                 cur_audio_mode = AUDIO_HF_TX_SSB;
-
-                // restart DSP process to allow for the i2s config to change
-                Serial.println("Restarting audio_dsp_task() with cur_audio_mode = " + audio_mode_to_string(cur_audio_mode));    
-                audio_dsp_task_restart();
+                audio_dsp_request_codec_update();
 
                 // exits WITHOUT changing sidetone volume. That is handled by key on/off function. This just changes "modes"
             }

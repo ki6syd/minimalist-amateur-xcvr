@@ -79,11 +79,11 @@ void info_task(void *param) {
     Serial.print("Transmit Power: ");
     Serial.println(radio_get_power());
     
-    Serial.print("Bias duty: CH0:");
+    Serial.print("Bias duty CH0: ");
     Serial.print(power_get_bias_duty(BIAS_CHANNEL_0));
     Serial.print("\tCH1: ");
-    Serial.println(power_get_bias_duty(BIAS_CHANNEL_1)); 
-    Serial.print("AGC duty:");
+    Serial.print(power_get_bias_duty(BIAS_CHANNEL_1)); 
+    Serial.print("\tAGC duty: ");
     Serial.println(power_get_agc_duty());
 
     Serial.print("S-meter: ");
