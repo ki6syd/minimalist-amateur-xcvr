@@ -95,13 +95,13 @@ void audio_dsp_task(void *pvParameter) {
     //configure es8388 i2s codec differently based the current audio mode
     audio_dsp_es8388_config(cur_audio_mode);
     
-    // initialize PCM1502 codec
+    // initialize PCM5102 codec
     auto cfg_tx = pcm1502_stream.defaultConfig(TX_MODE);
     cfg_tx.copyFrom(info_stereo);
-    cfg_tx.port_no = 1;
+    cfg_tx.port_no = PCM5102_I2S_PORT;
     cfg_tx.channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT;
     cfg_tx.channels = 2;
-    cfg_tx.buffer_count = 4;
+    cfg_tx.buffer_count = PCM5102_BUFFER_COUNT;
     cfg_tx.buffer_size = BUFFER_CHUNK;
     cfg_tx.pin_bck = HP_DAC_BCLK;
     cfg_tx.pin_data = HP_DAC_DO;
@@ -288,8 +288,8 @@ void audio_dsp_es8388_config(audio_mode_t mode) {
     auto i2s_config = es8388_stream.defaultConfig(RXTX_MODE);
     i2s_config.copyFrom(info_stereo);
     i2s_config.buffer_size = BUFFER_CHUNK;
-    i2s_config.buffer_count = 4;
-    i2s_config.port_no = 0;
+    i2s_config.buffer_count = ES8388_BUFFER_COUNT;
+    i2s_config.port_no = ES8388_I2S_PORT;
     // set input device depending on the audio mode
     if(mode == AUDIO_HF_RX || mode == AUDIO_HF_TX_CW || mode == AUDIO_VHF_RX)
         i2s_config.input_device = ADC_INPUT_LINE1;

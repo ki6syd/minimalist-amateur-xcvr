@@ -183,9 +183,11 @@ void radio_task(void *param) {
         if(xQueueReceive(xRadioQueue, (void *) &tmp, 0) == pdTRUE) {
           modulation = tmp.mod;
 
-          // call to set_rxtx_mode() to force an audio path change, if needed
-          // this is a hack
+          // hack: call to set_rxtx_mode() to force an audio path change, if needed
           radio_set_rxtx_mode(MODE_QSK_COUNTDOWN);
+
+          // hack: call to hf_set_dial_freq() to update bfo/vfo. Will use new modulation setting
+          hf_set_dial_freq(freq_dial, sideband);
         }
       }
       if(notifiedValue & NOTIFY_CAL_XTAL) {

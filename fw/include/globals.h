@@ -6,8 +6,8 @@
 #define TASK_PRIORITY_NORMAL    3
 #define TASK_PRIORITY_LOWEST    1
 
-#define TASK_PRIORITY_DSP       TASK_PRIORITY_NORMAL
 #define TASK_PRIORITY_AUDIO     TASK_PRIORITY_LOWEST
+#define TASK_PRIORITY_DSP       TASK_PRIORITY_NORMAL
 #define TASK_PRIORITY_RADIO     (TASK_PRIORITY_HIGHEST - 1)
 #define TASK_PRIORITY_ADC       (TASK_PRIORITY_LOWEST + 1)
 #define TASK_PRIORITY_BLINK     (TASK_PRIORITY_LOWEST + 1)
@@ -22,9 +22,9 @@
 #define TASK_CORE_RADIO         1
 #define TASK_CORE_ADC           0
 #define TASK_CORE_BLINK         0
-#define TASK_CORE_INFO          1
-#define TASK_CORE_FS            1
-#define TASK_CORE_DIGI          1
+#define TASK_CORE_INFO          0
+#define TASK_CORE_FS            0
+#define TASK_CORE_DIGI          0
 #define TASK_CORE_KEY_IO        1
 
 #define TASK_EXIT_SIGNAL        0xDEAD

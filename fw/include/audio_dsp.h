@@ -8,6 +8,10 @@
 #define PGA_GAIN                24
 #define INT16T_MAX              32767
 #define BUFFER_CHUNK            128
+#define PCM5102_BUFFER_COUNT    4
+#define ES8388_BUFFER_COUNT     4
+#define ES8388_I2S_PORT         0
+#define PCM5102_I2S_PORT        1
 
 void audio_dsp_init();
 void audio_dsp_task(void *pvParameter);

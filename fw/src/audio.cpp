@@ -54,7 +54,7 @@ void audio_logic_task(void *pvParameter) {
     uint32_t notifiedValue;
 
     while(true) {
-        last_volume_dB = audio_dsp_get_rx_level(20, 1);
+        last_volume_dB = audio_dsp_get_rx_level(10, 1);
 
         if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, 0) == pdTRUE) {
             if(notifiedValue & NOTIFY_PGA_ON) {

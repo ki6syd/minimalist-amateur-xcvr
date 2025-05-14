@@ -267,7 +267,7 @@ void key_task(void *param) {
   uint32_t notified_value;
   while(true) {
     // paddle_isr() will unblock and force context switch
-    if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notified_value, 10) == pdTRUE) {
+    if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notified_value, pdMS_TO_TICKS(10)) == pdTRUE) {
       if(notified_value & NOTIFY_DIT) {
         keyer_dit();
         io_enable_dah_isr(true);
