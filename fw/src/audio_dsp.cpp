@@ -30,7 +30,6 @@ FilteredStream<int16_t, float> audio_filt;
 FilteredStream<int16_t, float> hilbert;
 
 // volume functions
-// VolumeStream iq_rx_balance(es8388_stream);             // connect iq_rx_balance to the output of es8388_stream here. No setInput() function for iq_rx_balance.
 VolumeStream iq_rx_balance;
 VolumeStream hp_vol;                                // headphone volume
 VolumeStream tx_vol;                                // transmit audio volume
@@ -56,7 +55,6 @@ bool pga_en = false;
 float sidetone_vol = AUDIO_SIDE_DEFAULT;
 float sidetone_freq = F_SIDETONE_DEFAULT;
 float global_vol = AUDIO_VOL_DEFAULT;
-float tx_power = TX_POWER_DEFAULT;
 audio_filt_t cur_filt = AUDIO_FILT_DEFAULT;
 audio_mode_t cur_audio_mode = AUDIO_HF_RX;
 sideband_t cur_sideband = SIDEBAND_DEFAULT;
@@ -67,7 +65,6 @@ float i_tx_gain = 1.0;
 float q_tx_gain = 1.0;
 
 void audio_dsp_init() {
-
     my_pins.addI2C(PinFunction::CODEC, CODEC_SCL, CODEC_SDA, CODEC_ADDR, CODEC_I2C_SPEED, codecI2C);
     my_pins.addI2S(PinFunction::CODEC, CODEC_MCLK, CODEC_BCLK, CODEC_WS, CODEC_DO, CODEC_DI);
     my_pins.begin();
@@ -96,6 +93,8 @@ void audio_dsp_task(void *pvParameter) {
     audio_dsp_es8388_config(cur_audio_mode);
     
     // initialize PCM5102 codec
+    // todo: try I2S_CHANNEL_FMT_ALL_LEFT, maybe easier on interrupts?
+    // todo: look at I2SESP32.h, this is where .intr_alloc_flags is defined
     auto cfg_tx = pcm1502_stream.defaultConfig(TX_MODE);
     cfg_tx.copyFrom(info_stereo);
     cfg_tx.port_no = PCM5102_I2S_PORT;
@@ -122,11 +121,12 @@ void audio_dsp_task(void *pvParameter) {
     sidetone_wave.begin(info_stereo, sidetone_freq);
     sidetone_wave.setAmplitude(0);
 
-    imd_test_wave.begin(info_stereo, sidetone_freq+1000);
+    imd_test_wave.begin(info_stereo, sidetone_freq + IMD_TONE_OFFSET);
     imd_test_wave.setAmplitude(0);
 
     ConverterFillLeftAndRight<int16_t> converter_fill_lr(left_right_fill_mode);
-    mic_channel_duplicate = new ConverterStream<int16_t>(es8388_stream, converter_fill_lr); // connect mic_channel_duplicate to the output of es8388_stream here. No setInput() function for mic_channel_duplicate.
+    // connect mic_channel_duplicate to the output of es8388_stream here. No setInput() function for mic_channel_duplicate.
+    mic_channel_duplicate = new ConverterStream<int16_t>(es8388_stream, converter_fill_lr);
     mic_channel_duplicate->begin();    
 
     iq_rx_balance.setStream(*mic_channel_duplicate);
@@ -190,17 +190,19 @@ void audio_dsp_task(void *pvParameter) {
     size_t bytes_copied_imd = 0;
     Serial.println("Starting copier loop");
     while(true) {
+        digitalWrite(PA_VDD_CTRL, HIGH);    // debug whether copier is stopping when i2s traffic stops
         bytes_copied_in = copier_iq_in.copy();
-        // Serial.print("Bytes copied (IQ): ");
-        // Serial.println(bytes_copied_in);
+        Serial.print("Bytes copied (IQ): ");
+        Serial.println(bytes_copied_in);
 
         bytes_copied_imd = copier_imd_in.copy();
         // Serial.print("Bytes copied (IMD): ");
         // Serial.println(bytes_copied_imd);
 
-        bytes_copied_sidetone = copier_sidetone_in.copy();  
+        bytes_copied_sidetone = copier_sidetone_in.copy();
         // Serial.print("Bytes copied (ST): ");
         // Serial.println(bytes_copied_sidetone);
+        digitalWrite(PA_VDD_CTRL, LOW);
 
         // check if there was a request to update the codec
         if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, 0) == pdTRUE) {
@@ -221,6 +223,9 @@ void audio_dsp_request_codec_update() {
     if(xSemaphoreTake(xDSPcodecMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
         // reconfigure codec to use correct inputs/outputs
         audio_dsp_es8388_config(cur_audio_mode);
+
+        // delay long enough for codecs to start up. unclear if needed
+        vTaskDelay(pdMS_TO_TICKS(100));
 
         // give back mutex, allowing copier to run again
         xSemaphoreGive(xDSPcodecMutex);
@@ -283,7 +288,6 @@ void audio_dsp_set_sideband(sideband_t sideband) {
 
 
 void audio_dsp_es8388_config(audio_mode_t mode) {
-
     // initialize ES8388 codec
     auto i2s_config = es8388_stream.defaultConfig(RXTX_MODE);
     i2s_config.copyFrom(info_stereo);
@@ -309,7 +313,7 @@ void audio_dsp_es8388_config(audio_mode_t mode) {
     }
 
     // es8388 inputs are used for both RX and microphone input. In case of mic input, need to copy data to both stereo channels
-    if(cur_audio_mode == AUDIO_HF_RX)
+    if(cur_audio_mode == AUDIO_HF_RX || mode == AUDIO_HF_TX_CW)
         left_right_fill_mode = Auto;    // passes both channels through
     else
         left_right_fill_mode = RightIsEmpty;    // fills microphone into both channels of the stream

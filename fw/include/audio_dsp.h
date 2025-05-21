@@ -5,11 +5,13 @@
 #include "AudioTools.h"
 #include "AudioLibs/I2SCodecStream.h"
 
+// todo: try using fewer buffers but larger chunk size, reduce numer of interrupts
+#define IMD_TONE_OFFSET         1000
 #define PGA_GAIN                24
 #define INT16T_MAX              32767
-#define BUFFER_CHUNK            128
-#define PCM5102_BUFFER_COUNT    4
-#define ES8388_BUFFER_COUNT     4
+#define BUFFER_CHUNK            512
+#define PCM5102_BUFFER_COUNT    2
+#define ES8388_BUFFER_COUNT     2
 #define ES8388_I2S_PORT         0
 #define PCM5102_I2S_PORT        1
 

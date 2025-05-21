@@ -21,15 +21,25 @@ static float last_volume_dB = 0;
 void audio_logic_task(void *pvParameter);
 
 void audio_init() {
-    max_safe_vol = (uint32_t)(fs_load_setting(PREFERENCE_FILE, "max_audio_output").toFloat() * 32768);
+    // TODO: write a load_setting_uint function
+    if(fs_setting_exists(PREFERENCE_FILE, "max_audio_output"))
+        max_safe_vol = (uint32_t) (fs_load_setting_float(PREFERENCE_FILE, "max_audio_output", 0.0, 1.0) * INT16T_MAX);
 
     if(fs_setting_exists(PREFERENCE_FILE, "sidetone_level"))
-        sidetone_vol = fs_load_setting(PREFERENCE_FILE, "sidetone_level").toFloat();
+        sidetone_vol = fs_load_setting_float(PREFERENCE_FILE, "sidetone_level", 0.0, 1.0);
 
-    if(fs_setting_exists(PREFERENCE_FILE, "tx_power"))
-        tx_power = fs_load_setting(PREFERENCE_FILE, "tx_power").toFloat();
+    // TODO: delete me
+    // if(fs_setting_exists(PREFERENCE_FILE, "tx_power"))
+    //     tx_power = fs_load_setting(PREFERENCE_FILE, "tx_power").toFloat();
 
-    // todo: load gains from file system if they exist, call audio_set_iq_gains()
+    if(fs_setting_exists(HARDWARE_FILE, "i_rx_gain"))
+        i_rx_gain = fs_load_setting_float(HARDWARE_FILE, "i_rx_gain", 0.0, 1.0);
+    if(fs_setting_exists(HARDWARE_FILE, "i_tx_gain"))
+        i_tx_gain = fs_load_setting_float(HARDWARE_FILE, "i_tx_gain", 0.0, 1.0);
+    if(fs_setting_exists(HARDWARE_FILE, "q_rx_gain"))
+        q_rx_gain = fs_load_setting_float(HARDWARE_FILE, "q_rx_gain", 0.0, 1.0);
+    if(fs_setting_exists(HARDWARE_FILE, "q_tx_gain"))
+        q_tx_gain = fs_load_setting_float(HARDWARE_FILE, "q_tx_gain", 0.0, 1.0);
 
 
     // Initialize DSP subsystem
@@ -52,9 +62,11 @@ void audio_init() {
 
 void audio_logic_task(void *pvParameter) {
     uint32_t notifiedValue;
+    audio_mode_t prev_audio_mode;
 
     while(true) {
         last_volume_dB = audio_dsp_get_rx_level(10, 1);
+        prev_audio_mode = cur_audio_mode;
 
         if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, 0) == pdTRUE) {
             if(notifiedValue & NOTIFY_PGA_ON) {
@@ -70,12 +82,16 @@ void audio_logic_task(void *pvParameter) {
                 iq_rx_balance.setVolume(q_rx_gain, 0);
                 iq_rx_balance.setVolume(i_rx_gain, 1);
 
+                // don't 
                 tx_vol.setVolume(0.0);
 
                 hp_vol.setVolume(global_vol);
 
                 cur_audio_mode = AUDIO_HF_RX;
-                audio_dsp_request_codec_update();
+
+                // special case (a bit of a hack): don't update the codec if previous mode was HF_TX_CW. Speeds up entry into CW RX, avoids memory issues
+                if(prev_audio_mode != AUDIO_HF_TX_CW)
+                    audio_dsp_request_codec_update();
 
                 // exits WITHOUT changing sidetone volume. That is handled by key on/off function. This just changes "modes"
             }
@@ -83,17 +99,23 @@ void audio_logic_task(void *pvParameter) {
                 iq_rx_balance.setVolume(0, 0);
                 iq_rx_balance.setVolume(0, 1);
 
+                /*
+                todo: delete this if it just works to call audio_set_tx_power
                 Serial.print("Setting tx_power: ");
                 Serial.println(tx_power);
-                // TODO: get tx_power from a call to radio_get_power(), that module should maintain the power level
                 tx_vol.setVolume(tx_power * q_tx_gain, 0);
                 tx_vol.setVolume(tx_power * i_tx_gain, 1);
+                */
+                audio_set_tx_power(radio_get_power());
 
                 // TODO: consider deleting this from the audio mode change. Needs low latency so also exists in the sidetone enabling.
                 hp_vol.setVolume(sidetone_vol * global_vol);
 
                 cur_audio_mode = AUDIO_HF_TX_CW;
-                audio_dsp_request_codec_update();
+
+                // special case (a bit of a hack): don't update the codec if previous mode was HF_RX. Speeds up entry into CW TX, avoids memory issues
+                if(prev_audio_mode != AUDIO_HF_RX)
+                    audio_dsp_request_codec_update();
 
                 // exits WITHOUT changing sidetone volume. That is handled by key on/off function. This just changes "modes"
             }
@@ -101,16 +123,20 @@ void audio_logic_task(void *pvParameter) {
                 iq_rx_balance.setVolume(q_rx_gain, 0);
                 iq_rx_balance.setVolume(q_rx_gain, 1);
 
+                /*
+                TODO: just delete this if the call below works
                 Serial.print("Setting tx_power: ");
                 Serial.println(tx_power);
-                // TODO: get tx_power from a call to radio_get_power(), that module should maintain the power level
                 tx_vol.setVolume(tx_power * q_tx_gain, 0);
                 tx_vol.setVolume(tx_power * i_tx_gain, 1);
+                */
+                audio_set_tx_power(radio_get_power());
 
                 // TODO: consider deleting this from the audio mode change. Needs low latency so also exists in the sidetone enabling.
                 hp_vol.setVolume(sidetone_vol * global_vol);
 
                 cur_audio_mode = AUDIO_HF_TX_SSB;
+
                 audio_dsp_request_codec_update();
 
                 // exits WITHOUT changing sidetone volume. That is handled by key on/off function. This just changes "modes"
@@ -138,18 +164,26 @@ void audio_logic_task(void *pvParameter) {
     }
 }
 
-void audio_set_mode(audio_mode_t mode) {
+void audio_set_mode(audio_mode_t new_audio_mode) {
     Serial.print("audio_set_mode(): ");
-    Serial.println(audio_mode_to_string(mode));
-    if(mode == AUDIO_HF_RX)
+    Serial.println(audio_mode_to_string(new_audio_mode));
+
+    // don't do anything if requested mode is the same
+    // example: radio_set_rxtx_mode() may repeatedly call this when going from TX to QSK_COUNTDOWN during keying
+    if(new_audio_mode == cur_audio_mode) {
+        Serial.println("Skipping - no change to cur_audio_mode");
+        return;
+    }
+
+    if(new_audio_mode == AUDIO_HF_RX)
         xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_HF_RX_CW, eSetBits);
-    else if(mode == AUDIO_HF_TX_CW)
+    else if(new_audio_mode == AUDIO_HF_TX_CW)
         xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_HF_TX_CW, eSetBits);
-    else if(mode == AUDIO_HF_TX_SSB)
+    else if(new_audio_mode == AUDIO_HF_TX_SSB)
         xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_HF_TX_SSB, eSetBits);
-    else if(mode == AUDIO_VHF_RX)
+    else if(new_audio_mode == AUDIO_VHF_RX)
         xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_VHF_RX, eSetBits);
-    else if(mode == AUDIO_VHF_TX)
+    else if(new_audio_mode == AUDIO_VHF_TX)
         xTaskNotify(xAudioTaskHandle, NOTIFY_MODE_VHF_TX, eSetBits);
 }
 
@@ -242,9 +276,8 @@ bool audio_set_tx_power(float power) {
     Serial.println(power);
 
     // update power variable and also make an adjustment to the volume control
-    tx_power = power;
-    tx_vol.setVolume(tx_power * q_tx_gain, 0);
-    tx_vol.setVolume(tx_power * i_tx_gain, 1);
+    tx_vol.setVolume(power * q_tx_gain, 0);
+    tx_vol.setVolume(power * i_tx_gain, 1);
     return true;
 }
 

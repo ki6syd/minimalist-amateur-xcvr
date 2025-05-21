@@ -38,7 +38,7 @@ void hf_init() {
 }
 
 void hf_si5351_init() {
-  uint64_t si5351_xtal_freq = fs_load_setting(HARDWARE_FILE, "xtal_freq_hz").toInt();
+  uint64_t si5351_xtal_freq = fs_load_setting_long(HARDWARE_FILE, "xtal_freq_hz", 8000000, 32000000);
   // rough error checking. TODO: move magic numbers elsewhere
   if(si5351_xtal_freq < 25900000 || si5351_xtal_freq > 26100000) {
     si5351_xtal_freq = 26000000;

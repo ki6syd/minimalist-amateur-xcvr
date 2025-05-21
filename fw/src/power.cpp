@@ -64,9 +64,9 @@ void power_init() {
 
   // load configuration from JSON file
   if(fs_setting_exists(PREFERENCE_FILE, "vbat_cell_low"))
-    vbat_cell_low = fs_load_setting(PREFERENCE_FILE, "vbat_cell_low").toFloat();
-  if(fs_setting_exists(PREFERENCE_FILE, "vbat_cell_low"))
-    num_cell = fs_load_setting(PREFERENCE_FILE, "num_battery").toInt();
+    vbat_cell_low = fs_load_setting_float(PREFERENCE_FILE, "vbat_cell_low", 0.0, 5.0);
+  if(fs_setting_exists(PREFERENCE_FILE, "num_battery"))
+    num_cell = fs_load_setting_long(PREFERENCE_FILE, "num_battery", 0, 12);
 
   // set up a PWM channel that drives buck converter sync pin
   // feature for the future: select this frequency based on the dial frequency

@@ -66,7 +66,7 @@ void wifi_init() {
 
     // higher power level helps with TCP audio streaming, lower power makes less audible noise
     if(fs_setting_exists(PREFERENCE_FILE, "wifi_power"))
-        WiFi.setTxPower((wifi_power_t) fs_load_setting(PREFERENCE_FILE, "wifi_power").toInt());
+        WiFi.setTxPower((wifi_power_t) fs_load_setting_long(PREFERENCE_FILE, "wifi_power", 0, 100));
     else    
         WiFi.setTxPower(WIFI_POWER_19_5dBm);
 

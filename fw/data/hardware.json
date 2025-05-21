@@ -3,6 +3,10 @@
 	"serial_number": "1",
 	"xtal_freq_hz": "25999973",
 	"freq_if": "45000000",
+	"i_rx_gain": 1.0,
+	"q_rx_gain": 1.0,
+	"i_tx_gain": 1.0,
+	"q_tx_gain": 1.0,
 	"bands": [
 		{
 			"band_num": "BAND_HF_1",

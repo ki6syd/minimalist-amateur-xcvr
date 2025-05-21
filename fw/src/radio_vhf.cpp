@@ -22,7 +22,7 @@ bool vhf_response_success(String response);
 
 void vhf_init() {
     // load defaults from JSON
-    vhf_default_vol = (uint16_t) fs_load_setting(PREFERENCE_FILE, "vhf_default_vol").toInt();
+    vhf_default_vol = (uint16_t) fs_load_setting_long(PREFERENCE_FILE, "vhf_default_vol", 0, 10);
 
     pinMode(VHF_EN, OUTPUT);
     digitalWrite(VHF_EN, LOW);

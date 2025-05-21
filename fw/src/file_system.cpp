@@ -91,6 +91,28 @@ String fs_load_setting(String file_name, String param_name) {
     return tmp;
 }
 
+float fs_load_setting_float(String file_name, String param_name, float min_value, float max_value) {
+    float raw_value = fs_load_setting(file_name, param_name).toFloat();
+
+    // apply limits
+    if(raw_value < min_value)
+        return min_value;
+    if(raw_value > max_value)
+        return max_value;
+    return raw_value;
+}
+
+long fs_load_setting_long(String file_name, String param_name, long min_value, long max_value) {
+    long raw_value = fs_load_setting(file_name, param_name).toInt();
+
+    // apply limits
+    if(raw_value < min_value)
+        return min_value;
+    if(raw_value > max_value)
+        return max_value;
+    return raw_value;
+}
+
 bool fs_setting_exists(String file_name, String param_name) {
     String tmp = fs_load_setting(file_name, param_name);
     if(tmp == "")

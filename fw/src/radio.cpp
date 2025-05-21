@@ -45,6 +45,10 @@ void radio_init() {
   // find out what bands are enabled by looking at hardware file
   fs_load_bands(HARDWARE_FILE, band_capability);
 
+  // load power setting from file
+  if(fs_setting_exists(PREFERENCE_FILE, "tx_power"))
+    power = fs_load_setting_float(PREFERENCE_FILE, "tx_power", 0.0, 1.0);
+
   hf_init();
   vhf_init();
 
@@ -89,7 +93,7 @@ void radio_task(void *param) {
   while(true) {
     // look for flags. Don't clear on entry; clear on exit
     // example: https://freertos.org/Documentation/02-Kernel/02-Kernel-features/03-Direct-to-task-notifications/04-As-event-group
-    if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, pdMS_TO_TICKS(5)) == pdTRUE) {
+    if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, 0) == pdTRUE) {
       if(notifiedValue & NOTIFY_KEY_OFF) {
         Serial.println("KEY OFF");
 
@@ -205,6 +209,8 @@ void radio_task(void *param) {
         }
       }
     }
+    // wait 5 ms to allow other tasks to run
+    vTaskDelay(pdMS_TO_TICKS(5));
   }
 }
 

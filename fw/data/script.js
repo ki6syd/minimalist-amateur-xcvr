@@ -10,6 +10,7 @@ var rpt_timer = rpt_dly;
 var rpt_count_step_ms = 500;
 var mon_min = -2;
 var mon_max = 2;
+var counter = 0;
 
 var api_base_url = "/api/v1/"
 var sotamat_base_url = "sotamat://api/v1?app=max3b&appversion=2.1"
@@ -214,36 +215,6 @@ function adj_vol(change) {
 }
 
 
-
-// function set_sidetone() {
-//   sidetone = document.getElementById('mon').value;
-//   http_request("PUT", "sidetone", ["sidetoneLevelOffset"], [sidetone])
-// }
-
-// function get_sidetone() {
-//   // define callback function
-//   func = function() {
-//     if (this.readyState == 4 && this.status == 200) {
-//       document.getElementById('mon').value = this.responseText;
-//     }
-//   };
-//   http_request("GET", "sidetone", [], [], func)
-// }
-
-// function press_mon() {
-//   var mon = parseInt(document.getElementById('mon').value);
-//   if(mon < mon_max)
-//     mon = mon + 1;
-//   else
-//     mon = mon_min;
-
-//   document.getElementById('mon').value = mon;
-
-//   set_sidetone();
-//   get_sidetone();
-// }
-
-
 function set_speed() {
   speed = document.getElementById('keyer_speed').value;
   http_request("PUT", "cwSpeed", ["speed"], [speed])
@@ -336,99 +307,6 @@ function press_mod() {
   // update SOTAmat link
   updateSOTAmatLink();
 }
-
-// function set_lna() {
-//   lna = document.getElementById('lna').value;
-//   http_request("PUT", "lna", ["lnaState"], [lna])
-// }
-
-// function get_lna() {
-//   // define callback function
-//   func = function() {
-//     if (this.readyState == 4 && this.status == 200) {
-//       document.getElementById('lna').value = this.responseText;
-//     }
-//   };
-//   http_request("GET", "lna", [], [], func)
-// }
-
-// function press_lna() {
-//   var lna = document.getElementById('lna').value;
-
-//   if(lna == "ON")
-//     lna = "OFF"
-//   else if(lna == "OFF")
-//     lna = "ON"
-//   else
-//     return;
-
-//   document.getElementById('lna').value = lna;
-
-//   set_lna();
-//   get_lna();
-// }
-
-// function set_antenna() {
-//   antenna = document.getElementById('ant').value;
-//   http_request("PUT", "antenna", ["antennaPath"], [antenna])
-// }
-
-// function get_antenna() {
-//   // define callback function
-//   func = function() {
-//     if (this.readyState == 4 && this.status == 200) {
-//       document.getElementById('ant').value = this.responseText;
-//     }
-//   };
-//   http_request("GET", "antenna", [], [], func)
-// }
-
-// function press_ant() {
-//   var antenna = document.getElementById('ant').value;
-
-//   if(antenna == "DIRECT")
-//     antenna = "EFHW";
-//   else if(antenna == "EFHW")
-//     antenna = "DIRECT";
-//   else {
-//     get_antenna();
-//     return;
-//   }
-
-//   document.getElementById('ant').value = antenna;
-
-//   set_antenna();
-//   get_antenna();
-// }
-
-
-// function set_speaker() {
-//   speaker = document.getElementById('speaker').value;
-//   http_request("PUT", "speaker", ["speakerState"], [speaker])
-// }
-
-// function get_speaker() {
-//   // define callback function
-//   func = function() {
-//     if (this.readyState == 4 && this.status == 200) {
-//       document.getElementById('speaker').value = this.responseText;
-//     }
-//   };
-//   http_request("GET", "speaker", [], [], func)
-// }
-
-// function press_speaker() {
-//   var speaker = document.getElementById('speaker').value;
-//   if(speaker == 'ON')
-//     speaker = 'OFF'
-//   else
-//     speaker = 'ON'
-
-//   document.getElementById('speaker').value = speaker;
-
-//   set_speaker();
-//   get_speaker();
-// }
 
 
 function get_input_voltage() {
@@ -797,6 +675,52 @@ function on_load() {
   json_spots_to_table(num_spots, col_names, "spots");
 }
 
+// function staggers repetitive updates to avoid overloading HTTP requests
+// workaround for I2S disrupted by simultaneous requests. Suspect I2S post-DMA interrupt doesn't get serviced.
+function refresh_ui() {
+  if(counter % 4 == 0) {
+    watchdog_update();
+    get_s_meter();
+  }
+  
+  if(counter % 4 == 2) 
+    get_input_voltage();
+  
+  if(counter % 8 == 0)
+    get_freq();
+
+  if(counter % 10 == 0) 
+    get_queue_len();
+
+  if(counter % 15 == 0) 
+    repeat_update();
+  
+  if(counter % 21 == 4) 
+    get_volume();
+  
+  if(counter % 22 == 8) 
+    get_speed();
+  
+  if(counter % 23 == 12) 
+    get_bw();
+  
+  if(counter % 24 == 16) 
+    get_mod();
+  
+  if(counter % 40 == 0) 
+    json_spots_to_table(num_spots, col_names, "spots");
+
+  if(counter % 41 == 0) 
+    get_utc_time();
+  
+  if(counter % 240 == 0) 
+    set_epoch_ms();
+  
+  counter++;
+}
+
+setInterval(function() { refresh_ui();}, 250);
+
 // add listener, and a function for enqueueing/deleting characters
 document.getElementById('freeform').addEventListener('input', send_cw);
 
@@ -822,22 +746,3 @@ document.getElementById('cq').addEventListener('long-press', function(e) {
   memory(0);
 
 });
-
-// refresh variables
-setInterval(function() { get_freq();}, 500);
-setInterval(function() { get_input_voltage();}, 1500);
-setInterval(function() { get_s_meter();}, 500);
-setInterval(function() { get_volume();}, 5000); 
-setInterval(function() { get_speed();}, 5000); 
-setInterval(function() { get_bw();}, 3000); 
-setInterval(function() { get_mod();}, 3000); 
-setInterval(function() { get_queue_len();}, 1000); 
-// setInterval(function() { get_debug();}, 500);
-setInterval(function() { get_utc_time();}, 5000) 
-setInterval(function() { set_epoch_ms();}, 60000)
-// watchdog update runs slightly slower than s-meter
-setInterval(function() { watchdog_update();}, 500)
-// repeat logic runs every 500ms
-setInterval(function() { repeat_update();}, rpt_count_step_ms)
-// pull new SOTA spots every 10 seconds
-setInterval(function() { json_spots_to_table(num_spots, col_names, "spots");}, 10000)
