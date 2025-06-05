@@ -192,8 +192,8 @@ void audio_dsp_task(void *pvParameter) {
     while(true) {
         digitalWrite(PA_VDD_CTRL, HIGH);    // debug whether copier is stopping when i2s traffic stops
         bytes_copied_in = copier_iq_in.copy();
-        Serial.print("Bytes copied (IQ): ");
-        Serial.println(bytes_copied_in);
+        // Serial.print("Bytes copied (IQ): ");
+        // Serial.println(bytes_copied_in);
 
         bytes_copied_imd = copier_imd_in.copy();
         // Serial.print("Bytes copied (IMD): ");

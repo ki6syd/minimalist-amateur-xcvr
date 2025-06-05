@@ -245,9 +245,10 @@ void blink_task(void *param) {
   }
 }
 
-// TODO: rename, or merge with the CW paddle task
+
 void tx_pulse_task(void *param) {
   while(true) {
+    // check if the button semaphore is available. If not, block and allow another task to run
     if(xSemaphoreTake(btn_semaphore, portMAX_DELAY) == pdPASS) {
       if(digitalRead(BOOT_BTN) == LOW || digitalRead(PTT_MIC) == LOW)
         radio_key_on();
