@@ -82,7 +82,6 @@ void audio_logic_task(void *pvParameter) {
                 iq_rx_balance.setVolume(q_rx_gain, 0);
                 iq_rx_balance.setVolume(i_rx_gain, 1);
 
-                // don't 
                 tx_vol.setVolume(0.0);
 
                 hp_vol.setVolume(global_vol);
@@ -208,9 +207,11 @@ bool audio_set_hp_volume(float vol) {
     if(vol >= 0.0 && vol <= 1.0) {
         global_vol = vol;
         
-        // force an update to the audio controls by setting the mode again. TX vs RX volume handled there.
+        
         Serial.println("Setting HP volume");
-        audio_set_mode(cur_audio_mode);
+        hp_vol.setVolume(global_vol);
+        // force an update to the audio controls by setting the mode again. TX vs RX volume handled there.
+        // audio_set_mode(cur_audio_mode);
 
         return true;
     }

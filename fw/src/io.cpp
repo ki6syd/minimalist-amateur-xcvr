@@ -11,6 +11,7 @@
 #define NOTIFY_DIT            (1 << 0)
 #define NOTIFY_DAH            (1 << 1)
 #define NOTIFY_SK             (1 << 2)
+#define NOTIFY_BTN            (1 << 3)
 
 TaskHandle_t xBlinkTaskHandle, xSpareTaskHandle0, xSpareTaskHandle1, xTxPulseTaskHandle, xKeyTaskHandle;
 SemaphoreHandle_t btn_semaphore;
@@ -24,14 +25,17 @@ void key_task(void *pvParameter);
 void tx_pulse_task(void *pvParameter);
 void io_enable_dit_isr(bool enable);
 void io_enable_dah_isr(bool enable);
+void io_enable_btn_isr(bool enable);
 
 // only handles straight key / microphone PTT
-ICACHE_RAM_ATTR void buttonISR() {
+ICACHE_RAM_ATTR void button_isr() {
   // detach interrupt here, reattaches after taking semaphore
   detachInterrupt(digitalPinToInterrupt(BOOT_BTN));
   detachInterrupt(digitalPinToInterrupt(PTT_MIC));
 
-  xSemaphoreGiveFromISR(btn_semaphore, NULL);
+  // xSemaphoreGiveFromISR(btn_semaphore, NULL);
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  xTaskNotifyFromISR(xKeyTaskHandle, NOTIFY_BTN, eSetBits, &xHigherPriorityTaskWoken);
 }
 
 // only handles paddle inputs (dit, dah)
@@ -89,9 +93,9 @@ void io_init() {
   pinMode(SPARE_0, OUTPUT);
 
   pinMode(BOOT_BTN, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(BOOT_BTN), button_isr, CHANGE);
   pinMode(PTT_MIC, INPUT);
-  attachInterrupt(digitalPinToInterrupt(PTT_MIC), buttonISR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(PTT_MIC), button_isr, FALLING);
   // TODO: also include PTT_PT
   
   pinMode(KEY_DAH, INPUT);
@@ -172,15 +176,15 @@ void io_init() {
 
   btn_semaphore = xSemaphoreCreateBinary();
 
-  xTaskCreatePinnedToCore(
-      tx_pulse_task,
-      "TX pulse generator",
-      4096,
-      NULL,
-      TASK_PRIORITY_HIGHEST, // priority
-      &xTxPulseTaskHandle,
-      1 // core
-  );
+  // xTaskCreatePinnedToCore(
+  //     tx_pulse_task,
+  //     "TX pulse generator",
+  //     4096,
+  //     NULL,
+  //     TASK_PRIORITY_HIGHEST, // priority
+  //     &xTxPulseTaskHandle,
+  //     1 // core
+  // );
 
 
   xTaskCreatePinnedToCore(
@@ -245,24 +249,24 @@ void blink_task(void *param) {
   }
 }
 
+// todo: merge with paddle task, and do a similar notification strategy
+// void tx_pulse_task(void *param) {
+//   while(true) {
+//     // check if the button semaphore is available. If not, block and allow another task to run
+//     if(xSemaphoreTake(btn_semaphore, portMAX_DELAY) == pdPASS) {
+//       if(digitalRead(BOOT_BTN) == LOW || digitalRead(PTT_MIC) == LOW)
+//         radio_key_on();
+//       if(digitalRead(BOOT_BTN) == HIGH && digitalRead(PTT_MIC) == HIGH)
+//         radio_key_off();
 
-void tx_pulse_task(void *param) {
-  while(true) {
-    // check if the button semaphore is available. If not, block and allow another task to run
-    if(xSemaphoreTake(btn_semaphore, portMAX_DELAY) == pdPASS) {
-      if(digitalRead(BOOT_BTN) == LOW || digitalRead(PTT_MIC) == LOW)
-        radio_key_on();
-      if(digitalRead(BOOT_BTN) == HIGH && digitalRead(PTT_MIC) == HIGH)
-        radio_key_off();
+//       attachInterrupt(digitalPinToInterrupt(BOOT_BTN), button_isr, CHANGE);
+//       attachInterrupt(digitalPinToInterrupt(PTT_MIC), button_isr, FALLING);
 
-      attachInterrupt(digitalPinToInterrupt(BOOT_BTN), buttonISR, CHANGE);
-      attachInterrupt(digitalPinToInterrupt(PTT_MIC), buttonISR, FALLING);
-
-      // any value of notified_value should cancel currently sending messages
-      digi_mode_queue_clear();
-    }
-  }
-}
+//       // any value of notified_value should cancel currently sending messages
+//       digi_mode_queue_clear();
+//     }
+//   }
+// }
 
 void key_task(void *param) {
   uint32_t notified_value;
@@ -278,6 +282,16 @@ void key_task(void *param) {
         keyer_dah();
         io_enable_dit_isr(true);
         io_enable_dah_isr(true);
+      }
+
+      // TODO: pushbutton and PTT lines can be polled. Simplify by removing interrupts.
+      if(notified_value & NOTIFY_BTN) {
+        if(digitalRead(BOOT_BTN) == LOW)
+          radio_key_on();
+        if(digitalRead(BOOT_BTN) == HIGH)
+          radio_key_off();
+
+        io_enable_btn_isr(true);
       }
 
       // any value of notified_value should cancel currently sending messages
@@ -299,4 +313,11 @@ void io_enable_dah_isr(bool enabled) {
     attachInterrupt(digitalPinToInterrupt(KEY_DAH), paddle_isr, ONLOW);
   else
     detachInterrupt(digitalPinToInterrupt(KEY_DAH));
+}
+
+void io_enable_btn_isr(bool enabled) {
+  if(enabled)
+    attachInterrupt(digitalPinToInterrupt(BOOT_BTN), button_isr, CHANGE);
+  else
+    detachInterrupt(digitalPinToInterrupt(BOOT_BTN));
 }
