@@ -1,7 +1,7 @@
 {
-	"hardware_rev": "max-4b_v3.1",
+	"hardware_rev": "max-sdr_v1.1",
 	"serial_number": "1",
-	"xtal_freq_hz": "25999973",
+	"xtal_freq_hz": "25999751",
 	"freq_if": "45000000",
 	"i_rx_gain": 1.0,
 	"q_rx_gain": 1.0,

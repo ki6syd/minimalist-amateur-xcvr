@@ -179,11 +179,11 @@ void audio_dsp_task(void *pvParameter) {
 
     hp_vol.setOutput(pcm1502_stream);
     hp_vol.begin(info_stereo);
-    hp_vol.setVolume(1.0);
+    hp_vol.setVolume(AUDIO_VOL_DEFAULT);
 
     tx_vol.setOutput(es8388_stream);
     tx_vol.begin(info_stereo);
-    tx_vol.setVolume(1.0);
+    tx_vol.setVolume(TX_POWER_DEFAULT);
     
     size_t bytes_copied_in = 0;
     size_t bytes_copied_sidetone = 0;
@@ -263,7 +263,7 @@ String radio_audio_filt_to_string(audio_filt_t filt) {
 
 void audio_dsp_set_sideband(sideband_t sideband) {
     if(cur_audio_mode == AUDIO_HF_RX) {
-        if(sideband == SIDEBAND_USB) {
+        if(sideband == SIDEBAND_LSB) {
             hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
             hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
         }
@@ -273,7 +273,7 @@ void audio_dsp_set_sideband(sideband_t sideband) {
         }
     }
     else {
-        if(sideband == SIDEBAND_USB) {
+        if(sideband == SIDEBAND_LSB) {
             hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
             hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
         }

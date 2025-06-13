@@ -61,78 +61,82 @@ void loop() {
 }
 
 void info_task(void *param) {
-  while(true) {
-    Serial.println("\n\n----------INFORMATION----------");
-
-    Serial.print("Input voltage: ");
-    Serial.println(power_get_input_volt());
-
-    Serial.print("PA Current: ");
-    Serial.println(power_get_pa_current());
-
-    Serial.print("PA Voltage: ");
-    Serial.println(power_get_pa_volt());
-
-    Serial.print("PA Temperature: ");
-    Serial.println(power_get_pa_temp());
-
-    Serial.print("Transmit Power: ");
-    Serial.println(radio_get_power());
+    while(true) {
+      String info_output = "";
     
-    Serial.print("Bias duty CH0: ");
-    Serial.print(power_get_bias_duty(BIAS_CHANNEL_0));
-    Serial.print("\tCH1: ");
-    Serial.print(power_get_bias_duty(BIAS_CHANNEL_1)); 
-    Serial.print("\tAGC duty: ");
-    Serial.println(power_get_agc_duty());
-
-    Serial.print("S-meter: ");
-    Serial.println(radio_get_s_meter());
-
-    Serial.print("Audio dB: ");
-    Serial.println(audio_get_loudness());
-
-    Serial.print("PGA: ");
-    Serial.print(audio_get_pga());
-
-    Serial.print("\tVolume: ");
-    Serial.print(audio_get_volume());
-
-    Serial.print("\tSidetone Level: ");
-    Serial.println(audio_get_sidetone_volume());
-
-    Serial.println(radio_freq_string());    
-
-    Serial.print("Current band: ");
-    Serial.println(radio_band_to_string(radio_get_band(radio_get_dial_freq())));
-
-    Serial.print("Current Radio Modulation: ");
-    Serial.println(radio_modulation_to_string(radio_get_modulation()));
-
-    Serial.print("Current Audio Bandwidth: ");
-    Serial.println(radio_audio_filt_to_string(audio_dsp_get_filter()));
-
-    // TODO: print out the audio module bandwidth
-
-    Serial.print("IP Address: ");
-    Serial.println(wifi_get_ip());
-
-    Serial.print("MAC Address: ");
-    Serial.println(wifi_get_mac());
-
-    Serial.print("Firmware: ");
-    Serial.println(AUTO_VERSION);
-
-    Serial.print("Dit: ");
-    Serial.print(digitalRead(KEY_DIT));
-    Serial.print("\tDah: ");
-    Serial.print(digitalRead(KEY_DAH));
-    Serial.print("\tBOOT: ");
-    Serial.print(digitalRead(BOOT_BTN));
-    Serial.print("\tPTT: ");
-    Serial.println(digitalRead(PTT_MIC));
+      info_output += "\n\n";
+      info_output += "----------INFORMATION----------\n";
     
-    Serial.println();
+      info_output += "Input voltage: ";
+      info_output += String(power_get_input_volt()) + "\n";
+    
+      info_output += "PA Current: ";
+      info_output += String(power_get_pa_current()) + "\n";
+    
+      info_output += "PA Voltage: ";
+      info_output += String(power_get_pa_volt()) + "\n";
+    
+      info_output += "PA Temperature: ";
+      info_output += String(power_get_pa_temp()) + "\n";
+    
+      info_output += "Transmit Power: ";
+      info_output += String(radio_get_power()) + "\n";
+    
+      info_output += "Bias duty CH0: ";
+      info_output += String(power_get_bias_duty(BIAS_CHANNEL_0));
+      info_output += "\t\tCH1: ";
+      info_output += String(power_get_bias_duty(BIAS_CHANNEL_1));
+      info_output += "\t\tAGC duty: ";
+      info_output += String(power_get_agc_duty()) + "\n";
+    
+      info_output += "S-meter: ";
+      info_output += String(radio_get_s_meter()) + "\n";
+    
+      info_output += "Audio dB: ";
+      info_output += String(audio_get_loudness()) + "\n";
+    
+      info_output += "PGA: ";
+      info_output += String(audio_get_pga());
+      info_output += "\t\tVolume: ";
+      info_output += String(audio_get_volume());
+      info_output += "\t\tSidetone Level: ";
+      info_output += String(audio_get_sidetone_volume()) + "\n";
+    
+      info_output += String(radio_freq_string()) + "\n";
+    
+      info_output += "Current band: ";
+      info_output += String(radio_band_to_string(radio_get_band(radio_get_dial_freq()))) + "\n";
+    
+      info_output += "Current Radio Modulation: ";
+      info_output += String(radio_modulation_to_string(radio_get_modulation()));
+    
+      info_output += "\t\tCurrent Audio Bandwidth: ";
+      info_output += String(radio_audio_filt_to_string(audio_dsp_get_filter()));
+
+      info_output += "\t\tCurrent Sideband: ";
+      info_output += String(radio_sideband_to_string(radio_get_sideband())) + "\n";
+    
+      info_output += "IP Address: ";
+      info_output += String(wifi_get_ip()) + "\n";
+    
+      info_output += "MAC Address: ";
+      info_output += String(wifi_get_mac()) + "\n";
+    
+      info_output += "Firmware: ";
+      info_output += String(AUTO_VERSION) + "\n";
+    
+      info_output += "Dit: ";
+      info_output += String(digitalRead(KEY_DIT));
+      info_output += "\tDah: ";
+      info_output += String(digitalRead(KEY_DAH));
+      info_output += "\tBOOT: ";
+      info_output += String(digitalRead(BOOT_BTN));
+      info_output += "\tPTT: ";
+      info_output += String(digitalRead(PTT_MIC)) + "\n";
+    
+      info_output += "\n";
+    
+      Serial.print(info_output);
 
     vTaskDelay(pdMS_TO_TICKS(10000));
   }

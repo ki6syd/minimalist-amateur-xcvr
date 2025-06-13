@@ -76,7 +76,9 @@ typedef enum {
     DEBUG_CMD_IMD_TEST=9,
     DEBUG_CMD_MIN_VOL=10,
     DEBUG_CMD_CAL_LPF=12,
-    DEBUG_CMD_PA_VDD=13
+    DEBUG_CMD_PA_VDD=13,
+    DEBUG_CMD_IF_UP=14,
+    DEBUG_CMD_IF_DOWN=15
 } debug_action_t;
 
 typedef enum {

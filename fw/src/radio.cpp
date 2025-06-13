@@ -277,6 +277,10 @@ radio_modulation_t radio_get_modulation() {
   return modulation;
 }
 
+sideband_t radio_get_sideband() {
+  return sideband;
+}
+
 
 void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
   // return immediately if there was no change requested
@@ -535,6 +539,14 @@ String radio_modulation_to_string(radio_modulation_t bw) {
     }
 }
 
+String radio_sideband_to_string(sideband_t sideband) {
+  switch (sideband) {
+        case SIDEBAND_LSB: return "LSB";
+        case SIDEBAND_USB: return "USB";
+        default: return "UNKNOWN_SIDEBAND";
+    }
+}
+
 bool radio_modulation_valid(radio_modulation_t mod) {
     switch (mod) {
         case MOD_CW:
@@ -715,6 +727,14 @@ void radio_debug(debug_action_t action, void *value) {
     }
     case DEBUG_CMD_STOP_VFO: {
       si5351.output_enable(SI5351_IDX_VFO, 0);
+      break;
+    }
+    case DEBUG_CMD_IF_UP: {
+      freq_if += 500;
+      break;
+    }
+    case DEBUG_CMD_IF_DOWN: {
+      freq_if -= 500;
       break;
     }
   }

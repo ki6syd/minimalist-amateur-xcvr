@@ -6,7 +6,7 @@
 #define BIAS_MAX_PER_CH     0.5
 #define BIAS_VOLT_CW        4
 
-#define AGC_VOLT_RX         4.5
+#define AGC_VOLT_RX         4.0
 #define AGC_VOLT_TX_CW      3.5
 #define AGC_VOLT_TX_SSB     3.0
 

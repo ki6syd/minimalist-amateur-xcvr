@@ -13,11 +13,13 @@
 
 Si5351 si5351;
 
-uint64_t freq_if = 45000000;
+// TODO: parametrize this in JSON file
+uint64_t freq_if = 44991500;
 uint64_t freq_vfo = 0;
 uint64_t freq_bfo = 0;
 
-uint8_t phase_delay = 18;
+// TODO: parametrize into tx and rx phase delays
+uint8_t phase_delay = 16;
 
 // variable to track what value of audio_get_rx_db() corresponds to the #define'd S_UNIT_REF above
 float audio_level_sREF = -49.4;
@@ -94,7 +96,7 @@ void hf_set_dial_freq(uint64_t freq_dial, sideband_t sideband) {
     freq_bfo = freq_if;
 
     // temporary hack to get the signal inside the passband of the xtal filter
-    freq_if = 44992500;
+    // freq_if = 44992500;
   }
   else {
     Serial.println("ERROR: unknown bandwidth");
@@ -102,7 +104,6 @@ void hf_set_dial_freq(uint64_t freq_dial, sideband_t sideband) {
 
   hf_set_clocks(freq_bfo, freq_vfo, freq_dial);
 }
-
 
 void hf_set_clocks(uint64_t freq_bfo, uint64_t freq_vfo, uint64_t freq_rf) {
   // TODO: remove freq_rf

@@ -10,11 +10,9 @@
 
 #define NOTIFY_DIT            (1 << 0)
 #define NOTIFY_DAH            (1 << 1)
-#define NOTIFY_SK             (1 << 2)
-#define NOTIFY_BTN            (1 << 3)
+#define NOTIFY_BTN            (1 << 2)
 
 TaskHandle_t xBlinkTaskHandle, xSpareTaskHandle0, xSpareTaskHandle1, xTxPulseTaskHandle, xKeyTaskHandle;
-SemaphoreHandle_t btn_semaphore;
 
 blink_type_t blink_mode = BLINK_NORMAL;
 
@@ -33,7 +31,6 @@ ICACHE_RAM_ATTR void button_isr() {
   detachInterrupt(digitalPinToInterrupt(BOOT_BTN));
   detachInterrupt(digitalPinToInterrupt(PTT_MIC));
 
-  // xSemaphoreGiveFromISR(btn_semaphore, NULL);
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   xTaskNotifyFromISR(xKeyTaskHandle, NOTIFY_BTN, eSetBits, &xHigherPriorityTaskWoken);
 }
@@ -55,33 +52,6 @@ ICACHE_RAM_ATTR void paddle_isr() {
   }
 
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-}
-
-/*
-static void usbEventCallback(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
-  if (event_base == ARDUINO_HW_CDC_EVENTS) {
-    switch (event_id) {
-      case ARDUINO_HW_CDC_CONNECTED_EVENT:
-        digitalWrite(LED_RED, HIGH);
-        break;
-    }
-  }
-}
-*/
-
-const char *_hwcdc_status[] = {
-  " USB Plugged but CDC is NOT connected\r\n",
-  " USB Plugged and CDC is connected\r\n",
-  " USB Unplugged and CDC NOT connected\r\n",
-  " USB Unplugged BUT CDC is connected :: PROBLEM\r\n",
-};
-
-const char *HWCDC_Status() {
-  int i = Serial.isPlugged() ? 0 : 2;
-  if (Serial.isConnected()) {
-    i += 1;
-  }
-  return _hwcdc_status[i];
 }
 
 
@@ -138,31 +108,6 @@ void io_init() {
   Serial.print("Free PSRAM: ");
   Serial.println(ESP.getFreePsram());
 
-
-/*
-  // run on core 0
-  xTaskCreatePinnedToCore(
-      spare_task_core_0,
-      "Debug LED spare time task",
-      4096,
-      NULL,
-      TASK_PRIORITY_LOWEST, // priority
-      &xSpareTaskHandle0,
-      0 // core
-  );
-
-  // run on core 1
-  xTaskCreatePinnedToCore(
-      spare_task_core_1,
-      "Debug LED spare time task",
-      4096,
-      NULL,
-      TASK_PRIORITY_LOWEST, // priority
-      &xSpareTaskHandle1,
-      1 // core
-  );
-*/
-
   
   xTaskCreatePinnedToCore(
       blink_task,
@@ -173,19 +118,6 @@ void io_init() {
       &xBlinkTaskHandle,
       TASK_CORE_BLINK // core
   );
-
-  btn_semaphore = xSemaphoreCreateBinary();
-
-  // xTaskCreatePinnedToCore(
-  //     tx_pulse_task,
-  //     "TX pulse generator",
-  //     4096,
-  //     NULL,
-  //     TASK_PRIORITY_HIGHEST, // priority
-  //     &xTxPulseTaskHandle,
-  //     1 // core
-  // );
-
 
   xTaskCreatePinnedToCore(
       key_task,
@@ -203,26 +135,6 @@ void io_set_blink_mode(blink_type_t mode) {
   // TODO: check that it's a valid input
   blink_mode = mode;
 }
-
-// if LED_DBG_x is *not* illuminated, spareTask is starved
-/*
-void spare_task_core_0(void *param) {
-  while(true) {
-    digitalWrite(LED_DBG_0, HIGH);
-    vTaskDelay(pdMS_TO_TICKS(1));
-    digitalWrite(LED_DBG_0, LOW);
-    taskYIELD();
-  }
-}
-void spare_task_core_1(void *param) {
-  while(true) {
-    digitalWrite(LED_DBG_1, HIGH);
-    vTaskDelay(pdMS_TO_TICKS(1));
-    digitalWrite(LED_DBG_1, LOW);
-    taskYIELD();
-  }
-}
-*/
 
 void blink_task(void *param) {
   uint16_t on_duration, off_duration;

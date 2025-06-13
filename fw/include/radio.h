@@ -74,8 +74,10 @@ radio_band_t radio_get_band(uint64_t freq);
 bool radio_freq_valid(uint64_t freq);
 uint64_t radio_get_dial_freq();
 radio_modulation_t radio_get_modulation();
+sideband_t radio_get_sideband();
 String radio_band_to_string(radio_band_t band);
 String radio_modulation_to_string(radio_modulation_t bw);
+String radio_sideband_to_string(sideband_t sideband);
 bool radio_modulation_valid(radio_modulation_t mod);
 String radio_freq_string();
 float radio_get_s_meter();
@@ -85,3 +87,4 @@ void radio_enable_tx(bool en);
 void radio_debug(debug_action_t action, void *value);
 
 extern Si5351 si5351;   // TODO: get rid of this by avoiding any mention in radio.cpp
+extern uint64_t freq_if;
