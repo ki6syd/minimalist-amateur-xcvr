@@ -22,11 +22,13 @@
 
 #define TEMP_ABSOLUTE_0     273.15
 #define TEMP_REFERENCE      (25 + TEMP_ABSOLUTE_0)
+#define TEMP_CUTOFF         80
 
 #define NUM_BIAS_OUTPUTS    2
-#define BIAS_KP             1
-#define BIAS_KD             -4
-#define BIAS_DUTY_INITIAL   0.5
+#define BIAS_KP             0.5
+#define BIAS_KD             -1 // -4
+#define BIAS_DUTY_INITIAL   0.6
+#define BIAS_NUM_CONSISTENT 5
 
 
 power_bias_channel_t bias_outputs[] = {BIAS_CHANNEL_0, BIAS_CHANNEL_1};
@@ -93,7 +95,7 @@ void power_init() {
     power_set_bias_duty(bias_outputs[i], 0);
 
   // find gate bias point
-  power_bias_to_current(BIAS_CURRENT_CW);
+  power_bias_to_current(BIAS_CURRENT_SSB);
 
   // todo: run the bias sweep function and log data. use for lookup of starting point.
 
@@ -127,7 +129,11 @@ void analog_sense_task(void *param) {
     }
 
 
-    // TODO: build temperature monitoring logic. Cut off at high temp, shift biasing with temp
+    // TODO: require more than a single sample to shut down bias. Implement derating behavior with temperature
+    if(pa_temp > TEMP_CUTOFF) {
+      power_bias_to_voltage(0);
+      Serial.println("Temperature too high, shutting down bias");
+    }
 
     // TODO: move the below battery monitoring logic into a different task from ADC reads
     // figure out whether we're on USB power? Don't run this logic if voltage is very low
@@ -280,7 +286,7 @@ void power_sweep_duty() {
     
     // shut down PWM before moving to next one
     power_set_bias_duty(bias_outputs[i], 0);
-    vTaskDelay(pdMS_TO_TICKS(10));
+    vTaskDelay(pdMS_TO_TICKS(25));
 
     // todo: debug why this doesn't seem to actually bring current to zero
   }
@@ -313,6 +319,7 @@ void power_bias_to_current(float total_current) {
       power_set_bias_duty(bias_outputs[i], bias_duties[i]);
     }
     Serial.println("Biasing to zero current");
+    xSemaphoreGive(xADCmutex);
     return;
   }
 
@@ -325,6 +332,7 @@ void power_bias_to_current(float total_current) {
   if(abs(measured_current - total_current) < (BIAS_TOLERANCE * total_current)) {
     Serial.print("Bias current already in spec: ");
     Serial.println(measured_current);
+    xSemaphoreGive(xADCmutex);
     return;
   }
 
@@ -378,7 +386,7 @@ void power_bias_to_current(float total_current) {
         break;
       }
       
-      // add to counter if bias is correct. Wait for 3 successive correct values.
+      // add to counter if bias is correct. Wait for successive correct valuess.
       if(abs(error) < (BIAS_TOLERANCE * target_current))
         correct_counter++;
       else
@@ -392,7 +400,7 @@ void power_bias_to_current(float total_current) {
         break;
       }
     }
-    while(correct_counter < 3);
+    while(correct_counter < BIAS_NUM_CONSISTENT);
 
     // shut down PWM before moving to next one
     power_set_bias_duty(bias_outputs[i], 0);

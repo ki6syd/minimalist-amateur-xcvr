@@ -190,7 +190,6 @@ void audio_dsp_task(void *pvParameter) {
     size_t bytes_copied_imd = 0;
     Serial.println("Starting copier loop");
     while(true) {
-        digitalWrite(PA_VDD_CTRL, HIGH);    // debug whether copier is stopping when i2s traffic stops
         bytes_copied_in = copier_iq_in.copy();
         // Serial.print("Bytes copied (IQ): ");
         // Serial.println(bytes_copied_in);
@@ -202,7 +201,6 @@ void audio_dsp_task(void *pvParameter) {
         bytes_copied_sidetone = copier_sidetone_in.copy();
         // Serial.print("Bytes copied (ST): ");
         // Serial.println(bytes_copied_sidetone);
-        digitalWrite(PA_VDD_CTRL, LOW);
 
         // check if there was a request to update the codec
         if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notifiedValue, 0) == pdTRUE) {

@@ -42,6 +42,8 @@
 #define AUDIO_SIDE_DEFAULT      0.8
 #define TX_POWER_DEFAULT        0.8
 #define AUDIO_VOL_DURING_CAL    0.01
+#define AUDIO_VOL_SSB_SCALE     0.6
+#define AUDIO_VOL_CW_SCALE      1.0
 #define AUDIO_PGA_DEFAULT       true
 
 // comment out to prevent accidental TX
@@ -50,7 +52,7 @@
 #define DIGI_QUEUE_LEN          10
 
 #define VHF_DEFAULT_FREQ        146580000
-#define HF_DEFAULT_FREQ         14060000
+#define HF_DEFAULT_FREQ         14062000
 
 #define MORSE_SPEED_MIN         5
 #define MORSE_SPEED_MAX         25

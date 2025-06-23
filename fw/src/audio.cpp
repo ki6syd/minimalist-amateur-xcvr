@@ -276,9 +276,17 @@ bool audio_set_tx_power(float power) {
     Serial.print("Setting TX power: ");
     Serial.println(power);
 
+    // apply a different maximum volume source scaling depending on mode
+    // allows 100% power into this funciton to always be normalized
+    float power_scaling = 1.0;
+    if(radio_get_modulation() == MOD_CW)
+        power_scaling = AUDIO_VOL_CW_SCALE;
+    if(radio_get_modulation() == MOD_SSB)
+        power_scaling = AUDIO_VOL_SSB_SCALE;
+
     // update power variable and also make an adjustment to the volume control
-    tx_vol.setVolume(power * q_tx_gain, 0);
-    tx_vol.setVolume(power * i_tx_gain, 1);
+    tx_vol.setVolume(power * q_tx_gain * power_scaling, 0);
+    tx_vol.setVolume(power * i_tx_gain * power_scaling, 1);
     return true;
 }
 
