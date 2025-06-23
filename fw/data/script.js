@@ -205,6 +205,21 @@ function get_volume() {
   http_request("GET", "volume", [], [], func)
 }
 
+function set_power() {
+  power = document.getElementById('power').value;
+  http_request("PUT", "power", ["power"], [power])
+}
+
+function get_power() {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById('power').value = this.responseText;
+    }
+  };
+  http_request("GET", "power", [], [], func)
+}
+
 function adj_vol(change) {
   new_vol = parseFloat(document.getElementById('af_gain').value) + change;
   document.getElementById('af_gain').value = new_vol
@@ -212,6 +227,15 @@ function adj_vol(change) {
   // set and get volume to force update on both sides
   set_volume();
   get_volume();
+}
+
+function adj_power(change) {
+  new_power = parseFloat(document.getElementById('power').value) + change;
+  document.getElementById('power').value = new_power
+
+  // set and get power to force update on both sides
+  set_power();
+  get_power();
 }
 
 
@@ -276,7 +300,7 @@ function press_bw() {
 
 function set_mod() {
   mod = document.getElementById('mod').value;
-  http_request("PUT", "modulation", ["mod"], [mod])
+  http_request("PUT", "modulation", ["mod"], [mod])    
 }
 
 function get_mod() {
@@ -289,20 +313,30 @@ function get_mod() {
   http_request("GET", "modulation", [], [], func)
 }
 
+// function that changes mode and automatically updates bandwidth for convenience
 function press_mod() {
   var mod = document.getElementById('mod').value;
+  var bw = '';
 
-  if(mod == "CW")
+  if(mod == "CW") {
     mod = "SSB"
-  else if(mod == "SSB")
+    bw = "WIDE"
+  }
+  else if(mod == "SSB") {
     mod = "CW"
+    bw = "NARROW"
+  }
   else
     return;
 
+  // update UI to new modulation
   document.getElementById('mod').value = mod;
+  document.getElementById('bw').value = bw;
 
   set_mod();
   get_mod();
+  set_bw();
+  get_bw();
 
   // update SOTAmat link
   updateSOTAmatLink();
@@ -313,10 +347,30 @@ function get_input_voltage() {
   // define callback function
   func = function() {
     if (this.readyState == 4 && this.status == 200) {
-      document.getElementById('v_bat').value = this.responseText;
+      document.getElementById('v_bat').value = this.responseText + " V";
     }
   };
   http_request("GET", "inputVoltage", [], [], func)
+}
+
+function get_pa_current() {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById('i_pa').value = this.responseText + " A";
+    }
+  };
+  http_request("GET", "paCurrent", [], [], func)
+}
+
+function get_pa_temp() {
+  // define callback function
+  func = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById('temp').value = this.responseText + " &deg;C";
+    }
+  };
+  http_request("GET", "temperature", [], [], func)
 }
 
 function get_s_meter() {
@@ -385,22 +439,6 @@ function sample() {
   };
   http_request("POST", "rawSamples", [], [], func)
 }
-
-
-
-function get_debug() {
-  // define callback function
-  func = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      document.getElementById('dbg').value = this.responseText;
-
-      // do heartbeat update in this function, we look at S meter often.
-      wd_count = wd_count_max;
-    }
-  };
-  http_request("GET", "debug", [], [], func)
-}
-
 
 // looks for the minimum value for the given key name
 function min_from_json_data(json_data, key_name) {
@@ -666,7 +704,7 @@ function on_load() {
   get_volume();
   get_speed();
   get_bw();
-  // get_debug();
+  get_pa_temp();
   get_freq();
   get_utc_time();
   get_address();
@@ -686,8 +724,14 @@ function refresh_ui() {
   if(counter % 4 == 2) 
     get_input_voltage();
   
+  if(counter % 5 == 0)
+    get_pa_current();
+
   if(counter % 8 == 0)
     get_freq();
+
+  if(counter % 9 == 0)
+    get_pa_temp();
 
   if(counter % 10 == 0) 
     get_queue_len();
@@ -695,6 +739,9 @@ function refresh_ui() {
   if(counter % 15 == 0) 
     repeat_update();
   
+  if(counter % 20 == 0)
+    get_power();
+
   if(counter % 21 == 4) 
     get_volume();
   

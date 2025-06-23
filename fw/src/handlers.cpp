@@ -276,6 +276,14 @@ void handler_input_voltage_get(AsyncWebServerRequest *request) {
     request->send(200, "text/plain", String(power_get_input_volt()));
 }
 
+void handler_pa_current_get(AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", String(power_get_pa_current()));
+}
+
+void handler_temperature_get(AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", String(power_get_pa_temp()));
+}
+
 void handler_smeter_get(AsyncWebServerRequest *request) {
     request->send(200, "text/plain", String(radio_get_s_meter()));
 }

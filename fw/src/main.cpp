@@ -131,8 +131,10 @@ void info_task(void *param) {
       info_output += String(digitalRead(KEY_DAH));
       info_output += "\tBOOT: ";
       info_output += String(digitalRead(BOOT_BTN));
-      info_output += "\tPTT: ";
-      info_output += String(digitalRead(PTT_MIC)) + "\n";
+      info_output += "\tPTT_MIC: ";
+      info_output += String(digitalRead(PTT_MIC));
+      info_output += "\tPTT_HP: ";
+      info_output += String(digitalRead(PTT_HP)) + "\n";
     
       info_output += "\n";
     

@@ -1798,6 +1798,66 @@
 			]
 		},
 		{
+			"name": "paCurrent",
+			"item": [
+				{
+					"name": "Gets the radio's power amp current",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/paCurrent",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"paCurrent"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Current input voltage [V]",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "text/plain"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/inputVoltage",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"inputVoltage"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "text",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "text/plain"
+								}
+							],
+							"cookie": [],
+							"body": "<integer>"
+						}
+					]
+				}
+			]
+		},
+		{
 			"name": "sMeter",
 			"item": [
 				{
@@ -2111,7 +2171,7 @@
 						"method": "PUT",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/agc?volt=4",
+							"raw": "{{baseUrl}}/agc?volt=3",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -2121,7 +2181,12 @@
 							"query": [
 								{
 									"key": "volt",
-									"value": "4"
+									"value": "4",
+									"disabled": true
+								},
+								{
+									"key": "volt",
+									"value": "3"
 								}
 							]
 						}
@@ -2258,7 +2323,7 @@
 						"method": "PUT",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/tune?tune=on",
+							"raw": "{{baseUrl}}/tune?tune=off",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -2269,12 +2334,12 @@
 								{
 									"key": "tune",
 									"value": "on",
-									"description": "(Required) Tune On/Off\n"
+									"description": "(Required) Tune On/Off\n",
+									"disabled": true
 								},
 								{
 									"key": "tune",
-									"value": "off",
-									"disabled": true
+									"value": "off"
 								}
 							]
 						}
@@ -3130,7 +3195,7 @@
 						"method": "POST",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/debug?command=5",
+							"raw": "{{baseUrl}}/debug?command=15",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -3157,11 +3222,6 @@
 								},
 								{
 									"key": "command",
-									"value": "5",
-									"description": "DEBUG_STOP_CLOCKS"
-								},
-								{
-									"key": "command",
 									"value": "13",
 									"description": "DEBUG_CMD_PA_VDD",
 									"disabled": true
@@ -3180,7 +3240,7 @@
 								},
 								{
 									"key": "clk0",
-									"value": "14000000",
+									"value": "14060000",
 									"disabled": true
 								},
 								{
@@ -3201,9 +3261,32 @@
 								},
 								{
 									"key": "command",
+									"value": "5",
+									"description": "DEBUG_STOP_CLOCKS",
+									"disabled": true
+								},
+								{
+									"key": "command",
 									"value": "7",
 									"description": "DEBUG_CMD_STOP_BFO",
 									"disabled": true
+								},
+								{
+									"key": "command",
+									"value": "8",
+									"description": "DEBUG_CMD_STOP_VFO",
+									"disabled": true
+								},
+								{
+									"key": "command",
+									"value": "14",
+									"description": "DEBUG_CMD_IF_UP",
+									"disabled": true
+								},
+								{
+									"key": "command",
+									"value": "15",
+									"description": "DEBUG_CMD_IF_DOWN"
 								}
 							]
 						}

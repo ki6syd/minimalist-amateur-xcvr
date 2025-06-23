@@ -55,6 +55,17 @@
       <label for="v_bat" class="label">VDD </label>
       <output name="v_bat" class="readout" id="v_bat">0.0 V</output>
     </div>
+    <div>
+      <label for="i_pa" class="label">IDD </label>
+      <output name="i_pa" class="readout" id="i_pa">0.0 A</output>
+    </div>
+  </form>
+
+  <form>
+    <div>
+      <label for="power" class="label">PWR</label>
+      <output name="power" class="readout" id="power">0.8</output>
+    </div>
 
     <div>
       <label for="af_gain" class="label">VOL</label>
@@ -66,6 +77,10 @@
     <div>
       <label for="keyer_speed" class="label">WPM</label>
       <output name="keyer_speed" class="readout" id="keyer_speed">15</output>
+    </div>
+    <div>
+      <label for="temp" class="label">T </label>
+      <output name="temp" class="readout" id="temp">25.0 &deg;C</output>
     </div>
   </form>
 
@@ -117,8 +132,11 @@
     <div>
       <input type="text" class="cw_input" id="freeform" name="freeform" placeholder="TEXT TO CW" value="">
     </div>
+    <div>
+      <button type="button" class="button_emoji" onclick="adj_power(-0.1)">&#x1F4C9;</button>
+      <button type="button" class="button_emoji" onclick="adj_power(0.1)">&#x1F4C8;</button>
+    </div>
   </form>
-
 </div>
 
 <hr>

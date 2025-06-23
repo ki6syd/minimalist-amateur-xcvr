@@ -20,6 +20,8 @@ void handler_modulation_set(AsyncWebServerRequest *request);
 void handler_keyer_speed_get(AsyncWebServerRequest *request);
 void handler_keyer_speed_set(AsyncWebServerRequest *request);
 void handler_input_voltage_get(AsyncWebServerRequest *request);
+void handler_pa_current_get(AsyncWebServerRequest *request);
+void handler_temperature_get(AsyncWebServerRequest *request);
 void handler_smeter_get(AsyncWebServerRequest *request);
 void handler_power_set(AsyncWebServerRequest *request);
 void handler_power_get(AsyncWebServerRequest *request);
