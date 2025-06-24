@@ -140,7 +140,7 @@ void info_task(void *param) {
     
       Serial.print(info_output);
 
-    vTaskDelay(pdMS_TO_TICKS(10000));
+    vTaskDelay(pdMS_TO_TICKS(5000));
   }
 }
 

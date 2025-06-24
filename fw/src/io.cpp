@@ -20,20 +20,9 @@ void spare_task_core_0(void *pvParameter);
 void spare_task_core_1(void *pvParameter);
 void blink_task(void *pvParameter);
 void key_task(void *pvParameter);
-void tx_pulse_task(void *pvParameter);
 void io_enable_dit_isr(bool enable);
 void io_enable_dah_isr(bool enable);
 void io_enable_btn_isr(bool enable);
-
-// only handles straight key / microphone PTT
-ICACHE_RAM_ATTR void button_isr() {
-  // detach interrupt here, reattaches after taking semaphore
-  detachInterrupt(digitalPinToInterrupt(BOOT_BTN));
-  detachInterrupt(digitalPinToInterrupt(PTT_MIC));
-
-  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  xTaskNotifyFromISR(xKeyTaskHandle, NOTIFY_BTN, eSetBits, &xHigherPriorityTaskWoken);
-}
 
 // only handles paddle inputs (dit, dah)
 // reference for freertos code in this function: https://www.freertos.org/Documentation/02-Kernel/04-API-references/05-Direct-to-task-notifications/07-xTaskNotifyFromISR
@@ -63,15 +52,11 @@ void io_init() {
   pinMode(SPARE_0, OUTPUT);
 
   pinMode(BOOT_BTN, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(BOOT_BTN), button_isr, CHANGE);
   pinMode(PTT_MIC, INPUT);
-  attachInterrupt(digitalPinToInterrupt(PTT_MIC), button_isr, FALLING);
-  // TODO: also include PTT_PT
+  pinMode(PTT_HP, INPUT);
   
   pinMode(KEY_DAH, INPUT);
   pinMode(KEY_DIT, INPUT);
-  io_enable_dit_isr(true);
-  io_enable_dah_isr(true);
 
   digitalWrite(SPARE_0, LOW);
   digitalWrite(LED_GRN, HIGH);
@@ -161,29 +146,16 @@ void blink_task(void *param) {
   }
 }
 
-// todo: merge with paddle task, and do a similar notification strategy
-// void tx_pulse_task(void *param) {
-//   while(true) {
-//     // check if the button semaphore is available. If not, block and allow another task to run
-//     if(xSemaphoreTake(btn_semaphore, portMAX_DELAY) == pdPASS) {
-//       if(digitalRead(BOOT_BTN) == LOW || digitalRead(PTT_MIC) == LOW)
-//         radio_key_on();
-//       if(digitalRead(BOOT_BTN) == HIGH && digitalRead(PTT_MIC) == HIGH)
-//         radio_key_off();
-
-//       attachInterrupt(digitalPinToInterrupt(BOOT_BTN), button_isr, CHANGE);
-//       attachInterrupt(digitalPinToInterrupt(PTT_MIC), button_isr, FALLING);
-
-//       // any value of notified_value should cancel currently sending messages
-//       digi_mode_queue_clear();
-//     }
-//   }
-// }
-
 void key_task(void *param) {
   uint32_t notified_value;
+  bool last_button_state = false;
+
+  // attach interrupts. do it in the task to avoid running ISR before task starts
+  io_enable_dit_isr(true);
+  io_enable_dah_isr(true);
+
   while(true) {
-    // paddle_isr() will unblock and force context switch
+    // paddle_isr() will unblock and force context switch. Waits 10ms
     if(xTaskNotifyWait(pdFALSE, ULONG_MAX, &notified_value, pdMS_TO_TICKS(10)) == pdTRUE) {
       if(notified_value & NOTIFY_DIT) {
         keyer_dit();
@@ -196,20 +168,23 @@ void key_task(void *param) {
         io_enable_dah_isr(true);
       }
 
-      // TODO: pushbutton and PTT lines can be polled. Simplify by removing interrupts.
-      if(notified_value & NOTIFY_BTN) {
-        if(digitalRead(BOOT_BTN) == LOW)
-          radio_key_on();
-        if(digitalRead(BOOT_BTN) == HIGH)
-          radio_key_off();
-
-        io_enable_btn_isr(true);
-      }
-
       // any value of notified_value should cancel currently sending messages
       digi_mode_queue_clear();
     }
-    vTaskDelay(pdMS_TO_TICKS(10));
+    
+    // poll pushbuttons. call key_on/key_off if button state has changed
+    if(digitalRead(BOOT_BTN) == LOW || digitalRead(PTT_MIC) == LOW || digitalRead(PTT_HP) == LOW) {
+      if(!last_button_state) {  
+        radio_key_on();
+        last_button_state = true;
+      }
+    }
+    if(digitalRead(BOOT_BTN) == HIGH && digitalRead(PTT_MIC) == HIGH && digitalRead(PTT_HP) == HIGH) {
+      if(last_button_state) {  
+        radio_key_off();
+        last_button_state = false;
+      }
+    }
   }
 }
 
@@ -225,11 +200,4 @@ void io_enable_dah_isr(bool enabled) {
     attachInterrupt(digitalPinToInterrupt(KEY_DAH), paddle_isr, ONLOW);
   else
     detachInterrupt(digitalPinToInterrupt(KEY_DAH));
-}
-
-void io_enable_btn_isr(bool enabled) {
-  if(enabled)
-    attachInterrupt(digitalPinToInterrupt(BOOT_BTN), button_isr, CHANGE);
-  else
-    detachInterrupt(digitalPinToInterrupt(BOOT_BTN));
 }

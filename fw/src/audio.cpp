@@ -240,9 +240,6 @@ float audio_get_sidetone_volume() {
 }
 
 void audio_en_sidetone(bool en) {
-    Serial.print("Audio sidetone: ");
-    Serial.println(en);
-
     int16_t amp;
     if(en)
         amp = INT16T_MAX;
