@@ -357,7 +357,8 @@ function get_pa_current() {
   // define callback function
   func = function() {
     if (this.readyState == 4 && this.status == 200) {
-      document.getElementById('i_pa').value = this.responseText + " A";
+      let idd = parseFloat(this.responseText).toFixed(2);
+      document.getElementById('i_pa').value = idd + " A";
     }
   };
   http_request("GET", "paCurrent", [], [], func)
@@ -367,7 +368,8 @@ function get_pa_temp() {
   // define callback function
   func = function() {
     if (this.readyState == 4 && this.status == 200) {
-      document.getElementById('temp').value = this.responseText + " &deg;C";
+      let temp = parseFloat(this.responseText).toFixed(1);
+      document.getElementById('temp').innerHTML = temp + " &deg;C";
     }
   };
   http_request("GET", "temperature", [], [], func)
