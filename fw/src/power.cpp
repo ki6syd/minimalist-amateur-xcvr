@@ -22,7 +22,7 @@
 
 #define TEMP_ABSOLUTE_0     273.15
 #define TEMP_REFERENCE      (25 + TEMP_ABSOLUTE_0)
-#define TEMP_CUTOFF         80
+#define TEMP_CUTOFF         70
 
 #define NUM_BIAS_OUTPUTS    2
 #define BIAS_KP             0.5
@@ -128,10 +128,10 @@ void analog_sense_task(void *param) {
       xSemaphoreGive(xADCmutex);
     }
 
-
     // TODO: require more than a single sample to shut down bias. Implement derating behavior with temperature
     if(pa_temp > TEMP_CUTOFF) {
       power_bias_to_voltage(0);
+      io_set_blink_mode(BLINK_ERROR);
       Serial.println("Temperature too high, shutting down bias");
     }
 

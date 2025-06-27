@@ -32,9 +32,17 @@ function zeroPad(num, places) {
 function freq_in_band(num) {
   if(num >= 7 && num <= 7.3)
     return true;
+  if(num >= 10.1 && num <= 10.5)
+    return true;
   if(num >= 14.0 && num <= 14.35)
     return true;
+  if(num >= 18.068 && num <= 18.168)
+    return true;
   if(num >= 21 && num <= 21.45)
+    return true;
+  if(num >= 24.89 && num <= 24.99)
+    return true;
+  if(num >= 28 && num <= 29.7)
     return true;
   if(num >= 144 && num <= 148)
     return true;
@@ -178,11 +186,19 @@ function next_band() {
 
   // todo: clean this up. parametrize it
   if(round_down_freq == 7)
-    document.getElementById('freq_mhz').value = cur_freq + (14.0-7.0)
+    document.getElementById('freq_mhz').value = cur_freq + (10.1-7.0)
+  if(round_down_freq == 10)
+    document.getElementById('freq_mhz').value = cur_freq + (14.0-10.1)
   if(round_down_freq == 14)
-    document.getElementById('freq_mhz').value = cur_freq + (21.0-14.0)
+    document.getElementById('freq_mhz').value = cur_freq + (18.068-14.0)
+  if(round_down_freq == 18)
+    document.getElementById('freq_mhz').value = cur_freq + (21.0-18.068)
   if(round_down_freq == 21)
-    document.getElementById('freq_mhz').value = cur_freq + (7.0-21.0)
+    document.getElementById('freq_mhz').value = cur_freq + (24.89-21.0)
+  if(round_down_freq == 24 || round_down_freq == 25)
+    document.getElementById('freq_mhz').value = cur_freq + (28.0-24.89)
+  if(round_down_freq == 28 || round_down_freq == 29)
+    document.getElementById('freq_mhz').value = cur_freq + (7.0-28.0)
 
   set_freq();
   get_freq();
