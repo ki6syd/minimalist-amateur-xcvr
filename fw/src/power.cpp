@@ -100,6 +100,7 @@ void power_init() {
   // todo: run the bias sweep function and log data. use for lookup of starting point.
 
   // set AGC voltage
+  // TODO: look this up from config file or a front panel setting, rather than hard-coding
   power_agc_to_voltage(AGC_VOLT_RX);
 
   xTaskCreatePinnedToCore(

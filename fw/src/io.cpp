@@ -49,7 +49,7 @@ void io_init() {
   
   pinMode(LED_GRN, OUTPUT);
   pinMode(LED_RED, OUTPUT);
-  pinMode(SPARE_0, OUTPUT);
+  pinMode(SPARE, OUTPUT);
 
   pinMode(BOOT_BTN, INPUT_PULLUP);
   pinMode(PTT_MIC, INPUT);
@@ -58,7 +58,7 @@ void io_init() {
   pinMode(KEY_DAH, INPUT);
   pinMode(KEY_DIT, INPUT);
 
-  digitalWrite(SPARE_0, LOW);
+  digitalWrite(SPARE, LOW);
   digitalWrite(LED_GRN, HIGH);
 
   // check if USB is plugged in before attempting to configure Serial
