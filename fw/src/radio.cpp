@@ -102,15 +102,12 @@ void radio_task(void *param) {
         // initiate mode change
         radio_set_rxtx_mode(MODE_QSK_COUNTDOWN);
 
-        // turn off sidetone, LED, TX power amp rail, VHF tx_en, etc
-        digitalWrite(PA_VDD_CTRL, LOW);
         digitalWrite(VHF_PTT, HIGH);
         digitalWrite(LED_RED, LOW);
       }
       if(notifiedValue & NOTIFY_KEY_ON) {
         Serial.println("KEY ON");
         // TODO: create key shape using a ramp on the sidetone source volume, rather than using VDD_CTRL
-
         // only use sidetone in CW mode. TODO: differentiate whether key on was from PTT vs CW key. Consider cross-mode.
         if(radio_get_modulation() == MOD_CW)
           audio_en_sidetone(true);
@@ -118,15 +115,7 @@ void radio_task(void *param) {
         // initiate mode change
         radio_set_rxtx_mode(MODE_TX);
 
-        if(ok_to_tx) {
-          // turn off sidetone, LED, TX power amp rail, VHF tx_en, etc
-          digitalWrite(LED_RED, HIGH);
-
-          if(radio_freq_is_hf(freq_dial))
-            digitalWrite(PA_VDD_CTRL, HIGH);
-          else
-            digitalWrite(VHF_PTT, LOW);
-        }
+        digitalWrite(LED_RED, HIGH);
       }
       if(notifiedValue & NOTIFY_QSK_EXPIRE) {
         radio_set_rxtx_mode(MODE_RX);
@@ -302,6 +291,9 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
         rxtx_mode = MODE_RX;
 
         if(radio_freq_is_hf(freq_dial)) {
+          // turn off PA rail
+          digitalWrite(PA_VDD_CTRL, LOW);
+
           // change audio mode, function will ignore if there's no change
           audio_set_mode(AUDIO_HF_RX);
 
@@ -309,7 +301,8 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
           power_agc_to_voltage(AGC_VOLT_RX);
         }
         else {
-            audio_set_mode(AUDIO_VHF_RX);
+          digitalWrite(VHF_PTT, HIGH);
+          audio_set_mode(AUDIO_VHF_RX);
         }
 
         // change over relays if needed
@@ -366,6 +359,11 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
             power_agc_to_voltage(AGC_VOLT_TX_SSB);
           }
 
+          // turn on the PA rail
+          if(ok_to_tx)
+            digitalWrite(PA_VDD_CTRL, HIGH);
+
+
           // change audio mode, function will ignore if there's no change
           if(radio_get_modulation() == MOD_CW)
             audio_set_mode(AUDIO_HF_TX_CW);
@@ -374,6 +372,9 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
         }
         else {
           audio_set_mode(AUDIO_VHF_TX);
+
+          if(ok_to_tx)
+            digitalWrite(VHF_PTT, LOW);
 
           // TODO: turn off si5351 clocks for VHF mode
         }

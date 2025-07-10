@@ -294,6 +294,7 @@ void power_sweep_duty() {
 
   xSemaphoreGive(xADCmutex);
 
+  // put VDD ctrl line in a deterministic state
   digitalWrite(PA_VDD_CTRL, LOW);
 }
 
@@ -418,10 +419,12 @@ void power_bias_to_current(float total_current) {
   }
   Serial.println();
 
+  // TODO: delete this next line and make calling function handle state of this line?
   digitalWrite(PA_VDD_CTRL, LOW);
 }
 
 // set both channels to the specified bias voltage
+// does not touch the power amp VDD ctrl line, because it does not need voltage to see drain current 
 void power_bias_to_voltage(float voltage) {  
   if(voltage < 0 || voltage > BIAS_MAX_VOLT * BIAS_VOLT_GAIN)
     return;
@@ -439,8 +442,7 @@ void power_bias_to_voltage(float voltage) {
   }
   Serial.println();
 
-  // put bias control line in a deterministic state
-  digitalWrite(PA_VDD_CTRL, LOW);
+  // return without turning off the VDD ctrl line. 
 }
 
 float power_get_bias_target() {

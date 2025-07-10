@@ -98,13 +98,6 @@ void audio_logic_task(void *pvParameter) {
                 iq_rx_balance.setVolume(0, 0);
                 iq_rx_balance.setVolume(0, 1);
 
-                /*
-                todo: delete this if it just works to call audio_set_tx_power
-                Serial.print("Setting tx_power: ");
-                Serial.println(tx_power);
-                tx_vol.setVolume(tx_power * q_tx_gain, 0);
-                tx_vol.setVolume(tx_power * i_tx_gain, 1);
-                */
                 audio_set_tx_power(radio_get_power());
 
                 // TODO: consider deleting this from the audio mode change. Needs low latency so also exists in the sidetone enabling.
@@ -122,13 +115,6 @@ void audio_logic_task(void *pvParameter) {
                 iq_rx_balance.setVolume(q_rx_gain, 0);
                 iq_rx_balance.setVolume(q_rx_gain, 1);
 
-                /*
-                TODO: just delete this if the call below works
-                Serial.print("Setting tx_power: ");
-                Serial.println(tx_power);
-                tx_vol.setVolume(tx_power * q_tx_gain, 0);
-                tx_vol.setVolume(tx_power * i_tx_gain, 1);
-                */
                 audio_set_tx_power(radio_get_power());
 
                 // TODO: consider deleting this from the audio mode change. Needs low latency so also exists in the sidetone enabling.
@@ -159,7 +145,8 @@ void audio_logic_task(void *pvParameter) {
                 sidetone_wave.setAmplitude(INT16_MAX/2);
             }
         }
-        vTaskDelay(pdMS_TO_TICKS(50));
+        // this delay doesn't seem to matter. was it important for letting audio task run?
+        // vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
@@ -170,7 +157,6 @@ void audio_set_mode(audio_mode_t new_audio_mode) {
     // don't do anything if requested mode is the same
     // example: radio_set_rxtx_mode() may repeatedly call this when going from TX to QSK_COUNTDOWN during keying
     if(new_audio_mode == cur_audio_mode) {
-        Serial.println("Skipping - no change to cur_audio_mode");
         return;
     }
 
