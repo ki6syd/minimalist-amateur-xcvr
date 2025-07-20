@@ -259,7 +259,7 @@ String radio_audio_filt_to_string(audio_filt_t filt) {
     }
   }
 
-void audio_dsp_set_sideband(sideband_t sideband) {
+void audio_dsp_set_sideband(sideband_t sideband) {   
     if(cur_audio_mode == AUDIO_HF_RX) {
         if(sideband == SIDEBAND_LSB) {
             hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
@@ -271,7 +271,8 @@ void audio_dsp_set_sideband(sideband_t sideband) {
         }
     }
     else {
-        if(sideband == SIDEBAND_LSB) {
+        // opposite filter config from RX
+        if(sideband == SIDEBAND_USB) {
             hilbert.setFilter(0, new FIR<float>(coeff_hilbert_n45deg));
             hilbert.setFilter(1, new FIR<float>(coeff_hilbert_p45deg));
         }
@@ -301,20 +302,27 @@ void audio_dsp_es8388_config(audio_mode_t mode) {
 
     // set the correct DAC outputs based on audio mode
     AudioDriver *driver = audio_board.getDriver();
-    if(mode == AUDIO_HF_RX || mode == AUDIO_HF_TX_CW || mode == AUDIO_VHF_RX) {
+    if(mode == AUDIO_HF_RX || mode == AUDIO_HF_TX_CW || mode == AUDIO_HF_TX_SSB || mode == AUDIO_VHF_RX) {
+        // use OUT1-L, OUT1-R
         driver->setMute(false, 0);
         driver->setMute(true, 1);
     }
     else if(mode == AUDIO_VHF_TX) {
+        // use OUT2-L, OUT2-R
         driver->setMute(true, 0);
         driver->setMute(false, 1);
+    }
+    else {
+        // shouldn't get here.
     }
 
     // es8388 inputs are used for both RX and microphone input. In case of mic input, need to copy data to both stereo channels
     if(cur_audio_mode == AUDIO_HF_RX || mode == AUDIO_HF_TX_CW)
         left_right_fill_mode = Auto;    // passes both channels through
-    else
+    else {
         left_right_fill_mode = RightIsEmpty;    // fills microphone into both channels of the stream
+        // FIXME: this isn't working. Hardware hack works around it.
+    }
 }
 
 float audio_dsp_get_rx_level(uint16_t num_avg, uint16_t delay_ms) {

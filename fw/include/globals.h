@@ -42,7 +42,7 @@
 #define AUDIO_SIDE_DEFAULT      0.8
 #define TX_POWER_DEFAULT        0.8
 #define AUDIO_VOL_DURING_CAL    0.01
-#define AUDIO_VOL_SSB_SCALE     0.6
+#define AUDIO_VOL_SSB_SCALE     0.8
 #define AUDIO_VOL_CW_SCALE      1.0
 #define AUDIO_PGA_DEFAULT       true
 
@@ -80,7 +80,8 @@ typedef enum {
     DEBUG_CMD_CAL_LPF=12,
     DEBUG_CMD_PA_VDD=13,
     DEBUG_CMD_IF_UP=14,
-    DEBUG_CMD_IF_DOWN=15
+    DEBUG_CMD_IF_DOWN=15,
+    DEBUG_CMD_TONE_TEST=16
 } debug_action_t;
 
 typedef enum {

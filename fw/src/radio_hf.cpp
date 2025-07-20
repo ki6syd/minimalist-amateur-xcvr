@@ -18,7 +18,7 @@ uint64_t freq_if = 44991500;
 uint64_t freq_vfo = 0;
 uint64_t freq_bfo = 0;
 
-// TODO: parametrize into tx and rx phase delays
+// TODO: parametrize into tx and rx phase delays, pull from config file
 uint8_t phase_delay = 16;
 
 // variable to track what value of audio_get_rx_db() corresponds to the #define'd S_UNIT_REF above
@@ -84,8 +84,6 @@ void hf_si5351_init() {
 void hf_set_dial_freq(uint64_t freq_dial, sideband_t sideband) {
   freq_vfo = freq_if + freq_dial;
 
-  // TODO: check this logic for CW sidetone offset
-  // TODO: for CW, do we need to shift between TX and RX? this whole function may need an overhaul. unsure why CW vs SSB is relevant.
   if(radio_get_modulation() == MOD_CW) {
     if(sideband == SIDEBAND_USB)
       freq_bfo = freq_if + ((uint64_t) F_SIDETONE_DEFAULT);

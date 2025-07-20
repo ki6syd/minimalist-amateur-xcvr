@@ -14,6 +14,7 @@
 #define NOTIFY_DBG_MAX_VOL      (1 << 7)
 #define NOTIFY_DBG_MIN_VOL      (1 << 8)
 #define NOTIFY_DBG_IMD_TEST     (1 << 9)
+#define NOTIFY_DBG_TONE_TEST    (1 << 10)
 
 TaskHandle_t xAudioTaskHandle;
 static float last_volume_dB = 0;
@@ -79,6 +80,8 @@ void audio_logic_task(void *pvParameter) {
             }
             // Handle mode changes
             if(notifiedValue & NOTIFY_MODE_HF_RX_CW) {
+                cur_audio_mode = AUDIO_HF_RX;
+
                 iq_rx_balance.setVolume(q_rx_gain, 0);
                 iq_rx_balance.setVolume(i_rx_gain, 1);
 
@@ -86,7 +89,8 @@ void audio_logic_task(void *pvParameter) {
 
                 hp_vol.setVolume(global_vol);
 
-                cur_audio_mode = AUDIO_HF_RX;
+                // update hilbert transforms
+                audio_dsp_set_sideband(cur_sideband);
 
                 // special case (a bit of a hack): don't update the codec if previous mode was HF_TX_CW. Speeds up entry into CW RX, avoids memory issues
                 if(prev_audio_mode != AUDIO_HF_TX_CW)
@@ -95,6 +99,8 @@ void audio_logic_task(void *pvParameter) {
                 // exits WITHOUT changing sidetone volume. That is handled by key on/off function. This just changes "modes"
             }
             if(notifiedValue & NOTIFY_MODE_HF_TX_CW) {
+                cur_audio_mode = AUDIO_HF_TX_CW;
+
                 iq_rx_balance.setVolume(0, 0);
                 iq_rx_balance.setVolume(0, 1);
 
@@ -103,7 +109,8 @@ void audio_logic_task(void *pvParameter) {
                 // TODO: consider deleting this from the audio mode change. Needs low latency so also exists in the sidetone enabling.
                 hp_vol.setVolume(sidetone_vol * global_vol);
 
-                cur_audio_mode = AUDIO_HF_TX_CW;
+                // update hilbert transforms
+                audio_dsp_set_sideband(cur_sideband);
 
                 // special case (a bit of a hack): don't update the codec if previous mode was HF_RX. Speeds up entry into CW TX, avoids memory issues
                 if(prev_audio_mode != AUDIO_HF_RX)
@@ -112,6 +119,8 @@ void audio_logic_task(void *pvParameter) {
                 // exits WITHOUT changing sidetone volume. That is handled by key on/off function. This just changes "modes"
             }
             if(notifiedValue & NOTIFY_MODE_HF_TX_SSB) {
+                cur_audio_mode = AUDIO_HF_TX_SSB;
+
                 iq_rx_balance.setVolume(q_rx_gain, 0);
                 iq_rx_balance.setVolume(q_rx_gain, 1);
 
@@ -120,7 +129,8 @@ void audio_logic_task(void *pvParameter) {
                 // TODO: consider deleting this from the audio mode change. Needs low latency so also exists in the sidetone enabling.
                 hp_vol.setVolume(sidetone_vol * global_vol);
 
-                cur_audio_mode = AUDIO_HF_TX_SSB;
+                // update hilbert transforms
+                audio_dsp_set_sideband(cur_sideband);
 
                 audio_dsp_request_codec_update();
 
@@ -143,6 +153,9 @@ void audio_logic_task(void *pvParameter) {
                 // create a two-tone test waveform by outputting half amplitude at two different frequencies
                 imd_test_wave.setAmplitude(INT16_MAX/2);
                 sidetone_wave.setAmplitude(INT16_MAX/2);
+            }
+            if(notifiedValue & NOTIFY_DBG_TONE_TEST) {
+                sidetone_wave.setAmplitude(INT16_MAX);
             }
         }
         // this delay doesn't seem to matter. was it important for letting audio task run?
@@ -315,6 +328,9 @@ void audio_debug(debug_action_t command_num) {
             break;
         case DEBUG_CMD_IMD_TEST:
             xTaskNotify(xAudioTaskHandle, NOTIFY_DBG_IMD_TEST, eSetBits);
+            break;
+        case DEBUG_CMD_TONE_TEST:
+            xTaskNotify(xAudioTaskHandle, NOTIFY_DBG_TONE_TEST, eSetBits);
             break;
         case DEBUG_CMD_MIN_VOL:
             xTaskNotify(xAudioTaskHandle, NOTIFY_DBG_MIN_VOL, eSetBits);        
