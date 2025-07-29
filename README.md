@@ -1,10 +1,10 @@
  # minimalist-amateur-xcvr
 
-## MAX-4B
+## MAX-SDR
 
-This branch supports MAX-4B development (work-in-progress).
+This branch supports MAX-SDR development (work-in-progress). See www.ki6syd.com for more details.
 
-![IMG_5742](https://github.com/user-attachments/assets/a1d4a744-64ac-481b-b767-a33720bf08f2)
+![IMG_0612 (1)](https://github.com/user-attachments/assets/c2740dec-16bb-4900-a973-8f74be0eb31b)
 
 
 ## Licenses
