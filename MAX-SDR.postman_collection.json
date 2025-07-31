@@ -3195,7 +3195,7 @@
 						"method": "POST",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/debug?command=15",
+							"raw": "{{baseUrl}}/debug?command=10",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -3216,8 +3216,8 @@
 								},
 								{
 									"key": "command",
-									"value": "1",
-									"description": "DEBUG_CMD_TXCLK",
+									"value": "2",
+									"description": "DEBUG_CMD_CAL_XTAL",
 									"disabled": true
 								},
 								{
@@ -3234,9 +3234,14 @@
 								},
 								{
 									"key": "command",
-									"value": "10",
-									"description": "DEBUG_CMD_MIN_VOL",
+									"value": "16",
+									"description": "DEBUG_CMD_TONE_TEST",
 									"disabled": true
+								},
+								{
+									"key": "command",
+									"value": "10",
+									"description": "DEBUG_CMD_MIN_VOL"
 								},
 								{
 									"key": "clk0",
@@ -3286,7 +3291,8 @@
 								{
 									"key": "command",
 									"value": "15",
-									"description": "DEBUG_CMD_IF_DOWN"
+									"description": "DEBUG_CMD_IF_DOWN",
+									"disabled": true
 								}
 							]
 						}
