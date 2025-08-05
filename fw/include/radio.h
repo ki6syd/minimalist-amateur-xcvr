@@ -66,6 +66,7 @@ void radio_init();
 void radio_key_on();
 void radio_key_off();
 void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode);
+radio_rxtx_mode_t radio_get_rxtx_mode();
 void radio_set_band(radio_band_t new_band);
 bool radio_set_dial_freq(uint64_t freq);
 bool radio_set_dial_freq_fine(uint64_t freq_dHz);

@@ -390,6 +390,10 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
   }
 }
 
+radio_rxtx_mode_t radio_get_rxtx_mode() {
+  return rxtx_mode;
+}
+
 // this function does NOT care whether transmit is active currently. Blindly sets the correct relays/mux based on the band selection
 // mode change safety is handled by dial frequency updates
 // TODO: move this into the hf and vhf submodules?

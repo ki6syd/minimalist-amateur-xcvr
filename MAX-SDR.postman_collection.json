@@ -16,7 +16,7 @@
 						"method": "POST",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/ft8?messageText=ABCDEFGHIJKLM",
+							"raw": "{{baseUrl}}/ft8?messageText=S KI6SYD/3UTJ&rfFrequency=14060000",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -26,7 +26,7 @@
 							"query": [
 								{
 									"key": "messageText",
-									"value": "ABCDEFGHIJKLM",
+									"value": "S KI6SYD/3UTJ",
 									"description": "(Required) 13 character free-text FT8 message to send"
 								},
 								{
@@ -37,9 +37,8 @@
 								},
 								{
 									"key": "rfFrequency",
-									"value": "<integer>",
-									"description": "Dial frequency for sending [Hz]. If not provided, radio will pick a frequency using firmware-defined logic.",
-									"disabled": true
+									"value": "14060000",
+									"description": "Dial frequency for sending [Hz]. If not provided, radio will pick a frequency using firmware-defined logic."
 								},
 								{
 									"key": "audioFrequency",
