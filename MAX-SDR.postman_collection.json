@@ -16,7 +16,7 @@
 						"method": "POST",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/ft8?messageText=ABCDEFGHIJKLM",
+							"raw": "{{baseUrl}}/ft8?messageText=S KI6SYD/3UTJ&rfFrequency=14060000",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -26,7 +26,7 @@
 							"query": [
 								{
 									"key": "messageText",
-									"value": "ABCDEFGHIJKLM",
+									"value": "S KI6SYD/3UTJ",
 									"description": "(Required) 13 character free-text FT8 message to send"
 								},
 								{
@@ -37,9 +37,8 @@
 								},
 								{
 									"key": "rfFrequency",
-									"value": "<integer>",
-									"description": "Dial frequency for sending [Hz]. If not provided, radio will pick a frequency using firmware-defined logic.",
-									"disabled": true
+									"value": "14060000",
+									"description": "Dial frequency for sending [Hz]. If not provided, radio will pick a frequency using firmware-defined logic."
 								},
 								{
 									"key": "audioFrequency",
@@ -3195,7 +3194,7 @@
 						"method": "POST",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/debug?command=15",
+							"raw": "{{baseUrl}}/debug?command=10",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -3216,8 +3215,8 @@
 								},
 								{
 									"key": "command",
-									"value": "1",
-									"description": "DEBUG_CMD_TXCLK",
+									"value": "2",
+									"description": "DEBUG_CMD_CAL_XTAL",
 									"disabled": true
 								},
 								{
@@ -3234,9 +3233,14 @@
 								},
 								{
 									"key": "command",
-									"value": "10",
-									"description": "DEBUG_CMD_MIN_VOL",
+									"value": "16",
+									"description": "DEBUG_CMD_TONE_TEST",
 									"disabled": true
+								},
+								{
+									"key": "command",
+									"value": "10",
+									"description": "DEBUG_CMD_MIN_VOL"
 								},
 								{
 									"key": "clk0",
@@ -3286,7 +3290,8 @@
 								{
 									"key": "command",
 									"value": "15",
-									"description": "DEBUG_CMD_IF_DOWN"
+									"description": "DEBUG_CMD_IF_DOWN",
+									"disabled": true
 								}
 							]
 						}
