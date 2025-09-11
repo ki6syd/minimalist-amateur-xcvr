@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 #define BIAS_CURRENT_CW     0.1
-#define BIAS_CURRENT_SSB    0.4
+#define BIAS_CURRENT_SSB    0.3
 #define BIAS_MAX_PER_CH     0.5
 #define BIAS_VOLT_CW        3.5
 
