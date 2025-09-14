@@ -37,6 +37,10 @@ float pa_bias_target = 0;
 float bias_duties[NUM_BIAS_OUTPUTS];
 float agc_duty;
 
+float agc_volt_rx = AGC_VOLT_RX;
+float agc_volt_tx_cw = AGC_VOLT_TX_CW;
+float agc_volt_tx_ssb = AGC_VOLT_TX_SSB;
+
 TaskHandle_t xAnalogSenseTaskHandle;
 SemaphoreHandle_t xADCmutex;
 
@@ -69,6 +73,13 @@ void power_init() {
     vbat_cell_low = fs_load_setting_float(PREFERENCE_FILE, "vbat_cell_low", 0.0, 5.0);
   if(fs_setting_exists(PREFERENCE_FILE, "num_battery"))
     num_cell = fs_load_setting_long(PREFERENCE_FILE, "num_battery", 0, 12);
+  if(fs_setting_exists(PREFERENCE_FILE, "agc_volt_rx"))
+    agc_volt_rx = fs_load_setting_long(PREFERENCE_FILE, "agc_volt_rx", 0, 6.0);
+  if(fs_setting_exists(PREFERENCE_FILE, "agc_volt_tx_cw"))
+    agc_volt_tx_cw = fs_load_setting_long(PREFERENCE_FILE, "agc_volt_tx_cw", 0, 6.0);
+  if(fs_setting_exists(PREFERENCE_FILE, "agc_volt_tx_ssb"))
+    agc_volt_tx_ssb = fs_load_setting_long(PREFERENCE_FILE, "agc_volt_tx_ssb", 0, 6.0);
+
 
   // set up a PWM channel that drives buck converter sync pin
   // feature for the future: select this frequency based on the dial frequency
@@ -101,7 +112,7 @@ void power_init() {
 
   // set AGC voltage
   // TODO: look this up from config file or a front panel setting, rather than hard-coding
-  power_agc_to_voltage(AGC_VOLT_RX);
+  power_agc_to_voltage(agc_volt_rx);
 
   xTaskCreatePinnedToCore(
       analog_sense_task,

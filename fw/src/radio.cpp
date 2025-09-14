@@ -298,7 +298,7 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
           audio_set_mode(AUDIO_HF_RX);
 
           // change AGC setpoint
-          power_agc_to_voltage(AGC_VOLT_RX);
+          power_agc_to_voltage(agc_volt_rx);
         }
         else {
           digitalWrite(VHF_PTT, HIGH);
@@ -352,11 +352,11 @@ void radio_set_rxtx_mode(radio_rxtx_mode_t new_mode) {
           if(radio_get_modulation() == MOD_CW) {
             // todo: check bias current with a fixed voltage, mismatched transistors are a problem
             power_bias_to_voltage(BIAS_VOLT_CW);
-            power_agc_to_voltage(AGC_VOLT_TX_CW);
+            power_agc_to_voltage(agc_volt_tx_cw);
           }
           else if(radio_get_modulation() == MOD_SSB) {
             power_bias_to_current(power_get_bias_target());
-            power_agc_to_voltage(AGC_VOLT_TX_SSB);
+            power_agc_to_voltage(agc_volt_tx_ssb);
           }
 
           // turn on the PA rail

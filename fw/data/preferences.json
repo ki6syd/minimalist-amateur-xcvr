@@ -11,5 +11,8 @@
 	"vhf_default_vol": "6",
 	"vbat_cell_low": "2.6",
 	"num_battery": "3",
-	"tx_power": "0.7"
+	"tx_power": "0.7",
+	"agc_volt_rx": "3.0",
+	"agc_volt_tx_cw": "2.5",
+	"agc_volt_tx_ssb": "3.0"
 }

@@ -7,7 +7,7 @@
 #define BIAS_MAX_PER_CH     0.5
 #define BIAS_VOLT_CW        3.5
 
-#define AGC_VOLT_RX         2.5
+#define AGC_VOLT_RX         3.0
 #define AGC_VOLT_TX_CW      2.5
 #define AGC_VOLT_TX_SSB     3.0
 
@@ -22,6 +22,10 @@ typedef enum {
     BIAS_CHANNEL_0 = 0,
     BIAS_CHANNEL_1 = 1,
 } power_bias_channel_t;
+
+extern float agc_volt_rx;
+extern float agc_volt_tx_cw;
+extern float agc_volt_tx_ssb;
 
 void power_init();
 void power_update_freq(uint32_t freq);
