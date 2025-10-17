@@ -12,10 +12,6 @@ TaskHandle_t xFileSystemTask;
 ESPxWebFlMgr filemgr(8080);
 
 bool fs_mounted = false;
-
-radio_band_t string_to_radio_band(const char* band_str);
-radio_modulation_t string_to_radio_modulation(const char* mod_str);
-void print_band_capability(radio_band_capability_t (&bands)[NUMBER_BANDS]);
 void fs_task(void *pvParameter);
 
 // TODO: have fs_init() load everything into memory
@@ -118,127 +114,6 @@ bool fs_setting_exists(String file_name, String param_name) {
     if(tmp == "")
         return false;
     return true;
-}
-
-radio_band_t string_to_radio_band(const char* band_str) {
-    if (strcmp(band_str, "BAND_HF_1") == 0) return BAND_HF_1;
-    if (strcmp(band_str, "BAND_HF_2") == 0) return BAND_HF_2;
-    if (strcmp(band_str, "BAND_HF_3") == 0) return BAND_HF_3;
-    if (strcmp(band_str, "BAND_HF_4") == 0) return BAND_HF_4;
-    if (strcmp(band_str, "BAND_HF_5") == 0) return BAND_HF_5;
-    if (strcmp(band_str, "BAND_HF_6") == 0) return BAND_HF_6;
-    if (strcmp(band_str, "BAND_HF_7") == 0) return BAND_HF_7;
-    if (strcmp(band_str, "BAND_VHF") == 0) return BAND_VHF;
-    return BAND_UNKNOWN;
-}
-
-radio_modulation_t string_to_radio_modulation(const char* mod_str) {
-    if (strcmp(mod_str, "cw") == 0) return MOD_CW;
-    if (strcmp(mod_str, "ssb") == 0) return MOD_SSB;
-    if (strcmp(mod_str, "fm") == 0) return MOD_FM;
-    return MOD_CW;  // Default to CW if unrecognized
-}
-
-void print_band_capability(radio_band_capability_t (&bands)[NUMBER_BANDS]) {
-    for (int i = 0; i < NUMBER_BANDS; i++) {
-        // Print the band name
-        Serial.print("Band Name: ");
-        Serial.println(radio_band_to_string(bands[i].band_name));
-
-        Serial.println(bands[i].band_name);
-
-        // Print the frequency range
-        Serial.print("Min Frequency: ");
-        Serial.println(bands[i].min_freq);
-        Serial.print("Max Frequency: ");
-        Serial.println(bands[i].max_freq);
-
-        Serial.print("Num RX Bandwidths: ");
-        Serial.println(bands[i].num_rx_modulations);
-
-        // Print the bandwidths
-        Serial.print("RX Modulations: ");
-        for (int j = 0; j < bands[i].num_rx_modulations; j++) {
-            Serial.print(radio_modulation_to_string(bands[i].rx_modulations[j]));
-            Serial.print(", ");
-        }
-        Serial.println();
-
-        Serial.print("Num TX Bandwidths: ");
-        Serial.println(bands[i].num_tx_modulations);
-
-        // Print the bandwidths
-        Serial.print("TX Modulations: ");
-        for (int j = 0; j < bands[i].num_tx_modulations; j++) {
-            Serial.print(radio_modulation_to_string(bands[i].tx_modulations[j]));
-            Serial.print(", ");
-        }
-
-        Serial.println();  // End the bandwidth list line
-        Serial.println();
-    }
-}
-
-// TODO: error checking, handle missing parameters
-void fs_load_bands(String file_name, radio_band_capability_t (&bands)[NUMBER_BANDS]) {
-     // check if file system is mounted yet
-    if(!fs_mounted) {
-        Serial.println("Couldn't read, file system not properly mounted.");
-        return;
-    }
-
-    // attempt to read file
-    File file = LittleFS.open(file_name);
-    if(!file) {
-        Serial.print("Couldn't read file: ");
-        Serial.println(file_name);
-        return;
-    }
-
-    JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, file);
-    file.close();
-
-    JsonArray arr = doc["bands"].as<JsonArray>();
-    uint16_t num_bands = arr.size();
-    if(num_bands > NUMBER_BANDS)
-        num_bands = NUMBER_BANDS;
-
-    for (size_t i = 0; i < arr.size(); i++) {
-        radio_band_capability_t tmp;
-        JsonObject entry = arr[i];
-
-        // pull out information from the JSON object
-        const char* band_num = entry["band_num"];
-        tmp.band_name = string_to_radio_band(band_num);
-        tmp.min_freq = strtoull(entry["min_freq"].as<const char*>(), nullptr, 10);
-        tmp.max_freq = strtoull(entry["max_freq"].as<const char*>(), nullptr, 10);
-
-        // Parse rx_modes into the bandwidths array
-        JsonArray rx_modes = entry["rx_modes"].as<JsonArray>();
-        tmp.num_rx_modulations = rx_modes.size();
-        size_t mod_index = 0;
-        for (const char* mode : rx_modes) {
-            if (mod_index >= 8) break;  // Ensure we don't exceed bandwidths array size. TODO: parametrize this
-            tmp.rx_modulations[mod_index] = string_to_radio_modulation(mode);
-            mod_index++;
-        }
-
-        // Parse tx_modes into the bandwidths array
-        JsonArray tx_modes = entry["tx_modes"].as<JsonArray>();
-        tmp.num_tx_modulations = tx_modes.size();
-        mod_index = 0;
-        for (const char* mode : tx_modes) {
-            if (mod_index >= 8) break;  // Ensure we don't exceed bandwidths array size. TODO: parametrize this
-            tmp.tx_modulations[mod_index] = string_to_radio_modulation(mode);
-            mod_index++;
-        }
-
-        bands[i] = tmp;
-    }
-
-    // debug
-    print_band_capability(bands);
 }
 
 void fs_start_browser() {

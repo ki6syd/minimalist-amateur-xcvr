@@ -2,15 +2,9 @@
 #include "globals.h"
 #include "radio.h"
 #include "radio_hf.h"
-#include "audio.h"
-#include "audio_dsp.h"
-#include "keyer.h"
 #include "power.h"
 #include "wifi_conn.h"
-#include "time_keeping.h"
 #include "file_system.h"
-#include "digi_modes.h"
-#include "ft8.h"
 
 #include <ESPAsyncWebServer.h>
 #include <Arduino.h>
@@ -24,371 +18,83 @@ bool handler_require_param(AsyncWebServerRequest *request, String param_name) {
     return true;
 }
 
-void handler_ft8_post(AsyncWebServerRequest *request) {
-    if(!handler_require_param(request, "messageText"))
+
+// new: set three clock outputs (expects clk0, clk1, clk2 in Hz)
+void handler_clocks_set(AsyncWebServerRequest *request) {
+    if(!handler_require_param(request, "clk0") || !handler_require_param(request, "clk1") || !handler_require_param(request, "clk2"))
         return;
 
-    digi_msg_t tmp;
-    tmp.type = DIGI_MODE_FT8;
-    tmp.ignore_time = false;
+    uint64_t clk0_request = request->getParam("clk0")->value().toInt();
+    uint64_t clk1_request = request->getParam("clk1")->value().toInt();
+    uint64_t clk2_request = request->getParam("clk2")->value().toInt();
 
-    String message_text = request->getParam("messageText")->value();
+    // Log the requested clock frequencies
+    Serial.println("Setting clock frequencies:");
+    Serial.print("CLK0: "); Serial.println(clk0_request);
+    Serial.print("CLK1: "); Serial.println(clk1_request);
+    Serial.print("CLK2: "); Serial.println(clk2_request);
 
-    // update FT8 frequency if one is given
-    if(request->hasParam("rfFrequency") && request->hasParam("audioFrequency")) {
-        float rf_request = request->getParam("rfFrequency")->value().toFloat();
-        float af_request = request->getParam("audioFrequency")->value().toFloat();
-        tmp.freq = (uint64_t) (rf_request + af_request);
+    // set_freq expects values scaled similarly to other uses in code (multiply by 100)
+    si5351.set_freq(clk0_request * 100, SI5351_CLK0);
+    si5351.set_freq(clk1_request * 100, SI5351_CLK1);
+    si5351.set_freq(clk2_request * 100, SI5351_CLK2);
 
-        // check that frequency is valid, abort early if not
-        if(!radio_freq_valid(tmp.freq)) {
-            request->send(400, "text/plain", "Radio does not support this frequency");
-            return;
-        }
-    }
-    else {
-        tmp.freq = radio_get_dial_freq();
-    }
-
-    if(request->hasParam("ignoreTime") && request->getParam("ignoreTime")->value() == "true")
-        tmp.ignore_time = true;
-
-    // update time if parameter exists
-    if(request->hasParam("timeNow")) {
-        // TODO - delete the hack substring once the time module works in millseconds
-        String time_string = request->getParam("timeNow")->value();
-        time_string = time_string.substring(0, time_string.length()-3);
-        time_update(time_string.toInt());
-    }
-    
-    // turn the string into an encoded message, try adding to queue
-    ft8_string_process(message_text, &tmp);
-    if(digi_mode_enqueue(&tmp))
-        request->send(201, "text/plain", "OK");
-    else
-        request->send(400, "text/plain", "Unable to add to queue");
-}
-
-void handler_cw_post(AsyncWebServerRequest *request) {
-    if(!handler_require_param(request, "messageText"))
-        return;
-
-    digi_msg_t tmp;
-    tmp.type = DIGI_MODE_CW;
-    tmp.ignore_time = true;
-
-    String message_text = request->getParam("messageText")->value();
-
-    // update frequency if one is given
-    if(request->hasParam("rfFrequency")) {
-        uint64_t rf_request = request->getParam("rfFrequency")->value().toInt();
-        tmp.freq = rf_request;
-
-        // check that frequency is valid, abort early if not
-        if(!radio_freq_valid(tmp.freq)) {
-            request->send(400, "text/plain", "Radio does not support this frequency");
-            return;
-        }
-    }
-    else {
-        tmp.freq = 0;
-    }
-
-    // package string into the buffer
-    message_text.toCharArray((char *) tmp.buf, 255);
-    // add null terminator
-    tmp.buf[message_text.length()] = '\0';
-    // add to queue, error code if it didn't add successfully
-    if(digi_mode_enqueue(&tmp))
-        request->send(201, "text/plain", "OK");
-    else
-        request->send(400, "text/plain", "Unable to add to queue");
-}
-
-void handler_queue_get(AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", String(digi_mode_queue_size()));
-}
-
-void handler_queue_delete(AsyncWebServerRequest *request) {
-    if(digi_mode_queue_size() > 0) {
-        digi_mode_queue_clear();
-        request->send(204, "text/plain", "Queue cleared");
-    }
-    else
-        request->send(404, "text/plain", "Unable to clear queue, might have been empty");
-}
-
-
-void handler_time_get(AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", String(time_ms()));
-}
-
-void handler_time_set(AsyncWebServerRequest *request) {
-    if(!handler_require_param(request, "timeNow"))
-        return;
-
-    Serial.print("New time: ");
-    Serial.println(request->getParam("timeNow")->value());
-
-    // TODO - delete the hack substring once the time module works in millseconds
-    String time_string = request->getParam("timeNow")->value();
-    time_string = time_string.substring(0, time_string.length()-3);
-    uint64_t new_time = time_string.toInt();
-    if(time_update(new_time))
-        request->send(201, "text/plain", "OK");
-    else {
-        request->send(400, "text/plain", "Unable to update time");
-    }
-}
-
-void handler_frequency_get(AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", String(radio_get_dial_freq()));
-}
-
-void handler_frequency_set(AsyncWebServerRequest *request) {
-    if(!handler_require_param(request, "frequency"))
-        return;
-
-    uint64_t freq_request = request->getParam("frequency")->value().toInt();
-    if(radio_set_dial_freq(freq_request))
-        request->send(201, "text/plain", "OK");
-    else {
-        request->send(400, "text/plain", "Frequency out of range");
-    }
-}
-
-void handler_volume_get(AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", String(audio_get_volume()));
-}
-
-void handler_volume_set(AsyncWebServerRequest *request) {
-    if(!handler_require_param(request, "audioLevel"))
-        return;
-
-    float vol_request = request->getParam("audioLevel")->value().toFloat();
-    if(audio_set_hp_volume(vol_request))
-        request->send(201, "text/plain", "OK");
-    else {
-        request->send(400, "text/plain", "Volume out of range");
-    }
-}
-
-void handler_sidetone_get(AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", String(audio_get_sidetone_volume()));
-}
-
-void handler_sidetone_set(AsyncWebServerRequest *request) {
-    if(!handler_require_param(request, "sidetoneLevelOffset"))
-        return;
-
-    float vol_request = request->getParam("sidetoneLevelOffset")->value().toFloat();
-    if(audio_set_sidetone_volume(vol_request))
-        request->send(201, "text/plain", "OK");
-    else {
-        request->send(400, "text/plain", "Sidetone level out of range");
-    }
-}
-
-void handler_bandwidth_get(AsyncWebServerRequest *request) {
-    String ret_val = "";
-    switch(audio_dsp_get_filter()) {
-        case AUDIO_FILT_NARROW:
-            ret_val = "NARROW";
-            break;
-        case AUDIO_FILT_WIDE:
-            ret_val = "WIDE";
-            break;
-        default:
-            ret_val = "UNKNOWN";
-    }
-    request->send(200, "text/plain", ret_val);
-}
-
-void handler_bandwidth_set(AsyncWebServerRequest *request) {
-    if(!handler_require_param(request, "bw"))
-        return;
-
-    String bw = request->getParam("bw")->value();
-
-    if(bw == "NARROW")
-        audio_dsp_set_filter(AUDIO_FILT_NARROW);
-    else if(bw == "WIDE")
-        audio_dsp_set_filter(AUDIO_FILT_WIDE);
-    else {
-        request->send(400, "text/plain", "Unknown bandwidth requested");
-        return;
-    }
     request->send(201, "text/plain", "OK");
 }
 
-
-void handler_modulation_get(AsyncWebServerRequest *request) {
-    String ret_val = "";
-    switch(radio_get_modulation()) {
-        case MOD_CW:
-            ret_val = "CW";
-            break;
-        case MOD_SSB:
-            ret_val = "SSB";
-            break;
-        default:
-            ret_val = "UNKNOWN";
-    }
-    request->send(200, "text/plain", ret_val);
-}
-
-void handler_modulation_set(AsyncWebServerRequest *request) {
-    if(!handler_require_param(request, "mod"))
+// new: set per-clock phase values (expects phase0, phase1, phase2 as small integers)
+void handler_phase_set(AsyncWebServerRequest *request) {
+    if(!handler_require_param(request, "phase0") || !handler_require_param(request, "phase1") || !handler_require_param(request, "phase2"))
         return;
 
-    String mod = request->getParam("mod")->value();
+    int16_t phase0 = request->getParam("phase0")->value().toInt();
+    int16_t phase1 = request->getParam("phase1")->value().toInt();
+    int16_t phase2 = request->getParam("phase2")->value().toInt();
 
-    if(mod == "CW")
-        radio_set_modulation(MOD_CW);
-    else if(mod == "SSB")
-        radio_set_modulation(MOD_SSB);
-    else if(mod == "FM")
-        radio_set_modulation(MOD_FM);
-    else {
-        request->send(400, "text/plain", "Unknown modulation requested");
-        return;
-    }
+    // Log the requested phase values
+    Serial.println("Setting clock phases:");
+    Serial.print("Phase0: "); Serial.println(phase0);
+    Serial.print("Phase1: "); Serial.println(phase1);
+    Serial.print("Phase2: "); Serial.println(phase2);
+
+    // set phase for each clock output
+    si5351.set_phase(SI5351_CLK0, phase0);
+    si5351.set_phase(SI5351_CLK1, phase1);
+    si5351.set_phase(SI5351_CLK2, phase2);
+
+    // reset PLLs if needed; here reset both PLLs to ensure changes take effect
+    si5351.pll_reset(SI5351_PLLA);
+    si5351.pll_reset(SI5351_PLLB);
+
     request->send(201, "text/plain", "OK");
 }
 
-void handler_keyer_speed_get(AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", String(keyer_get_speed()));
-}
-
-void handler_keyer_speed_set(AsyncWebServerRequest *request) {
-    if(!handler_require_param(request, "speed"))
+void handler_clock_toggle(AsyncWebServerRequest *request) {
+    if(!handler_require_param(request, "clk") || !handler_require_param(request, "enable"))
         return;
 
-    uint16_t speed_request = request->getParam("speed")->value().toInt();
-    if(keyer_set_speed(speed_request))
-        request->send(201, "text/plain", "OK");
-    else {
-        request->send(400, "text/plain", "Keyer speed out of range");
+    int clk = request->getParam("clk")->value().toInt();
+    bool enable = request->getParam("enable")->value().toInt();
+
+    if (clk < 0 || clk > 2) {
+        request->send(400, "text/plain", "Invalid clock index");
+        return;
     }
+
+    // Log the action
+    Serial.print("Setting clock ");
+    Serial.print(clk);
+    Serial.print(enable ? " ON" : " OFF");
+    Serial.println();
+
+    // Enable or disable the clock
+    si5351.output_enable(static_cast<si5351_clock>(clk), enable ? 1 : 0);
+
+    request->send(201, "text/plain", "OK");
 }
 
 void handler_input_voltage_get(AsyncWebServerRequest *request) {
     request->send(200, "text/plain", String(power_get_input_volt()));
-}
-
-void handler_smeter_get(AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", String(radio_get_s_meter()));
-}
-
-void handler_power_set(AsyncWebServerRequest *request) {
-    if(!handler_require_param(request, "power"))
-        return;
-
-    float power_request = request->getParam("power")->value().toFloat();
-    if(radio_set_power(power_request))
-        request->send(201, "text/plain", "OK");
-    else {
-        request->send(400, "text/plain", "Power level out of range");
-    }
-}
-
-void handler_power_get(AsyncWebServerRequest *request) {
-    request->send(200, "text/plain", String(radio_get_power()));
-}
-
-// TODO: add a handler for getting the bias duty, voltage, or current
-void handler_bias_set(AsyncWebServerRequest *request) {
-    if(!request->hasParam("curr") && !request->hasParam("volt")) {
-        request->send(400, "text/plain", "Send either curr/volt and a value");
-        return;
-    }
-
-    if(request->hasParam("curr")) {
-        float curr_request = request->getParam("curr")->value().toFloat();
-        power_bias_to_current(curr_request);
-    }
-    else if(request->hasParam("volt")) {
-        float volt_request = request->getParam("volt")->value().toFloat();
-        power_bias_to_voltage(volt_request);
-    }
-    else {
-        request->send(400, "text/plain", "Invalid bias setting requested");
-        return;
-    }
-
-    if(request->hasParam("stayBiased") && request->getParam("stayBiased")->value() == "true") {
-        digitalWrite(PA_VDD_CTRL, HIGH);
-    }
-
-    request->send(201, "text/plain", "OK");
-}
-
-void handler_agc_set(AsyncWebServerRequest *request) {
-    if(!request->hasParam("volt")) {
-        request->send(400, "text/plain", "Send volt and a value");
-        return;
-    }
-
-    if(request->hasParam("volt")) {
-        float volt_request = request->getParam("volt")->value().toFloat();
-        power_agc_to_voltage(volt_request);
-    }
-    else {
-        request->send(400, "text/plain", "Invalid AGC setting requested");
-        return;
-    }
-
-    request->send(201, "text/plain", "OK");
-}
-
-
-void handler_tune_set(AsyncWebServerRequest *request) {
-    if(!handler_require_param(request, "tune"))
-        return;
-
-    String state = request->getParam("tune")->value();
-    if(state == "on") {
-        radio_key_on();
-        request->send(201, "text/plain", "OK");
-    }
-    else if(state == "off") {
-        radio_key_off();
-        request->send(201, "text/plain", "OK");
-    }
-    else {
-        request->send(400, "text/plain", "Invalid tune state requested");
-    }
-}
-
-void handler_iq_phase_set(AsyncWebServerRequest *request) {
-    if(!handler_require_param(request, "phase"))
-        return;
-
-    int16_t phase_request = request->getParam("phase")->value().toInt();
-    if(hf_set_phase(phase_request))
-        request->send(201, "text/plain", "OK");
-    else {
-        request->send(400, "text/plain", "Phase request out of range");
-    }
-}
-
-void handler_iq_gains_set(AsyncWebServerRequest *request) {
-    if(!handler_require_param(request, "i_tx") || 
-       !handler_require_param(request, "q_tx") ||
-       !handler_require_param(request, "i_rx") ||
-       !handler_require_param(request, "q_rx"))
-        return;
-
-    float i_tx = request->getParam("i_tx")->value().toFloat();
-    float q_tx = request->getParam("q_tx")->value().toFloat();
-    float i_rx = request->getParam("i_rx")->value().toFloat();
-    float q_rx = request->getParam("q_rx")->value().toFloat();
-
-    if(audio_set_iq_gains(i_tx, q_tx, i_rx, q_rx)) {
-        request->send(201, "text/plain", "OK");
-    } else {
-        request->send(400, "text/plain", "Gain values must be between 0 and 1");
-    }
 }
 
 void handler_mac_get(AsyncWebServerRequest *request) {
@@ -426,59 +132,9 @@ void handler_debug_post(AsyncWebServerRequest *request) {
 
     uint64_t command_num = request->getParam("command")->value().toInt();
 
-    if(command_num == DEBUG_CMD_SET_CLOCKS) {
-        if(!handler_require_param(request, "clk0") && !handler_require_param(request, "clk1") && !handler_require_param(request, "clk2"))
-            return;
-
-        uint64_t clk0_request = request->getParam("clk0")->value().toInt();
-        uint64_t clk1_request = request->getParam("clk1")->value().toInt();
-        uint64_t clk2_request = request->getParam("clk2")->value().toInt();
-
-        si5351.set_freq(clk0_request * 100, SI5351_CLK0);
-        si5351.set_freq(clk1_request * 100, SI5351_CLK1);
-        si5351.set_freq(clk2_request * 100, SI5351_CLK2);
-        
-        Serial.println("Setting clocks via debug routine: ");
-        Serial.println(clk0_request);
-        Serial.println(clk1_request);
-        Serial.println(clk2_request);
-    }
-    else if(command_num == DEBUG_CMD_PA_VDD) {
-        if(!handler_require_param(request, "value"))
-            return;
-
-        String value = request->getParam("value")->value();
-        if(strcmp(value.c_str(), "on") == 0)
-            digitalWrite(PA_VDD_CTRL, HIGH);
-        else if(strcmp(value.c_str(), "off") == 0) 
-            digitalWrite(PA_VDD_CTRL, LOW);
-        else {
-            request->send(400, "text/plain", "Unknown value requested");
-            return;
-        }
-    }
-    else if(command_num == DEBUG_CMD_REBOOT) {
+    if(command_num == DEBUG_CMD_REBOOT) {
         esp_restart();
     }
-    else if(command_num == DEBUG_CMD_CAL_XTAL|| command_num == DEBUG_CMD_STOP_CLOCKS || command_num == DEBUG_CMD_STOP_BFO || command_num == DEBUG_CMD_STOP_VFO) {
-        radio_debug((debug_action_t) command_num, nullptr);
-    }
-    else if(command_num == DEBUG_CMD_MAX_VOL || DEBUG_CMD_IMD_TEST) {
-        audio_debug((debug_action_t) command_num);
-    }
-    else if(command_num == DEBUG_CMD_SPOT) {
-         if(!handler_require_param(request, "value"))
-            return;
 
-        String value = request->getParam("value")->value();
-        if(strcmp(value.c_str(), "on") == 0)
-            Serial.println("todo");
-        else if(strcmp(value.c_str(), "off") == 0) 
-            Serial.println("todo");
-        else {
-            request->send(400, "text/plain", "Unknown value requested");
-            return;
-        }
-    }
     request->send(201, "text/plain", "OK");
 }

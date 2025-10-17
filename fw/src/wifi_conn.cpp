@@ -22,6 +22,8 @@ void wifi_init() {
     WiFi.mode(WIFI_STA);
 
     // try credentials assigned at compile time
+    Serial.println("[WIFI] Connecting to SSID: " + String(WIFI_STA_SSID));
+    Serial.println("[WIFI] Using PASS: " + String(WIFI_STA_PASS));
     WiFi.begin(WIFI_STA_SSID, WIFI_STA_PASS);
     for (int i = 0; i < 50; i++) {
         if (WiFi.status() == WL_CONNECTED)
@@ -80,12 +82,6 @@ void wifi_init() {
     // start MDNS
     if (MDNS.begin(fs_load_setting(PREFERENCE_FILE, "mdns_hostname"))) {
         MDNS.addService("http", "tcp", 80);
-    }
-
-    // Init ESP-NOW
-    if (esp_now_init() != ESP_OK) {
-        Serial.println("Error initializing ESP-NOW");
-    return;
     }
 }
 

@@ -26,34 +26,9 @@ String api_prefix = "/api/v";
 AsyncWebServer server(80);
 
 static const server_handler_t handlers[] = {
-    {API_V1,    HTTP_POST,  "ft8",              handler_ft8_post},
-    {API_V1,    HTTP_POST,  "prepareft8",       handler_ft8_post},
-    {API_V1,    HTTP_POST,  "cw",               handler_cw_post},
-    {API_V1,    HTTP_GET,   "queue",            handler_queue_get},
-    {API_V1,    HTTP_DELETE, "queue",           handler_queue_delete},
-    {API_V1,    HTTP_GET,   "time",             handler_time_get},
-    {API_V1,    HTTP_PUT,   "time",             handler_time_set},
-    {API_V1,    HTTP_GET,   "frequency",        handler_frequency_get},
-    {API_V1,    HTTP_PUT,   "frequency",        handler_frequency_set},
-    {API_V1,    HTTP_GET,   "volume",           handler_volume_get},
-    {API_V1,    HTTP_PUT,   "volume",           handler_volume_set},
-    {API_V1,    HTTP_GET,   "sidetone",         handler_sidetone_get},
-    {API_V1,    HTTP_PUT,   "sidetone",         handler_sidetone_set},
-    {API_V1,    HTTP_GET,   "bandwidth",        handler_bandwidth_get},
-    {API_V1,    HTTP_PUT,   "bandwidth",        handler_bandwidth_set},
-    {API_V1,    HTTP_GET,   "modulation",       handler_modulation_get},
-    {API_V1,    HTTP_PUT,   "modulation",       handler_modulation_set},
-    {API_V1,    HTTP_GET,   "cwSpeed",          handler_keyer_speed_get},
-    {API_V1,    HTTP_PUT,   "cwSpeed",          handler_keyer_speed_set},
+    {API_V1,    HTTP_PUT,   "clocks",           handler_clocks_set},
+    {API_V1,    HTTP_PUT,   "phase",            handler_phase_set},
     {API_V1,    HTTP_GET,   "inputVoltage",     handler_input_voltage_get},
-    {API_V1,    HTTP_GET,   "sMeter",           handler_smeter_get},
-    {API_V1,    HTTP_PUT,   "power",            handler_power_set},
-    {API_V1,    HTTP_GET,   "power",            handler_power_get},
-    {API_V1,    HTTP_PUT,   "bias",             handler_bias_set},
-    {API_V1,    HTTP_PUT,   "agc",              handler_agc_set},
-    {API_V1,    HTTP_PUT,   "tune",             handler_tune_set},
-    {API_V1,    HTTP_PUT,   "iqPhase",          handler_iq_phase_set},
-    {API_V1,    HTTP_PUT,   "iqGains",          handler_iq_gains_set},
     {API_V1,    HTTP_GET,   "githash",          handler_githash_get},
     {API_V1,    HTTP_GET,   "heap",             handler_heap_get},
     {API_V1,    HTTP_GET,   "mac",              handler_mac_get},
@@ -61,13 +36,13 @@ static const server_handler_t handlers[] = {
     {API_V1,    HTTP_GET,   "hwRevision",       handler_revision_get},
     {API_V1,    HTTP_GET,   "unitSerial",       handler_serial_get},
     {API_V1,    HTTP_GET,   "api",              handler_api_get},
-    {API_V1,    HTTP_POST,  "debug",            handler_debug_post}
+    {API_V1,    HTTP_POST,  "debug",            handler_debug_post},
+    {API_V1,    HTTP_PUT,   "clock_toggle",     handler_clock_toggle}
 };
 
 
 bool server_http_handler(AsyncWebServerRequest *request);
 void server_print_request(AsyncWebServerRequest *request);
-void server_espnow_handler(const uint8_t * mac, const uint8_t *incomingData, int len);
 
 
 // Structure example to receive data
@@ -109,9 +84,6 @@ void server_init() {
     });
 
     server.begin();
-
-    // register ESP-NOW callback
-    esp_now_register_recv_cb(esp_now_recv_cb_t(server_espnow_handler));
 
     // start the web-based file browser now that the server is up
     fs_start_browser();
@@ -188,25 +160,4 @@ bool server_http_handler(AsyncWebServerRequest *request) {
 
     // no handler found
     return false;
-}
-
-// callback function that will be executed when data is received
-// TODO: use the handler mapping from above, ESP-NOW can implement the same API
-void server_espnow_handler(const uint8_t * mac, const uint8_t *incomingData, int len) {
-    memcpy(&myData, incomingData, sizeof(myData));
-
-    // check for duplicates before proceeding
-    if(myData.counter != last_counter_val) {
-        last_counter_val = myData.counter;
-
-        Serial.println(myData.action);
-        
-        // hack for testing: "dit" keys on, "dah" keys off
-        if(strcmp(myData.action, "dit")) {
-            radio_key_on();
-        }
-        else if(strcmp(myData.action, "dah")) {
-            radio_key_off();
-        }
-    }
 }
