@@ -11,101 +11,118 @@
 <body onload="on_load()">
 
 <div class="table">
-  <h2>Superhet Calculator</h2>
-  <p>Enter dial, IF and sidetone (all in Hz). Choose sideband and press Calculate to populate CLK0-2.</p>
-  <table>
-    <tbody>
-      <tr>
-        <td>Dial Frequency (Hz)</td>
-        <td><input type="number" step="1" id="dial_hz" value="14000000" class="vfo_display_small"></td>
-      </tr>
-      <tr>
-        <td>IF1 Frequency (Hz)</td>
-        <td><input type="number" step="1" id="if1_hz" value="10000000" class="vfo_display_small"></td>
-      </tr>
-      <tr>
-        <td>IF2 Frequency (Hz)</td>
-        <td><input type="number" step="1" id="if2_hz" value="10000" class="vfo_display_small"></td>
-      </tr>
-      <tr>
-        <td>Sidetone Frequency (Hz)</td>
-        <td><input type="number" step="1" id="sidetone_hz" value="800" class="vfo_display_small"></td>
-      </tr>
-      <tr>
-        <td>Upper Sideband</td>
-        <td><input type="checkbox" id="usb_chk" checked></td>
-      </tr>
-      <tr>
-        <td>Upconvert</td>
-        <td><input type="checkbox" id="upconvert_chk" checked></td>
-      </tr>
-      <tr>
-        <td></td>
-        <td><button type="button" class="button" onclick="calculate_clocks()">CALCULATE</button></td>
-      </tr>
-    </tbody>
-  </table>
+  <div class="grid">
 
-  <h2>Set Three Clocks</h2>
-  <p>Note: CLK0 and CLK1 are tied to PLLA, and CLK2 is tied to PLLB.</p>
-  <table>
-    <thead>
-      <tr>
-        <th>Clock</th>
-        <th>Frequency (Hz)</th>
-        <th>Enable</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>CLK0</td>
-        <td><input type="number" step="500" id="clk0_hz" name="clk0_hz" value="10000000" class="vfo_display_small"></td>
-        <td><input type="checkbox" id="clk0_enable" name="clk0_enable" checked onchange="set_clock_state(0, this.checked)"></td>
-      </tr>
-      <tr>
-        <td>CLK1</td>
-        <td><input type="number" step="500" id="clk1_hz" name="clk1_hz" value="10000000" class="vfo_display_small"></td>
-        <td><input type="checkbox" id="clk1_enable" name="clk1_enable" checked onchange="set_clock_state(1, this.checked)"></td>
-      </tr>
-      <tr>
-        <td>CLK2</td>
-        <td><input type="number" step="500" id="clk2_hz" name="clk2_hz" value="10000000" class="vfo_display_small"></td>
-        <td><input type="checkbox" id="clk2_enable" name="clk2_enable" checked onchange="set_clock_state(2, this.checked)"></td>
-      </tr>
-    </tbody>
-  </table>
-  <div style="margin-top:8px;">
-    <button type="button" class="button" onclick="set_clocks()">SET CLOCKS</button>
-  </div>
+    <section class="card" id="card-superhet">
+      <h2>Superhet Calculator</h2>
+      <p>Enter dial, IF and sidetone (all in Hz). Choose sideband and press Calculate to populate CLK0-2.</p>
+      <table>
+        <tbody>
+          <tr>
+            <td>Dial Frequency (Hz)</td>
+            <td><input type="number" step="1" id="dial_hz" value="14000000" class="control vfo_display_small"></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>IF1 Frequency (Hz)</td>
+            <td><input type="number" step="1" id="if1_hz" value="10000000" class="control vfo_display_small"></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>IF2 Frequency (Hz)</td>
+            <td><input type="number" step="1" id="if2_hz" value="10000" class="control vfo_display_small"></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>Sidetone Frequency (Hz)</td>
+            <td><input type="number" step="1" id="sidetone_hz" value="800" class="control vfo_display_small"></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>Upper Sideband</td>
+            <td><input type="checkbox" id="usb_chk" class="checkbox-centered" checked></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>Upconvert</td>
+            <td><input type="checkbox" id="upconvert_chk" class="checkbox-centered" checked></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td><button type="button" class="button" onclick="calculate_clocks()">CALCULATE</button></td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
 
-  <h2>Set Clock Phases</h2>
-  <p>Note: Phase values are in arbitrary units.</p>
-  <table>
-    <thead>
-      <tr>
-        <th>Clock</th>
-        <th>Phase</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>CLK0</td>
-        <td><input type="number" step="1" id="phase0" name="phase0" value="0" class="vfo_display_small"></td>
-      </tr>
-      <tr>
-        <td>CLK1</td>
-        <td><input type="number" step="1" id="phase1" name="phase1" value="0" class="vfo_display_small"></td>
-      </tr>
-      <tr>
-        <td>CLK2</td>
-        <td><input type="number" step="1" id="phase2" name="phase2" value="0" class="vfo_display_small"></td>
-      </tr>
-    </tbody>
-  </table>
-  <div style="margin-top:8px;">
-    <button type="button" class="button" onclick="set_phase()">SET PHASE</button>
-  </div>
-</div>
+    <section class="card" id="card-clocks">
+      <h2>Set Three Clocks</h2>
+      <p>Note: CLK0 and CLK1 are tied to PLLA, and CLK2 is tied to PLLB.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Clock</th>
+            <th>Frequency (Hz)</th>
+            <th>Enable</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>CLK0</td>
+            <td><input type="number" step="500" id="clk0_hz" name="clk0_hz" value="10000000" class="control vfo_display_small"></td>
+            <td><input type="checkbox" id="clk0_enable" name="clk0_enable" class="checkbox-centered" checked onchange="set_clock_state(0, this.checked)"></td>
+          </tr>
+          <tr>
+            <td>CLK1</td>
+            <td><input type="number" step="500" id="clk1_hz" name="clk1_hz" value="10000000" class="control vfo_display_small"></td>
+            <td><input type="checkbox" id="clk1_enable" name="clk1_enable" class="checkbox-centered" checked onchange="set_clock_state(1, this.checked)"></td>
+          </tr>
+          <tr>
+            <td>CLK2</td>
+            <td><input type="number" step="500" id="clk2_hz" name="clk2_hz" value="10000000" class="control vfo_display_small"></td>
+            <td><input type="checkbox" id="clk2_enable" name="clk2_enable" class="checkbox-centered" checked onchange="set_clock_state(2, this.checked)"></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="row-actions"><button type="button" class="button" onclick="set_clocks()">SET CLOCKS</button></div>
+    </section>
+
+    <section class="card" id="card-phases">
+      <h2>Set Clock Phases</h2>
+      <p>Note: Phase values are in arbitrary units.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Clock</th>
+            <th>Phase</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>CLK0</td>
+            <td><input type="number" step="1" id="phase0" name="phase0" value="0" class="control vfo_display_small"></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>CLK1</td>
+            <td><input type="number" step="1" id="phase1" name="phase1" value="0" class="control vfo_display_small"></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>CLK2</td>
+            <td><input type="number" step="1" id="phase2" name="phase2" value="0" class="control vfo_display_small"></td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="row-actions"><button type="button" class="button" onclick="set_phase()">SET PHASE</button></div>
+    </section>
+
+  </div> <!-- .grid -->
+</div> <!-- .table -->
 
 <script src="./script.js"></script>
 

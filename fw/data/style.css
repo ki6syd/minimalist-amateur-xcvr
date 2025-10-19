@@ -1,37 +1,66 @@
-/* CSS styles */
-/* Cosmetic improvements only (no JS/HTML changes required) */
+/* Reset + simple, robust layout for the UI
+   - 3-column grid on wide screens, 2-col / 1-col breakpoints
+   - No forced viewport heights (avoid page taller than needed)
+   - Table cells use flex so controls align vertically
+   - Uniform control heights for inputs/buttons/checkboxes
+*/
 :root{
-  --bg: #0b1220;
-  --panel: #0f1722;
-  --muted: #9aa4b2;
-  --accent: #2f9fff;
-  --btn: #3b4250;
+  --bg:#071018;
+  --panel:#0f1722;
+  --muted:#9aa4b2;
+  --accent:#2f9fff;
+  --btn:#3b4250;
 }
 
+*{box-sizing:border-box}
 body{
-  margin:0; padding:0; background:linear-gradient(0deg,var(--bg),#071018);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  color:var(--muted);
+  margin:10px; background:linear-gradient(180deg,var(--bg),#021018); font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color:var(--muted);
 }
 
 .table{
-  max-width:980px; margin:24px auto; background:var(--panel); border-radius:10px; padding:18px; box-shadow:0 6px 18px rgba(0,0,0,0.6);
+  max-width:1150px; margin:8px auto; padding:12px; background:var(--panel); border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.6);
 }
 
-h2{ color:#e6eef8; margin:6px 0 }
-p{ margin:6px 0 12px }
+/* Grid layout */
+.grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap:12px }
+@media (max-width:1100px){ .grid{ grid-template-columns: repeat(2, 1fr) } }
+@media (max-width:760px){ .grid{ grid-template-columns: 1fr } }
 
-table{ width:100%; border-collapse:collapse; margin-bottom:10px }
-thead th{ text-align:left; padding:8px 6px; color:var(--muted); font-size:13px }
-tbody td{ padding:8px 6px; vertical-align:middle }
-tbody tr:nth-child(odd){ background: rgba(255,255,255,0.01) }
+.card{ background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent); padding:10px; border-radius:8px }
+.card h2{ margin:0 0 6px 0; color:#e6eef8; font-size:15px }
+.card p{ margin:0 0 8px 0; font-size:12px; color:var(--muted) }
 
-input[type=number], input[type=text]{ padding:8px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.04); background:#081018; color:#dfe9f2; font-family:monospace }
-input[type=checkbox]{ transform:scale(1.1); margin-left:6px }
+/* Tables: use a consistent 3-column grid so columns line up across all cards
+  - Column 1: label (fixed)
+  - Column 2: control (flexible)
+  - Column 3: small action/checkbox
+*/
+.card table{ width:100%; border-collapse:collapse; table-layout:fixed }
+.card th, .card td{ padding:6px 6px; color:var(--muted); }
+.card tbody tr:nth-child(odd){ background: rgba(255,255,255,0.01) }
 
-.vfo_display_small{ width:160px }
+/* Column widths and alignment */
+.card th:nth-child(1), .card td:nth-child(1){ width:130px; text-align:right; padding-right:12px }
+.card th:nth-child(2), .card td:nth-child(2){ width:auto; text-align:left }
+.card th:nth-child(3), .card td:nth-child(3){ width:54px; text-align:center }
 
-.button{ background:var(--btn); color:#eef6ff; padding:8px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:600 }
-.button:hover{ opacity:0.95 }
+/* Uniform control sizing */
+.control{ height:34px; min-height:34px; padding:6px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.04); background:#081018; color:#dfe9f2; font-family:monospace }
+input[type=number].control, input[type=text].control{ width:140px }
+.button{ background:var(--btn); color:#eef6ff; border:none; padding:6px 10px; border-radius:8px; cursor:pointer; height:34px }
 
-.scrollable{ max-height:200px; overflow:auto }
+/* Checkboxes: keep them visually centered and consistent across browsers */
+.checkbox-centered{ width:18px; height:18px; display:inline-block; }
+input[type=checkbox]{ width:18px; height:18px; margin:0; padding:0 }
+
+/* Row action area */
+.row-actions{ margin-top:6px; display:flex; gap:8px; align-items:center }
+
+/* Small tweaks for very small screens */
+@media (max-width:420px){ .control{ width:110px; height:30px; } .button{ height:30px; padding:6px 8px } }
+
+/* Utilities */
+
+
+/* Ensure clickable areas are large enough */
+button, input{ touch-action:manipulation }
