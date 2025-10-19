@@ -9,7 +9,9 @@
 Si5351 si5351;
 
 // Default frequency for SI5351 outputs
-uint64_t DEFAULT_SI5351_FREQ_HZ = 10000000;
+uint64_t DEFAULT_CLK0_HZ = 10000000;
+uint64_t DEFAULT_CLK1_HZ = 10000000;
+uint64_t DEFAULT_CLK2_HZ = 10000000;
 
 void hf_si5351_init();
 
@@ -45,10 +47,30 @@ void hf_si5351_init() {
   si5351.drive_strength(SI5351_CLK1, SI5351_DRIVE_8MA);
   si5351.drive_strength(SI5351_CLK2, SI5351_DRIVE_8MA);
 
-  // Set default frequency to parameterized value before enabling outputs
-  si5351.set_freq(DEFAULT_SI5351_FREQ_HZ * 100, SI5351_CLK0);
-  si5351.set_freq(DEFAULT_SI5351_FREQ_HZ * 100, SI5351_CLK1);
-  si5351.set_freq(DEFAULT_SI5351_FREQ_HZ * 100, SI5351_CLK2);
+  // Load optional default clock frequencies from the hardware config file
+  // Load optional default clock frequencies from preferences (no fallback)
+  if (fs_setting_exists(PREFERENCE_FILE, "clk0_default")) {
+    long v = fs_load_setting_long(PREFERENCE_FILE, "clk0_default", 0, 2000000000);
+    DEFAULT_CLK0_HZ = (uint64_t) v;
+    Serial.print("Loaded clk0_default from preferences: "); Serial.println(DEFAULT_CLK0_HZ);
+  }
+
+  if (fs_setting_exists(PREFERENCE_FILE, "clk1_default")) {
+    long v = fs_load_setting_long(PREFERENCE_FILE, "clk1_default", 0, 2000000000);
+    DEFAULT_CLK1_HZ = (uint64_t) v;
+    Serial.print("Loaded clk1_default from preferences: "); Serial.println(DEFAULT_CLK1_HZ);
+  }
+
+  if (fs_setting_exists(PREFERENCE_FILE, "clk2_default")) {
+    long v = fs_load_setting_long(PREFERENCE_FILE, "clk2_default", 0, 2000000000);
+    DEFAULT_CLK2_HZ = (uint64_t) v;
+    Serial.print("Loaded clk2_default from preferences: "); Serial.println(DEFAULT_CLK2_HZ);
+  }
+
+  // Set default frequency to parameterized values (from config or fallback)
+  si5351.set_freq(DEFAULT_CLK0_HZ * 100, SI5351_CLK0);
+  si5351.set_freq(DEFAULT_CLK1_HZ * 100, SI5351_CLK1);
+  si5351.set_freq(DEFAULT_CLK2_HZ * 100, SI5351_CLK2);
 
   si5351.output_enable(SI5351_CLK0, 1);
   si5351.output_enable(SI5351_CLK1, 1);

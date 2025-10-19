@@ -6,10 +6,9 @@
 	"ap_password": "summitsontheair",
 	"ap_channel": "11",
 	"wifi_power": "68",
-	"max_audio_output": "0.99",
-	"sidetone_level": "0.8",
-	"vhf_default_vol": "6",
 	"vbat_cell_low": "2.6",
 	"num_battery": "3",
-	"tx_power": "0.7"
+	"clk0_default": "10000000",
+	"clk1_default": "10000000",
+	"clk2_default": "10000000"
 }

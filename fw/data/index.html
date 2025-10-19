@@ -11,9 +11,40 @@
 <body onload="on_load()">
 
 <div class="table">
-
-  <h2>VFO Frequency (removed)</h2>
-  <p>The single frequency control has been removed — use the clock controls below.</p>
+  <h2>Superhet Calculator</h2>
+  <p>Enter dial, IF and sidetone (all in Hz). Choose sideband and press Calculate to populate CLK0-2.</p>
+  <table>
+    <tbody>
+      <tr>
+        <td>Dial Frequency (Hz)</td>
+        <td><input type="number" step="1" id="dial_hz" value="14000000" class="vfo_display_small"></td>
+      </tr>
+      <tr>
+        <td>IF1 Frequency (Hz)</td>
+        <td><input type="number" step="1" id="if1_hz" value="10000000" class="vfo_display_small"></td>
+      </tr>
+      <tr>
+        <td>IF2 Frequency (Hz)</td>
+        <td><input type="number" step="1" id="if2_hz" value="10000" class="vfo_display_small"></td>
+      </tr>
+      <tr>
+        <td>Sidetone Frequency (Hz)</td>
+        <td><input type="number" step="1" id="sidetone_hz" value="800" class="vfo_display_small"></td>
+      </tr>
+      <tr>
+        <td>Upper Sideband</td>
+        <td><input type="checkbox" id="usb_chk" checked></td>
+      </tr>
+      <tr>
+        <td>Upconvert</td>
+        <td><input type="checkbox" id="upconvert_chk" checked></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td><button type="button" class="button" onclick="calculate_clocks()">CALCULATE</button></td>
+      </tr>
+    </tbody>
+  </table>
 
   <h2>Set Three Clocks</h2>
   <p>Note: CLK0 and CLK1 are tied to PLLA, and CLK2 is tied to PLLB.</p>
