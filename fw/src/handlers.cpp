@@ -24,6 +24,8 @@ void handler_clocks_set(AsyncWebServerRequest *request) {
     if(!handler_require_param(request, "clk0") || !handler_require_param(request, "clk1") || !handler_require_param(request, "clk2"))
         return;
 
+    digitalWrite(LED_RED, HIGH);
+
     uint64_t clk0_request = request->getParam("clk0")->value().toInt();
     uint64_t clk1_request = request->getParam("clk1")->value().toInt();
     uint64_t clk2_request = request->getParam("clk2")->value().toInt();
@@ -40,12 +42,16 @@ void handler_clocks_set(AsyncWebServerRequest *request) {
     si5351.set_freq(clk2_request * 100, SI5351_CLK2);
 
     request->send(201, "text/plain", "OK");
+
+    digitalWrite(LED_RED, LOW);
 }
 
 // new: set per-clock phase values (expects phase0, phase1, phase2 as small integers)
 void handler_phase_set(AsyncWebServerRequest *request) {
     if(!handler_require_param(request, "phase0") || !handler_require_param(request, "phase1") || !handler_require_param(request, "phase2"))
         return;
+
+    digitalWrite(LED_RED, HIGH);
 
     int16_t phase0 = request->getParam("phase0")->value().toInt();
     int16_t phase1 = request->getParam("phase1")->value().toInt();
@@ -67,6 +73,8 @@ void handler_phase_set(AsyncWebServerRequest *request) {
     si5351.pll_reset(SI5351_PLLB);
 
     request->send(201, "text/plain", "OK");
+
+    digitalWrite(LED_RED, LOW);
 }
 
 void handler_clock_toggle(AsyncWebServerRequest *request) {
@@ -81,6 +89,8 @@ void handler_clock_toggle(AsyncWebServerRequest *request) {
         return;
     }
 
+    digitalWrite(LED_RED, HIGH);
+
     // Log the action
     Serial.print("Setting clock ");
     Serial.print(clk);
@@ -91,6 +101,8 @@ void handler_clock_toggle(AsyncWebServerRequest *request) {
     si5351.output_enable(static_cast<si5351_clock>(clk), enable ? 1 : 0);
 
     request->send(201, "text/plain", "OK");
+
+    digitalWrite(LED_RED, LOW);
 }
 
 void handler_input_voltage_get(AsyncWebServerRequest *request) {

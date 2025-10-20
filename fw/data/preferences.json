@@ -1,8 +1,8 @@
 {
-	"mdns_hostname": "radio",
+	"mdns_hostname": "clock",
 	"home_ssid": "SSID_HERE",
 	"home_password": "PASSWORD_HERE",
-	"ap_ssid": "max-4b_ki6syd",
+	"ap_ssid": "clock-gen_ki6syd",
 	"ap_password": "summitsontheair",
 	"ap_channel": "11",
 	"wifi_power": "68",

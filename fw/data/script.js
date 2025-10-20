@@ -16,7 +16,9 @@ function http_request(type, path, keys, values, callback) {
 }
 
 function on_load() {
-  // placeholder kept for compatibility; page doesn't require any init
+  // initialize periodic reads for dynamic values
+  fetch_input_voltage();
+  setInterval(fetch_input_voltage, 5000);
 }
 
 function set_clocks() {
@@ -66,7 +68,7 @@ function calculate_clocks() {
   }
 
   // LO2 (CLK1) = LO1 +/- IF2
-  var lo2 = upconvert ? (lo1 + if2) : (lo1 - if2);
+  var lo2 = if1 - if2;
   if (lo2 <= 0) {
     alert('Calculated LO2 is non-positive. Check IF2 and Upconvert settings.');
     return;
@@ -83,6 +85,28 @@ function calculate_clocks() {
   // Auto-apply the calculated clock frequencies to the device
   console.log('Auto-applying calculated clocks: ', lo1, lo2, bfo);
   set_clocks();
+}
+
+// Fetch and display input voltage from the device
+function fetch_input_voltage() {
+  // Use XHR directly to keep parity with http_request helper behavior
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', api_base_url + 'inputVoltage', true);
+  xhr.onreadystatechange = function () {
+    if (xhr.readyState === 4) {
+      if (xhr.status === 200) {
+        var val = parseFloat(xhr.responseText);
+        if (!isNaN(val)) {
+          document.getElementById('input_voltage').textContent = val.toFixed(2);
+        } else {
+          document.getElementById('input_voltage').textContent = '--';
+        }
+      } else {
+        document.getElementById('input_voltage').textContent = '--';
+      }
+    }
+  };
+  xhr.send();
 }
 
 // Allow Enter to trigger set_freq when focus is in the freq field

@@ -4,11 +4,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Clock Setter</title>
+<title>clock.local</title>
 <link rel="stylesheet" type="text/css" href="./style.css">
 </head>
 
 <body onload="on_load()">
+
+<!-- compact input voltage badge -->
+<div class="voltage-badge" id="input_voltage_badge" aria-live="polite">
+  <div class="label">VIN</div>
+  <div class="value" id="input_voltage">--</div>
+</div>
 
 <div class="table">
   <div class="grid">
@@ -120,7 +126,6 @@
       </table>
       <div class="row-actions"><button type="button" class="button" onclick="set_phase()">SET PHASE</button></div>
     </section>
-
   </div> <!-- .grid -->
 </div> <!-- .table -->
 

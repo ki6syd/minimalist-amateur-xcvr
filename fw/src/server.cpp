@@ -40,7 +40,6 @@ static const server_handler_t handlers[] = {
     {API_V1,    HTTP_PUT,   "clock_toggle",     handler_clock_toggle}
 };
 
-
 bool server_http_handler(AsyncWebServerRequest *request);
 void server_print_request(AsyncWebServerRequest *request);
 

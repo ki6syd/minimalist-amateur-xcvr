@@ -62,5 +62,27 @@ input[type=checkbox]{ width:18px; height:18px; margin:0; padding:0 }
 /* Utilities */
 
 
+/* Compact voltage badge in the top-right corner */
+.voltage-badge{
+  position:fixed;
+  top:14px;
+  right:14px;
+  background: rgba(15,23,34,0.9);
+  border: 1px solid rgba(255,255,255,0.04);
+  color: #dfe9f2;
+  padding:8px 10px;
+  border-radius:8px;
+  font-family: monospace;
+  font-size:13px;
+  display:flex;
+  gap:8px;
+  align-items:center;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+  z-index:9999;
+}
+.voltage-badge .label{ color:var(--muted); font-size:11px }
+.voltage-badge .value{ color:var(--accent); min-width:46px; text-align:right }
+
+
 /* Ensure clickable areas are large enough */
 button, input{ touch-action:manipulation }

@@ -24,8 +24,6 @@ uint16_t num_cell = 3;
 void analog_sense_task(void *pvParameter);
 
 void power_init() {
-  pinMode(ADC_MUX_CTRL_0, OUTPUT);
-  pinMode(ADC_MUX_CTRL_1, OUTPUT);
 
   // initialize mutex for ADC readings through the mux
   xADCmutex = xSemaphoreCreateMutex();
@@ -63,12 +61,19 @@ void analog_sense_task(void *param) {
     if(xSemaphoreTake(xADCmutex, portMAX_DELAY) == pdTRUE) {
       // read all ADC channels
       input_volt = power_adc_conversion(ADC_CHANNEL_VIN);
-      pa_volt = power_adc_conversion(ADC_CHANNEL_PA_VDD);
-      pa_curr = power_adc_conversion(ADC_CHANNEL_PA_IDD);
-      pa_temp = power_adc_conversion(ADC_CHANNEL_PA_TEMP);
 
       // give back the mutex after reading
       xSemaphoreGive(xADCmutex);
+    }
+
+    // check if power source is likely battery, and then if minimum cell voltage is an issue
+    if(input_volt > 5.0 && input_volt / num_cell < vbat_cell_low) {
+      io_set_blink_mode(BLINK_ERROR);
+      digitalWrite(LED_RED, HIGH);
+    }
+    else {
+      io_set_blink_mode(BLINK_NORMAL);
+      digitalWrite(LED_RED, LOW);
     }
 
     vTaskDelay(pdMS_TO_TICKS(250));
@@ -88,31 +93,7 @@ float power_adc_conversion(adc_channel_t channel) {
   if(channel == ADC_CHANNEL_VIN)
     return (float) analogRead(ADC_VDD) * ADC_MAX_VOLT / ADC_VDD_SCALE / ADC_FS_COUNTS;
   else {
-    // set mux control pins
-    switch(channel) {
-      case ADC_CHANNEL_PA_VDD:
-        digitalWrite(ADC_MUX_CTRL_0, LOW);
-        digitalWrite(ADC_MUX_CTRL_1, HIGH);
-        break;
-      case ADC_CHANNEL_PA_IDD:
-        digitalWrite(ADC_MUX_CTRL_0, HIGH);
-        digitalWrite(ADC_MUX_CTRL_1, LOW);
-        break;
-      case ADC_CHANNEL_PA_TEMP:
-        digitalWrite(ADC_MUX_CTRL_0, LOW);
-        digitalWrite(ADC_MUX_CTRL_1, LOW);
-        break;
-    }
-
-    // delay to allow settling
-    // TODO: remove this delay if there was no change to the mux control. Would allow higher read rates
-    vTaskDelay(pdMS_TO_TICKS(2));
-
-    // scale and return
-    switch(channel) {
-      case ADC_CHANNEL_PA_VDD:
-        return (float) analogRead(ADC_MUX_OUT) * ADC_MAX_VOLT / ADC_PA_VDD_SCALE / ADC_FS_COUNTS;
-    }
+    // placeholder
   }
 
   return 0;
@@ -120,16 +101,4 @@ float power_adc_conversion(adc_channel_t channel) {
 
 float power_get_input_volt() {
   return input_volt;
-}
-
-float power_get_pa_current() {
-  return pa_curr;
-}
-
-float power_get_pa_volt() {
-  return pa_volt;
-}
-
-float power_get_pa_temp() {
-  return pa_temp;
 }
