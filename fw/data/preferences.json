@@ -7,7 +7,7 @@
 	"ap_channel": "11",
 	"wifi_power": "68",
 	"vbat_cell_low": "2.6",
-	"num_battery": "3",
+	"num_battery": "2",
 	"clk0_default": "10000000",
 	"clk1_default": "10000000",
 	"clk2_default": "10000000"

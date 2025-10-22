@@ -21,7 +21,16 @@
 
     <section class="card" id="card-superhet">
       <h2>Superhet Calculator</h2>
-      <p>Enter dial, IF and sidetone (all in Hz). Choose sideband and press Calculate to populate CLK0-2.</p>
+      <p>Choose a calculator mode and enter the requested frequencies (Hz). Press Calculate to populate CLK0-2.</p>
+
+      <div class="superhet-mode">
+    <label><input type="radio" name="superhet_mode" value="single" checked onchange="switch_superhet_mode('single')"> Single-IF</label>
+    <label><input type="radio" name="superhet_mode" value="dual" onchange="switch_superhet_mode('dual')"> Dual-IF</label>
+  
+      </div>
+
+      <!-- Dual-IF panel (existing) -->
+      <div id="superhet-dual">
       <table>
         <tbody>
           <tr>
@@ -61,6 +70,45 @@
           </tr>
         </tbody>
       </table>
+      </div>
+
+      <!-- Single-IF panel (new) -->
+      <div id="superhet-single" style="display:none;">
+      <table>
+        <tbody>
+          <tr>
+            <td>Dial Frequency (Hz)</td>
+            <td><input type="number" step="1" id="dial_single_hz" value="14000000" class="control vfo_display_small"></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>IF Frequency (Hz)</td>
+            <td><input type="number" step="1" id="if_single_hz" value="10000" class="control vfo_display_small"></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>Sidetone Frequency (Hz)</td>
+            <td><input type="number" step="1" id="sidetone_single_hz" value="800" class="control vfo_display_small"></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>Upper Sideband</td>
+            <td><input type="checkbox" id="usb_single_chk" class="checkbox-centered" checked></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>Upconvert</td>
+            <td><input type="checkbox" id="upconvert_single_chk" class="checkbox-centered" checked></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td></td>
+            <td><button type="button" class="button" onclick="calculate_clocks_single_if()">CALCULATE</button></td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
     </section>
 
     <section class="card" id="card-clocks">

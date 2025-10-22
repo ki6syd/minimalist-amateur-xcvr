@@ -19,6 +19,8 @@ function on_load() {
   // initialize periodic reads for dynamic values
   fetch_input_voltage();
   setInterval(fetch_input_voltage, 5000);
+  // ensure default superhet mode visibility (default to single-IF)
+  switch_superhet_mode('single');
 }
 
 function set_clocks() {
@@ -84,6 +86,55 @@ function calculate_clocks() {
 
   // Auto-apply the calculated clock frequencies to the device
   console.log('Auto-applying calculated clocks: ', lo1, lo2, bfo);
+  set_clocks();
+}
+
+// Switch between dual-IF and single-IF superhet panels
+function switch_superhet_mode(mode) {
+  var dual = document.getElementById('superhet-dual');
+  var single = document.getElementById('superhet-single');
+  if (!dual || !single) return;
+  if (mode === 'single') {
+    dual.style.display = 'none';
+    single.style.display = '';
+  } else {
+    dual.style.display = '';
+    single.style.display = 'none';
+  }
+}
+
+// New single-IF calculation: takes a single IF frequency and computes individual clocks
+function calculate_clocks_single_if() {
+  var dial = parseInt(document.getElementById('dial_single_hz').value) || 0;
+  var ifreq = parseInt(document.getElementById('if_single_hz').value) || 0;
+  var sidetone = parseInt(document.getElementById('sidetone_single_hz').value) || 0;
+  var usb = document.getElementById('usb_single_chk').checked;
+  var upconvert = document.getElementById('upconvert_single_chk').checked;
+
+  if (dial <= 0 || ifreq <= 0) {
+    alert('Dial and IF must be positive numbers (Hz).');
+    return;
+  }
+
+  // For single-IF, compute clocks differently:
+  // CLK0 = LO = Dial +/- IF (depends on upconvert)
+  var lo = upconvert ? (dial + ifreq) : (dial - ifreq);
+  if (lo <= 0) {
+    alert('Calculated LO is non-positive. Check Dial/IF and Upconvert settings.');
+    return;
+  }
+
+  // CLK1 = sidetone-anchored clock: use IF +/- sidetone (preserve USB/LSB choice)
+  var clk1 = usb ? (ifreq + sidetone) : (ifreq - sidetone);
+
+  var clk2 = dial;
+
+  // Populate clock fields
+  document.getElementById('clk0_hz').value = lo;
+  document.getElementById('clk1_hz').value = clk1;
+  document.getElementById('clk2_hz').value = clk2;
+
+  console.log('Single-IF calculated clocks:', lo, clk1, clk2);
   set_clocks();
 }
 
