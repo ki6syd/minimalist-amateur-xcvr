@@ -1,10 +1,12 @@
  # minimalist-amateur-xcvr
 
-## MAX-4B
+## Function Generator with MAX-SDR Boards
 
-This branch supports MAX-4B development (work-in-progress).
+Basic ESP32 + SI5351 clock generator in a box
 
-![IMG_5742](https://github.com/user-attachments/assets/a1d4a744-64ac-481b-b767-a33720bf08f2)
+![IMG_1127](https://github.com/user-attachments/assets/cb04bad2-41a5-47b5-bedc-4250c8d60fdd)
+
+<img width="1860" height="689" alt="image" src="https://github.com/user-attachments/assets/3050aa60-9e83-4562-9c8a-ae937d20e44b" />
 
 
 ## Licenses
