@@ -3,13 +3,22 @@
 // TODO: handle high side or low side injection on both VFO and BFO
 // TODO: make sure we don't generate negative frequencies
 uint64_t update_vfo(uint64_t f_rf, uint64_t f_bfo, uint64_t f_audio) {
+  /*
+   * As-released (~2023) implementation follows in this comment.
+   * Thanks to AI6XG for uncovering better sensitivity on unwanted sideband. 
+   * 40m tuning direction was correct, 20m/15m was incorrect.
+   * Solution is always keeping VFO > IF, and moving IF frequency to high end of the IF filter passband.
+   * 
   if(f_rf > f_if)
     f_vfo = f_rf + f_if;
   else
     f_vfo = f_if - f_rf;
+  */
+
+  f_vfo = f_rf + f_if;
     
   return f_vfo;
-}
+} 
 
 
 // update SI5351 clocks
